@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant RT as Grok Bot routine (5 min)
+  participant G as Gmail
+  participant BX as run_mail.sh (box)
+  participant DB as mail_* tables
+  actor R as Rolan
+  RT->>G: search school mail (newer_than:2d)
+  RT->>BX: ingest JSON (messages + attachments)
+  BX->>DB: upsert mail_messages, attachments to private bucket
+  BX->>DB: draft reply for individual staff senders (status draft)
+  R->>DB: edit draft, press Send (status queued)
+  RT->>BX: outbox list (atomic claim queued→sending)
+  RT->>G: send in thread (school emails 7 AM–7 PM)
+  RT->>BX: outbox mark sent / failed
+  DB->>DB: trigger stores (original, final) in mail_style_edits

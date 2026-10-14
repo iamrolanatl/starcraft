@@ -1,0 +1,22 @@
+flowchart TB
+  R((Rolan<br/>parent, owner, admin))
+  E((Eli<br/>student, minor))
+  T((Trusted adult<br/>viewer))
+  F2((Second family<br/>planned))
+  CR[["Crystal<br/>family command center<br/>crystal-7ot.pages.dev"]]
+  PV["Cobb ParentVUE / CTLS<br/>(Edupoint Synergy)"]
+  G["Google<br/>Calendar, Tasks, Drive, Gmail"]
+  MS["Microsoft O365<br/>Eli calendar ICS"]
+  AH["Apple Health<br/>via iOS Shortcuts"]
+  CCSD["CCSD district<br/>calendar ICS"]
+  YF["Yahoo Finance<br/>delayed quotes"]
+  R --> CR
+  E --> CR
+  T --> CR
+  F2 -.-> CR
+  CR -->|pulled from home computers| PV
+  CR <--> G
+  CR --> MS
+  AH --> CR
+  CR --> CCSD
+  CR --> YF

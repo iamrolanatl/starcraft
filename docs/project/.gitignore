@@ -1,0 +1,4 @@
+build/.venv/
+build/node_modules/
+__pycache__/
+pdf/

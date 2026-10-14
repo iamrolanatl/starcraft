@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  actor P as Parent
+  participant UI as Crystal › Downloads
+  participant API as /api/sync/*
+  participant DB as Postgres RPCs (020)
+  participant A as Device A (primary)
+  participant B as Device B (standby)
+  participant PV as ParentVUE
+  P->>UI: Create pairing code (children)
+  UI->>DB: sync_pair_create → XXXX-XXXX (15 min, single use)
+  P->>A: enter code in setup wizard
+  A->>API: pair {code, name, platform, version}
+  API->>DB: sync_pair_exchange
+  DB-->>A: device key csd_… returned once, DB keeps sha256 and last 4
+  Note over A,B: 05:40 slot
+  A->>API: claim {slot}
+  API->>DB: sync_claim → leader
+  B->>API: claim {slot}
+  API->>DB: sync_claim → standby (no login)
+  A->>PV: one login, pull
+  A->>API: start {child_id, slot}
+  A->>API: log {lines (masked)}
+  A->>API: upload {payload ≤4 MB}
+  API->>DB: sync_upload (scope = paired child_ids)
+  A->>API: finish {status ok, counts}
+  B->>API: claim → done
+  Note over B: if A not finished within 10 min, B takes over (takeovers+1)
