@@ -77,7 +77,7 @@ export const revokeMember = (user: string) => rpc("family_revoke_member", { p_us
 export const revokeFamilyInvite = (id: string) => rpc("family_revoke_invite", { p_invite: id });
 export const leaveFamily = () => rpc("family_leave");
 /** Redeems ANY code (child login, trusted adult or list share). */
-export const joinWithCode = (code: string) => rpc<{ ok: boolean; kind?: string; error?: string; confirm_code?: string; status?: string; owner_name?: string; child_name?: string; list?: string; tries_left?: number; locked_until?: string }>("family_join", { p_code: code });
+export const joinWithCode = (code: string) => rpc<{ ok: boolean; kind?: string; error?: string; confirm_code?: string; status?: string; owner_name?: string; child_name?: string; list?: string; tries_left?: number; locked_until?: string; invited?: string }>("family_join", { p_code: code });
 
 // ---- trusted adults ----
 export const listViewers = async () => chk<Viewer[]>(await sb().from("child_viewers").select("*").order("joined_at") as never) ?? [];

@@ -75,6 +75,22 @@ function ViewerForm({ kids, onSent }: { kids: F.Child[]; onSent: (code: string, 
     <p className="text-xs text-ash sm:col-span-2">Pressing SEND INVITE emails them a one-time code from your Gmail. They are read-only, never see Finance, Mail, Health, other children or excuse letters, and can&apos;t start a sync. You approve them after matching a 6-digit number.</p></form>;
 }
 
+const JERR: Record<string, string> = { bad_code: "That code didn't match.", used: "That code was already used.", expired: "That code expired. Ask for a new one.", revoked: "That invite was cancelled.",
+  locked: "Too many tries. Wait an hour.", parent_account: "Parent accounts can't join as a child.", already_member: "This account is already in a family.", own_list: "That's your own list.",
+  own_child: "That's your own child.", child_account: "Child accounts can't be trusted adults.", wrong_account: "This invite was sent to a different email. Sign in with the invited email." };
+export function EnterCode({ onDone }: { onDone?: () => void }) {
+  const [c, setC] = useState(""); const [busy, setBusy] = useState(false); const [res, setRes] = useState<{ conf: string; who: string } | null>(null);
+  if (res) return <div className="glass rounded-xl border border-emerald-400/40 p-3"><div className="text-xs font-bold uppercase tracking-[.06em] text-emerald-300">Code Accepted · Waiting for Approval</div>
+    <div className="mt-1 text-sm text-ash">Read this number to {res.who}. They press Approve when it matches their screen.</div>
+    <div className="my-1 font-mono text-3xl font-bold tracking-[.3em] text-snow">{res.conf.slice(0, 3)} {res.conf.slice(3)}</div></div>;
+  return <form className="glass flex flex-wrap items-end gap-2 rounded-xl p-3" onSubmit={async e => { e.preventDefault(); setBusy(true);
+      try { const r = await F.joinWithCode(c); if (r.ok) { setRes({ conf: r.confirm_code || "", who: r.owner_name || "the person who invited you" }); onDone?.(); }
+        else toast((JERR[r.error ?? ""] ?? "That code didn't work.") + (r.error === "wrong_account" && r.invited ? ` (sent to ${r.invited})` : "") + (r.tries_left !== undefined && r.error !== "locked" ? ` ${r.tries_left} tries left.` : ""), "warn"); }
+      catch (er) { toast((er as Error).message, "warn"); } finally { setBusy(false); } }}>
+    <Lbl t="Invite Code (from your email or text)"><input className="input font-mono uppercase tracking-[.15em]" required placeholder="e.g. K7Q4-M9TX" maxLength={12} value={c} onChange={e => setC(e.target.value)} autoComplete="one-time-code" /></Lbl>
+    <button className="btn btn-primary" disabled={busy || c.replace(/[^A-Za-z0-9]/g, "").length < 8}>{busy ? "CHECKING…" : "JOIN"}</button></form>;
+}
+
 export default function Family() {
   const [ready, setReady] = useState<boolean | null>(null); const [kids, setKids] = useState<F.Child[]>([]); const [mem, setMem] = useState<F.Member[]>([]);
   const [inv, setInv] = useState<F.Invite[]>([]); const [vw, setVw] = useState<F.Viewer[]>([]); const [vinv, setVinv] = useState<Awaited<ReturnType<typeof F.listViewerInvites>>>([]);
@@ -107,6 +123,8 @@ export default function Family() {
   const openInv = inv.filter(i => !i.used_at && !i.revoked_at && new Date(i.expires_at) > new Date());
   return <div className="pb-4">
     <Approvals onDone={load} />
+    <H>Enter Invite Code</H>
+    <EnterCode onDone={load} />
     <H>Children</H>
     <ul className="space-y-2">{kids.map(c => { const login = mem.find(m => m.child_id === c.id && m.status !== "revoked" && m.status !== "denied");
       return <li key={c.id} className="glass flex flex-wrap items-center gap-3 rounded-xl p-3"><Avatar c={c} size={40} />

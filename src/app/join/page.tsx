@@ -7,7 +7,7 @@ import { sb } from "@/lib/supabase"; import { joinWithCode, loadAccess, isMissin
 const AuthPanel = dynamic(() => import("@/components/AuthPanel"), { ssr: false });
 const ERR: Record<string, string> = { bad_code: "That code didn't match. Check the letters and try again.", used: "That code was already used. Ask for a new one.", expired: "That code expired. Ask for a new one.",
   revoked: "That invite was cancelled. Ask for a new one.", locked: "Too many wrong tries. Wait an hour, then try again.", parent_account: "This account already runs its own family, so it can't join as a child.",
-  already_member: "This account is already in a family.", own_list: "That's your own list.", own_child: "That's your own child.", child_account: "Child accounts can't be trusted adults." };
+  already_member: "This account is already in a family.", own_list: "That's your own list.", own_child: "That's your own child.", child_account: "Child accounts can't be trusted adults.", wrong_account: "This invite was sent to a different email. Sign in with the invited email address." };
 const fmt = (s: string) => { const c = s.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8); return c.length > 4 ? `${c.slice(0, 4)}-${c.slice(4)}` : c; };
 export default function Join() {
   const [me, setMe] = useState<string | null | undefined>(undefined); const [code, setCode] = useState(""); const [msg, setMsg] = useState(""); const [busy, setBusy] = useState(false);
