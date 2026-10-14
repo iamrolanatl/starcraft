@@ -46,7 +46,7 @@ export function AbilityGrid({ abilities }: { abilities: Ability[] }) {
             onClick={() => fire(a)} onMouseEnter={() => sfx("hover")}
             className="relative flex flex-col items-center justify-center overflow-hidden rounded-md border border-cyan/25 bg-navy-2/70 text-cyan transition hover:border-cyan hover:bg-cyan/10 hover:shadow-[0_0_12px_rgba(62,242,224,.4)] disabled:cursor-wait">
             <span className="text-base leading-none sm:text-lg">{a.icon}</span>
-            <span className="hidden text-[9px] uppercase tracking-wider text-ash sm:block">{a.label}</span>
+            <span className="hidden w-full truncate px-0.5 text-center text-[9px] uppercase tracking-wide text-ash sm:block">{a.label}</span>
             <span className="absolute left-0.5 top-0 font-mono text-[8px] text-slate">{idx + 1}</span>
             {left > 0 && (<>
               <span className="absolute inset-0" style={{ background: `conic-gradient(rgba(6,11,26,.8) ${pct * 360}deg, transparent 0)` }} />
@@ -130,7 +130,7 @@ export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogou
   const [muted, setM] = useState(false); useEffect(() => setM(isMuted()), []);
   // Phones: HUD collapses to a compact bar; abilities open in a bottom sheet; radar/feeds expand on demand.
   const [phone, setPhone] = useState(false); const [expanded, setExpanded] = useState(false); const [abSheet, setAbSheet] = useState(false);
-  useEffect(() => { const mq = matchMedia("(max-width: 640px)"); const u = () => setPhone(mq.matches); u(); mq.addEventListener("change", u); return () => mq.removeEventListener("change", u); }, []);
+  useEffect(() => { const mq = matchMedia("(max-width: 640px), (pointer: coarse)"); const u = () => setPhone(mq.matches); u(); mq.addEventListener("change", u); return () => mq.removeEventListener("change", u); }, []);
   const compact = phone && !expanded;
   return (
     <nav data-safe-bottom aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
