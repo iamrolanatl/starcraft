@@ -92,7 +92,7 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
         </div>
       </header>
       <div className="applet-body min-h-0 flex-1 overflow-y-auto overscroll-contain p-3" onPointerDown={gesture}>{pull > 0 && <div className="mb-1 text-center text-xs text-cyan" aria-hidden>{pull > 70 ? "↻ Release to refresh" : "↓ Pull to refresh"}</div>}<Boundary name={title}>{children}</Boundary></div>
-      {(mode === "float" || mode === "tile" || mode === "max") && HANDLES.map(([d, c, cur]) => <div key={d} data-resize={d} onPointerDown={e => startResize(e, d)} onDoubleClick={() => { if (mode !== "float") { setOv(null); if (okey) try { localStorage.removeItem(okey); } catch {} } }} className={`absolute z-[5] touch-none ${c}`} style={{ cursor: cur }} aria-hidden />)}
+      {(mode === "float" || mode === "tile" || mode === "max") && HANDLES.map(([d, c, cur]) => <div key={d} data-resize={d} onPointerDown={e => startResize(e, d)} onDoubleClick={() => { if (mode !== "float") { setOv(null); if (okey) try { localStorage.removeItem(okey); } catch {} } }} className={`absolute z-50 touch-none ${c}`} style={{ cursor: cur }} aria-hidden />)}
       {(mode === "float" || mode === "tile" || mode === "max") && <div className="pointer-events-none absolute bottom-0 right-0 h-3 w-3" aria-hidden style={{ background: "linear-gradient(135deg, transparent 50%, rgba(62,242,224,.55) 50%)" }} />}
     </section>
   </>);
