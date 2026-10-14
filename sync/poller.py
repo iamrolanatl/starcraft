@@ -15,7 +15,7 @@ Env: CRYSTAL_SUPABASE_URL (default prod), CRYSTAL_SUPABASE_SERVICE_ROLE_KEY, ELI
      CRYSTAL_STATE_DIR, CRYSTAL_NOW (test override, ISO), optional CRYSTAL_SMTP_* for email.
 Secrets are never printed.
 """
-import fcntl, json, os, smtplib, subprocess, sys, traceback, datetime as dt
+import fcntl, json, os, shutil, smtplib, subprocess, sys, traceback, datetime as dt
 from email.message import EmailMessage
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -53,11 +53,11 @@ def owner():
     _uid = next((u["id"] for u in r.json().get("users", []) if (u.get("email") or "").lower() == OWNER), None)
     return _uid
 
-def run_row(job, status, error=None, counts=None, fetched_at=None):
+def run_row(job, status, error=None, counts=None, fetched_at=None, extra=None):
     uid = owner()
     if not uid: return
     try: rest("POST", "edu_sync_runs", {"user_id": uid, "job_id": job["id"], "kind": job.get("kind"), "status": status,
-              "source": f"laptop:{job.get('kind')}", "error": error, "counts": counts or {}, "fetched_at": fetched_at}, prefer="return=minimal")
+              "source": f"laptop:{job.get('kind')}", "error": error, "counts": counts or {}, "fetched_at": fetched_at, **(extra or {})}, prefer="return=minimal")
     except Exception as e: say(f"edu_sync_runs write failed: {e}")
 
 def email(subject, body):
@@ -113,23 +113,82 @@ def process(job):
         from scrub_ctls_secrets import scrub_zip_bytes
         body, _ = scrub_zip_bytes(r.content)
     except Exception as e: return fail("bad upload: unreadable zip", type(e).__name__)
-    (DATA / "incoming").mkdir(exist_ok=True); z = DATA / "incoming" / "raw.zip"; z.write_bytes(body)
-    jlog(jid, "> parsing + building model", "step")
-    ing = subprocess.run(["bash", str(DATA / "ingest_zip.sh"), str(z)], cwd=DATA, capture_output=True, text=True)
+    # archive the (scrubbed) zip for 30-day replay, then ingest into a STAGING copy so a bad pull can't touch live files
+    arch = STATE / "raw-archive"; arch.mkdir(parents=True, exist_ok=True)
+    zname = f"{now().astimezone(ET):%Y%m%dT%H%M%S}_job{jid}.zip"; (arch / zname).write_bytes(body)
+    stage = stage_copy(); z = stage / "incoming" / "raw.zip"; z.write_bytes(body)
+    jlog(jid, "> parsing + building model (staging)", "step")
+    ing = subprocess.run(["bash", str(stage / "ingest_zip.sh"), str(z)], cwd=stage, capture_output=True, text=True)
     if ing.returncode not in (0, 3):
         last = ((ing.stderr or ing.stdout).strip().splitlines() or ["unknown error"])[-1]
         return fail(f"parse failed: {last[:150]}", ing.stderr or ing.stdout)
-    try: d = json.loads((DATA / "data.json").read_text()); fetched = d.get("fetched_at")
+    try: d = json.loads((stage / "data.json").read_text()); fetched = d.get("fetched_at")
     except Exception as e: return fail("parse produced no data.json", str(e))
-    ss = subprocess.run([sys.executable, str(HERE / "school_sync.py"), "--force", "--no-run-log"], capture_output=True, text=True, env={**os.environ, "ELI_DATA_DIR": str(DATA)})
+    ss = subprocess.run([sys.executable, str(HERE / "school_sync.py"), "--force", "--no-run-log"], capture_output=True, text=True, env={**os.environ, "ELI_DATA_DIR": str(stage)})
+    if ss.returncode == 4:   # validation gate rejected the pull: quarantine, live tables + live files untouched
+        q = next((json.loads(l[11:]) for l in ss.stdout.splitlines() if l.startswith("QUARANTINE ")), {"reasons": ["unknown"]})
+        qd = STATE / "quarantine" / zname[:-4]; qd.mkdir(parents=True, exist_ok=True)
+        (qd / "raw.zip").write_bytes(body); shutil.copy(stage / "data.json", qd / "data.json"); (qd / "reasons.json").write_text(json.dumps(q, indent=1))
+        why = "; ".join(q["reasons"])
+        jlog(jid, f"> quarantined: {why}"[:500], "err")
+        rest("PATCH", "sync_requests", {"status": "failed", "finished_at": iso(now()), "processed_at": iso(now()), "process_message": f"quarantined: {why}"[:2000]}, {"id": f"eq.{jid}"}, "return=minimal")
+        run_row(job, "quarantined", why, {"fields_rejected": q.get("fields_rejected", 0)}, fetched, extra={"reason": why, "raw_path": job.get("raw_path"), "fields_accepted": 0, "fields_kept": 0, "fields_rejected": q.get("fields_rejected", 0)})
+        alert("quarantined", f"job:{jid}", f"Sync #{jid} ({job['kind']}) was QUARANTINED, existing data kept: {why}. Raw pull saved on the box at {qd}.", jid)
+        return False
     if ss.returncode != 0:
         return fail({2: "Rolan hasn't signed in to Crystal yet", 3: "Crystal tables missing (run migrations)"}.get(ss.returncode, "school_sync failed"), ss.stdout + ss.stderr)
     counts = next((json.loads(l[7:]) for l in ss.stdout.splitlines() if l.startswith("COUNTS ")), {})
+    promote(stage)
     summary = f"{len(d.get('courses') or [])} courses, {len(d.get('assignments') or [])} assignments"
     jlog(jid, f"> model built · {summary}", "info"); jlog(jid, "> sync complete", "ok")
     rest("PATCH", "sync_requests", {"status": "done", "finished_at": iso(now()), "processed_at": iso(now()), "process_message": "ok; " + summary}, {"id": f"eq.{jid}"}, "return=minimal")
-    run_row(job, "ok", None, counts, fetched)
-    say(f"job {jid} done: {summary} {counts}"); return True
+    run_row(job, "ok", None, {k: v for k, v in counts.items() if k != "validation"}, fetched,
+            extra={"fields_accepted": counts.get("fields_accepted"), "fields_kept": counts.get("fields_kept_old"), "fields_rejected": counts.get("fields_rejected"),
+                   "reason": "; ".join(counts.get("validation") or [])[:2000] or None, "raw_path": job.get("raw_path")})
+    say(f"job {jid} done: {summary}"); return True
+
+SKIP = {"backups", "web", "incoming", ".venv", "__pycache__", "node_modules"}
+PROMOTE = ["data.json", "model.json", "plan.json", "term_finals.json", "raw.zip", "raw", "app", "dashboard.html"]
+def stage_copy():
+    st = STATE / "stage"
+    if st.exists(): shutil.rmtree(st)
+    shutil.copytree(DATA, st, ignore=lambda d, names: [n for n in names if d == str(DATA) and n in SKIP], symlinks=True)
+    (st / "incoming").mkdir(exist_ok=True)
+    return st
+
+def promote(stage):
+    """Accepted pull: copy the staged outputs over the live eli-dashboard files (old ones backed up first)."""
+    bk = DATA / "backups" / f"pre-promote-{now().astimezone(ET):%Y%m%d-%H%M%S}"; bk.mkdir(parents=True, exist_ok=True)
+    for n in PROMOTE:
+        src, dst = stage / n, DATA / n
+        if not src.exists(): continue
+        if dst.exists(): (shutil.copytree if dst.is_dir() else shutil.copy2)(dst, bk / n)
+        if src.is_dir():
+            if dst.exists(): shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+        else: shutil.copy2(src, dst)
+
+def retention(days=30):
+    """Raw zips are kept 30 days for replay (box archive + Supabase storage), then removed."""
+    cut = now() - dt.timedelta(days=days)
+    for d in ("raw-archive", "quarantine"):
+        for p in (STATE / d).glob("*") if (STATE / d).exists() else []:
+            if dt.datetime.fromtimestamp(p.stat().st_mtime, dt.timezone.utc) < cut: (shutil.rmtree if p.is_dir() else os.remove)(p)
+    old = rest("GET", "sync_requests", params={"select": "id,raw_path", "raw_path": "not.is.null", "raw_purged_at": "is.null", "finished_at": f"lt.{iso(cut)}"}) or []
+    for j in old:
+        r = requests.delete(f"{URL}/storage/v1/object/raw/{j['raw_path']}", headers=H, timeout=30)
+        if r.status_code in (200, 204, 404, 400):
+            rest("PATCH", "sync_requests", {"raw_purged_at": iso(now())}, {"id": f"eq.{j['id']}"}, "return=minimal")
+
+def replay(zpath):
+    """Re-run an archived zip through the same staging + validation path (no laptop job). Prints the result."""
+    stage = stage_copy(); z = stage / "incoming" / "raw.zip"; shutil.copy(zpath, z)
+    ing = subprocess.run(["bash", str(stage / "ingest_zip.sh"), str(z)], cwd=stage, capture_output=True, text=True)
+    if ing.returncode not in (0, 3): say("replay: parse failed"); return 2
+    ss = subprocess.run([sys.executable, str(HERE / "school_sync.py"), "--force"], capture_output=True, text=True, env={**os.environ, "ELI_DATA_DIR": str(stage)})
+    print(ss.stdout + ss.stderr)
+    if ss.returncode == 0: promote(stage)
+    return ss.returncode
 
 def school_day(day):
     if day.weekday() >= 5: return False
@@ -151,6 +210,8 @@ def check_missed():
                   f"The laptop may be off/asleep, offline, or unable to reach Supabase (check C:\\Users\\iamro\\EliDashboard\\sync\\LAST_FAILURE.txt).{why}")
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--replay":
+        STATE.mkdir(parents=True, exist_ok=True); return replay(sys.argv[2])
     if not KEY: say("CRYSTAL_SUPABASE_SERVICE_ROLE_KEY not set"); return 1
     STATE.mkdir(parents=True, exist_ok=True)
     lock = open(STATE / "poller.lock", "w")
@@ -169,6 +230,8 @@ def main():
             if alert("laptop_failed", f"job:{j['id']}", f"Sync #{j['id']} ({j['kind']}) failed: {reason}", j["id"]):
                 run_row(j, "failed", reason)
         check_missed()
+        try: retention()
+        except Exception as e: say(f"retention skipped: {type(e).__name__}")
     except requests.RequestException as e:
         say(f"Supabase unreachable from the box: {type(e).__name__}"); return 1
     except RuntimeError as e:
