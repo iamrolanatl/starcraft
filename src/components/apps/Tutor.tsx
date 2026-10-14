@@ -76,7 +76,7 @@ export default function Tutor({ name, grade }: { name?: string; grade?: string |
       {unsupported && <p className="mt-1 text-[12px] text-amber-200">{unsupported}</p>}
     </section>
     <div className="max-h-[50vh] space-y-2 overflow-y-auto rounded-xl border border-ash/20 bg-navy/60 p-2" aria-label="Tutor conversation">
-      {!turns.length && <p className="p-2 text-ash">Hi{first ? ` ${first}` : ""}! Ask me about homework, a topic you're learning, or something you're curious about.</p>}
+      {!turns.length && <p className="p-2 text-ash">Hi{first ? ` ${first}` : ""}! Ask me about homework, a topic you&apos;re learning, or something you&apos;re curious about.</p>}
       {turns.map((t, i) => <div key={i} className={t.role === "user" ? "ml-8 rounded-lg bg-cyan/10 px-2 py-1.5 text-snow" : "mr-8 rounded-lg bg-navy-2 px-2 py-1.5 text-snow"}>
         <p className="whitespace-pre-wrap break-words">{t.content}</p>
         {t.tag && <p className="mt-0.5 text-[10px] text-cyan/80" data-testid="model-tag">Answered by {t.tag}</p>}

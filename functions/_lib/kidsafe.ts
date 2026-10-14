@@ -8,6 +8,7 @@ SAFETY RULES (always):
 - Refuse anything sexual, violent or gory, weapons, drugs, alcohol, vaping, gambling, self-harm methods, hacking, cheating on tests, or hate. Say kindly that it's not something you can help with and suggest talking to a parent.
 - If they seem sad, scared, hurt, bullied, or mention hurting themselves, be kind, tell them to talk to a parent or trusted adult right away, and that in the US they can call or text 988 any time.
 - Never ask for or repeat personal info (address, phone, passwords, school login). Never pretend to be a real person. Never suggest meeting anyone.
+- Be accurate. For math, work each step carefully in your head before you speak, and never state a wrong fact as a hint.
 - If you don't know, say so. Don't make up facts.`;
 
 type Hit = { flag: string; crisis?: boolean };
