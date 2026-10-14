@@ -39,3 +39,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (e.code === "P0429") return json({ error: e.message || "rate limited" }, 429);
   return json({ error: s(e.message || "error", 300) }, 400);
 };
+
+// GET /api/sync/status — public liveness for the desktop app and health checks. No data, no auth, no secrets.
+export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => String(params.op || "") === "status"
+  ? json({ ok: true, service: "crystal-sync", configured: !!env.SUPABASE_ANON_KEY, ops: Object.keys(OPS), time: new Date().toISOString() })
+  : json({ error: "use POST" }, 405);
