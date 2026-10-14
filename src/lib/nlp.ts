@@ -3,7 +3,7 @@
 import type { AppId, CommandIntent } from "@/contracts/api";
 
 const DAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
-const APPS: Record<string, AppId> = { home:"home", tasks:"tasks", todo:"tasks", weather:"weather", calendar:"calendar", health:"health", meds:"health", steps:"health", glucose:"health", mail:"comms", email:"comms", drive:"comms", comms:"comms", communications:"comms", school:"education", education:"education", grades:"education", bells:"school", bell:"school", "check-ins":"school", checkins:"school", finance:"finance", bills:"finance", stocks:"finance", credit:"finance", shopping:"shopping", wishlist:"shopping", ocr:"ocr", scan:"ocr", scanner:"ocr", crystal:"crystal", chat:"crystal" };
+const APPS: Record<string, AppId> = { home:"home", tasks:"tasks", todo:"tasks", weather:"weather", calendar:"calendar", health:"health", meds:"health", steps:"health", glucose:"health", mail:"comms", email:"comms", drive:"comms", comms:"comms", communications:"comms", school:"education", education:"education", grades:"education", bells:"school", bell:"school", "check-ins":"school", checkins:"school", finance:"finance", bills:"finance", stocks:"finance", credit:"finance", shopping:"shopping", wishlist:"shopping", ocr:"ocr", medals:"medals", rank:"medals", achievements:"medals", globe:"globe", scan:"ocr", scanner:"ocr", crystal:"crystal", chat:"crystal" };
 const DATE_RX = /\b(on |by |next |due )?(today|tonight|tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2})\b/gi;
 
 function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }

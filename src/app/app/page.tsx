@@ -68,7 +68,7 @@ export default function Cockpit() {
       else setTimeout(() => c.auth.getSession().then(({ data: d }) => d.session ? done(d.session.user.email ?? "pilot") : location.replace("/#launch")), 1500);
     });
     const { data: sub } = c.auth.onAuthStateChange((_e, s) => { if (s) done(s.user.email ?? "pilot"); });
-    const mq = matchMedia("(min-width: 1100px) and (pointer: fine)"); const upd = () => setDesk(mq.matches); upd(); mq.addEventListener("change", upd);
+    const mq = matchMedia("(min-width: 1100px) and (not (pointer: coarse))"); const upd = () => setDesk(mq.matches); upd(); mq.addEventListener("change", upd);
     setNight(pref("theme") === "night"); const pt = () => setPrefTick(x => x + 1); addEventListener("crystal-prefs", pt);
     return () => { sub.subscription.unsubscribe(); mq.removeEventListener("change", upd); removeEventListener("crystal-prefs", pt); };
   }, []);

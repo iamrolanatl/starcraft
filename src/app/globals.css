@@ -59,8 +59,10 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
 /* ───────── Premium HUD layer (v2) ───────── */
 @property --ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 @keyframes spin-ang { to { --ang: 360deg; } }
+@layer components {
 .glass { position: relative; background: linear-gradient(160deg, rgba(36,46,68,.62), rgba(12,16,26,.52) 55%, rgba(8,12,22,.6)); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -1px 0 rgba(0,0,0,.35) inset, 0 18px 50px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(62,242,224,.06); }
 .glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 30%); }
+}
 .neon-frame { position: relative; }
 .neon-frame::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
   background: conic-gradient(from var(--ang), transparent 0 60%, #3ef2e0 72%, #7dffc8 78%, #c77dff 84%, transparent 92%);

@@ -136,7 +136,7 @@ export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogou
       )}
       <div className="mx-auto flex h-[112px] max-w-[1600px] items-stretch gap-2 sm:h-[132px]">
         <div className="flex min-w-0 flex-1 snap-x items-stretch gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="HUD panels (swipe on mobile)">
-          <div className="snap-start"><DefconMeter level={defcon.level} reasons={defcon.reasons} manual={alert} /></div>
+          <div className="snap-start"><DefconMeter level={defcon.level} reasons={defcon.reasons} manual={defcon.reasons[0] === "Manual red alert"} /></div>
           <div className="snap-start"><PilotView name={pilot} mood={mood} onClick={onPilot} alert={alert} /></div>
           <div className="flex snap-start flex-col items-center gap-1"><div className="h-[84px] sm:h-[104px]"><Radar blips={blips} alert={alert} items={radar} pulse={pulse} /></div><span className="hud-label !text-[8px]">360 · {blips} tgt</span></div>
           <div className="w-[132px] shrink-0 snap-start sm:w-[200px]"><AbilityGrid abilities={abilities} /></div>
