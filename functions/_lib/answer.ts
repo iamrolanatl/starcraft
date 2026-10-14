@@ -8,17 +8,16 @@ const SUBJ: [RegExp, RegExp][] = [
   [/\bchorus|choir|music|band|orchestra\b/i, /chorus|choir|music|band|orchestra/i], [/\bpltw|engineering|stem|robotics\b/i, /pltw|engineer|stem|robot/i],
   [/\b(pe|p\.e\.|gym|health|physical)\b/i, /\bpe\b|phys|health|gym/i], [/\bspanish|french|german|chinese|latin\b/i, /spanish|french|german|chinese|latin/i], [/\bart\b/i, /\bart\b/i],
 ];
-/** One row per course: latest snapshot, plus latest numeric/final grade when the latest is empty. */
-export function courseTable(g: Grade[]) {
-  const by = new Map<string, Grade[]>(); for (const r of g) { const k = r.course_key || r.course; by.set(k, [...(by.get(k) || []), r]); }
-  return [...by.values()].map(rs => { rs.sort((a, b) => b.captured_at.localeCompare(a.captured_at)); const cur = rs[0]; const lastNum = rs.find(r => r.percent != null) ?? null; return { cur, lastNum }; })
-    .sort((a, b) => (a.cur.period || "99").localeCompare(b.cur.period || "99", undefined, { numeric: true }) || a.cur.course.localeCompare(b.cur.course));
-}
-const gradeLine = ({ cur, lastNum }: ReturnType<typeof courseTable>[number]) => {
-  const t = cur.teacher ? ` (${cur.teacher})` : ""; const now = cur.percent != null ? `${cur.term}: ${cur.percent}%${cur.mark && cur.mark !== String(cur.percent) ? ` ${cur.mark}` : ""}` : `${cur.term}: no grade posted yet`;
-  const prev = cur.percent == null && lastNum ? `; latest posted grade ${lastNum.percent}% (${lastNum.term}${lastNum.is_final ? " final" : ""})` : "";
-  return `${cur.course}${t}: ${now}${prev}`;
+import { gradeView, type CurrentClass } from "../../src/lib/gradeview";
+/** Current classes (latest snapshot) joined to their latest final; completed = finals not in the latest snapshot. */
+export function courseTable(g: Grade[]) { return gradeView(g); }
+const gradeLine = (c: CurrentClass) => {
+  const t = c.teacher ? ` (${c.teacher})` : "";
+  const now = c.posted ? `${c.term}: ${c.percent}%` : c.final ? `${c.term}: not posted yet` : `${c.term}: no grade yet`;
+  const fin = c.final ? `; ${c.final.term} final ${c.final.percent ?? c.final.mark}%` : "";
+  return `${c.course}${t}: ${now}${fin}`;
 };
+const completedLine = (v: ReturnType<typeof gradeView>) => v.completed.length ? ` Completed courses: ${v.completed.map(f => `${f.course}${f.teacher ? ` (${f.teacher})` : ""}: ${f.term} final ${f.percent ?? f.mark}%`).join("; ")}.` : "";
 export function asOf(f: Facts) { return f.lastSync ? fmt(f.lastSync.fetched_at || f.lastSync.ran_at) : "unknown"; }
 const tag = (f: Facts) => `${f.demo ? " [DEMO DATA]" : ""} (as of last sync ${asOf(f)})`;
 const who = (f: Facts) => f.student?.name?.split(/[ ,]/)[0] || "your student";
@@ -28,7 +27,7 @@ export const isSchoolQ = (q: string) => /\b(grade|grades|gpa|class|classes|cours
 export function answerSchool(q: string, f: Facts): string | null {
   if (!isSchoolQ(q)) return null;
   if (!f.student && !f.demo) return f.signedIn ? `I can't see any school data yet: ${f.reason ?? "no sync has loaded data"}. Once the laptop sync runs, I'll answer from it.` : `I can't see school data yet because you're not signed in. Sign in and I'll answer from your synced records.`;
-  const rows = courseTable(f.grades);
+  const v = courseTable(f.grades); const rows = v.current;
   if (/\b(last|latest|recent)?\s*sync(ed)?\b|updated|refresh/i.test(q) && !/grade|class/i.test(q)) {
     const last = f.lastSync ? `Last successful sync: ${fmt(f.lastSync.fetched_at || f.lastSync.ran_at)}.` : "I don't have any successful sync on record.";
     const fail = f.lastRun && f.lastRun.status !== "ok" ? ` The most recent run (${fmt(f.lastRun.ran_at)}) ${f.lastRun.status}: ${f.lastRun.error ?? "no details"}.` : "";
@@ -45,21 +44,23 @@ export function answerSchool(q: string, f: Facts): string | null {
   const subj = SUBJ.find(([r]) => r.test(q));
   if (/\b(grade|grades|doing|score|percent|average|gpa|mark)\b/i.test(q) || (subj && /\bhow\b/i.test(q))) {
     if (!rows.length) return `I don't have any grades in the synced data${tag(f)}.`;
-    if (subj) { const hit = rows.filter(r => subj[1].test(r.cur.course) || subj[1].test(r.cur.course_key)); return hit.length ? `${hit.map(gradeLine).join("; ")}${tag(f)}.` : `I don't have a class matching that in ${who(f)}'s synced schedule. Classes I can see: ${rows.map(r => r.cur.course).join(", ")}.`; }
-    return `${who(f)}'s grades: ${rows.map(gradeLine).join("; ")}${tag(f)}.`;
+    if (subj) { const hit = rows.filter(r => subj[1].test(r.course) || subj[1].test(r.key)); const done = v.completed.filter(r => subj[1].test(r.course) || subj[1].test(r.course_key));
+      return hit.length ? `${hit.map(gradeLine).join("; ")}${tag(f)}.` : done.length ? `${done.map(d => `${d.course} is a completed course: ${d.term} final ${d.percent ?? d.mark}%`).join("; ")}${tag(f)}.` : `I don't have a class matching that in ${who(f)}'s synced schedule. Classes I can see: ${rows.map(r => r.course).join(", ")}.`; }
+    return `${who(f)}'s grades: ${rows.map(gradeLine).join("; ")}.${completedLine(v)}${tag(f)}.`;
   }
   if (/\b(class|classes|course|courses|schedule|subjects?|teachers?|taking|take)\b/i.test(q)) {
     if (!rows.length) return `I don't have ${who(f)}'s class list in the synced data${tag(f)}.`;
-    return `${who(f)} takes ${rows.length} classes: ${rows.map(({ cur }) => `${cur.course}${cur.period ? ` (period ${cur.period}` : " ("}${cur.teacher ? `${cur.period ? ", " : ""}${cur.teacher}` : ""})`.replace(" ()", "")).join("; ")}${tag(f)}.`;
+    return `${who(f)} takes ${rows.length} classes: ${rows.map(c => `${c.course}${c.period ? ` (period ${c.period}` : " ("}${c.teacher ? `${c.period ? ", " : ""}${c.teacher}` : ""})`.replace(" ()", "")).join("; ")}.${completedLine(v)}${tag(f)}.`;
   }
   return null;
 }
 
 export function dataBlock(f: Facts): string {
   if (!f.student && !f.demo) return `DATA:\nschool: unavailable (${f.reason ?? "no data"})\ntasks: ${f.tasks.filter(t => !t.done).map(t => `${t.title}${t.due_date ? ` due ${t.due_date}` : ""}`).join("; ") || "none"}`;
-  const rows = courseTable(f.grades);
+  const v = courseTable(f.grades);
   return [`DATA${f.demo ? " (DEMO, fake sample data)" : ""} as of last sync ${asOf(f)}:`, `student: ${f.student?.name ?? "unknown"}${f.student?.grade ? `, grade ${f.student.grade}` : ""}${f.student?.school ? `, ${f.student.school}` : ""}`,
-    `classes+grades: ${rows.map(gradeLine).join(" | ") || "none"}`,
+    `current classes (latest snapshot ${v.term ?? ""}): ${v.current.map(gradeLine).join(" | ") || "none"}`,
+    `completed courses (no longer on schedule): ${v.completed.map(c => `${c.course}: ${c.term} final ${c.percent ?? c.mark}`).join(" | ") || "none"}`,
     `missing: ${f.assignments.filter(a => a.missing).map(a => `${a.course}: ${a.name} (due ${a.due_date?.slice(0, 10)})`).join(" | ") || "none"}`,
     `upcoming: ${f.assignments.filter(a => !a.missing && a.due_date && a.due_date.slice(0, 10) >= new Date().toISOString().slice(0, 10)).slice(0, 8).map(a => `${a.course}: ${a.name} (due ${a.due_date?.slice(0, 10)})`).join(" | ") || "none"}`,
     `sync alerts: ${f.alerts.map(a => a.message).join(" | ") || "none"}`,

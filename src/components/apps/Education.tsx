@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { gradeView, type GRow } from "@/lib/gradeview";
 import { loadEducation, loadSyncStatus, requestSync, jobStatus, type EduData, type GradeRow, type SyncStatus } from "@/lib/education";
 import { sfx } from "@/lib/synth";
 
@@ -39,16 +40,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
   }
   useEffect(() => { loadEducation(demo).then(d => { setData(d); if (d) log(`Education uplink: ${d.student.name}, synced ${ago(d.student.last_synced_at)}.`, "ok"); }).catch(e => { setErr((e as Error).message); log(`Education: ${(e as Error).message}`, "warn"); }); }, [demo, log]);
 
-  const rows = useMemo(() => {
-    if (!data) return [];
-    const by = new Map<string, GradeRow[]>(); data.grades.forEach(g => by.set(g.course_key, [...(by.get(g.course_key) || []), g]));
-    return [...by.values()].map(gs => {
-      const cur = [...gs].reverse().find(g => !g.is_final && g.term === data.student.reporting_period?.name) || gs[gs.length - 1];
-      const fin = [...gs].reverse().find(g => g.is_final);
-      const pts = gs.filter(g => g.percent != null).map(g => Number(g.percent));
-      return { cur, fin, pts };
-    }).sort((a, b) => Number(a.cur.period ?? 9) - Number(b.cur.period ?? 9));
-  }, [data]);
+  const gv = useMemo(() => gradeView((data?.grades ?? []) as GRow[]), [data]);
 
   if (err) return <p className="text-sm text-alert">{err}</p>;
   if (data === undefined) return <p className="text-sm text-ash">Linking to school uplink…</p>;
@@ -75,13 +67,18 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
     <div role="tablist" className="flex gap-1 border-b border-cyan/15">
       {TABS.map(([id, label, n]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`-mb-px border-b-2 px-2 py-1 text-xs ${tab === id ? "border-cyan text-cyan" : "border-transparent text-ash hover:text-snow"}`}>{label}{n ? <span className="ml-1 rounded-full bg-alert/30 px-1.5 text-[10px] text-snow">{n}</span> : null}</button>)}
     </div>
-    {tab === "grades" && <ul className="space-y-1">{rows.map(({ cur, fin, pts }) => (
-      <li key={cur.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
-        <span className="w-4 font-mono text-[10px] text-slate">{cur.period}</span>
-        <div className="min-w-0 flex-1"><div className="truncate text-snow">{cur.course}</div><div className="truncate text-[10px] text-slate">{cur.teacher}{fin && fin !== cur ? ` · ${fin.term} final ${fin.mark}` : ""}</div></div>
-        <Spark pts={pts} />
-        <span className={`w-12 text-right font-mono ${tone(cur.percent)}`}>{cur.percent != null ? `${Number(cur.percent).toFixed(cur.percent % 1 ? 1 : 0)}` : (cur.mark ?? "—")}</span>
-      </li>))}</ul>}
+    {tab === "grades" && <div className="space-y-2">
+      <ul className="space-y-1" aria-label="Current classes">{gv.current.map(c => (
+        <li key={c.key} data-class={c.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
+          <span className="w-4 font-mono text-xs text-slate">{c.period}</span>
+          <div className="min-w-0 flex-1"><div className="truncate text-snow" title={c.course}>{c.course}</div>
+            <div className="truncate text-xs text-slate" title={`${c.teacher ?? ""} · ${c.status}`}>{c.teacher}{c.final ? ` · ${c.final.term} final ${c.final.percent ?? c.final.mark}` : ""}</div></div>
+          <Spark pts={c.trend} />
+          <span className={`shrink-0 text-right text-xs ${c.posted ? `font-mono text-sm ${tone(c.percent)}` : "text-ash"}`}>{c.posted ? Number(c.percent).toFixed(Number(c.percent) % 1 ? 1 : 0) : c.status}</span>
+        </li>))}{!gv.current.length && <li className="text-xs text-ash">No classes in the latest sync.</li>}</ul>
+      {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><span className={`font-mono ${tone(f.percent)}`}>{f.percent ?? f.mark}</span></li>)}</ul></div>}
+      {gv.asOf && <p className="text-xs text-slate">Current term: {gv.term} · as of {fmt(gv.asOf)}</p>}
+    </div>}
     {tab === "work" && <div className="space-y-2">
       {missing.length > 0 && <div><div className="hud-label mb-1 text-alert">Missing / zero</div><ul className="space-y-1">{missing.map(a => <li key={a.source + a.ext_id} className="rounded-lg border border-alert/30 bg-alert/10 px-2 py-1"><div className="text-snow">{a.name}</div><div className="text-[10px] text-ash">{a.course} · due {fmt(a.due_date)} · {a.score_display}</div></li>)}</ul></div>}
       <div><div className="hud-label mb-1">Upcoming</div><ul className="space-y-1">{upcoming.map(a => <li key={a.source + a.ext_id} className="flex items-center gap-2 rounded-lg bg-navy-2/50 px-2 py-1"><div className="min-w-0 flex-1"><div className="truncate text-snow">{a.name}</div><div className="truncate text-[10px] text-ash">{a.course} · {a.source}</div></div><span className="text-xs text-cyan">{fmt(a.due_date)}</span></li>)}{!upcoming.length && <li className="text-xs text-ash">Nothing due.</li>}</ul></div>
