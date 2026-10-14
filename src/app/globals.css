@@ -392,3 +392,17 @@ html:is([data-motion=off],[data-motion=reduced]) .hf-cue{animation:none;outline:
 .cal-today { border-color: #3ef2e0; box-shadow: 0 0 0 1px #3ef2e0, 0 0 14px -2px #3ef2e0; }
 .cal-sel:not(.cal-today) { border-color: #c7d2fe; }
 .cal-chip2 { overflow-wrap: normal; word-break: keep-all; }
+/* Shared ProgressBar */
+.pb-track { position: relative; border-radius: 999px; background: rgb(255 255 255 / .07); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06); cursor: default; }
+.pb-has-goal { margin-top: 14px; }
+.pb-fill { position: relative; height: 100%; border-radius: inherit; overflow: hidden; opacity: .9; box-shadow: 0 0 8px -1px currentColor; transition: width 1.1s cubic-bezier(.2,.8,.2,1); }
+.pb-fill::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 0%, rgb(255 255 255 / .28) 50%, transparent 100%); transform: translateX(-120%); animation: pb-shine 3.6s ease-in-out 1.2s infinite; }
+@keyframes pb-shine { 0% { transform: translateX(-120%); } 45%, 100% { transform: translateX(220%); } }
+.pb-met { animation: pb-met 1.4s ease-out 1.1s 1; }
+@keyframes pb-met { 0% { box-shadow: 0 0 8px -1px currentColor; } 40% { box-shadow: 0 0 18px 3px currentColor, 0 0 2px 1px #fff; } 100% { box-shadow: 0 0 8px -1px currentColor; } }
+.pb-goal { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: #f1f5f9; box-shadow: 0 0 6px #fff; border-radius: 1px; }
+.pb-flag { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 1px; white-space: nowrap; font-size: 9.5px; font-weight: 800; letter-spacing: .05em; color: #e6e8ef; background: rgb(10 12 22 / .9); border: 1px solid rgb(241 245 249 / .5); border-radius: 4px; padding: 0 3px; line-height: 12px; }
+.pb-pop { position: absolute; right: 0; bottom: calc(100% + 16px); z-index: 5; white-space: nowrap; font-size: 12px; font-weight: 700; color: #e6e8ef; background: rgb(10 12 22 / .95); border: 1px solid rgb(148 163 184 / .4); border-radius: 6px; padding: 1px 6px; }
+.pb-msg { margin-top: 4px; font-size: 13px; font-weight: 600; line-height: 1.35; }
+html:is([data-motion=off],[data-motion=reduced]) .pb-fill { transition: none; } html:is([data-motion=off],[data-motion=reduced]) .pb-fill::after { display: none; } html:is([data-motion=off],[data-motion=reduced]) .pb-met { animation: none; }
+@media (prefers-reduced-motion: reduce) { .pb-fill { transition: none; } .pb-fill::after { display: none; } .pb-met { animation: none; } }

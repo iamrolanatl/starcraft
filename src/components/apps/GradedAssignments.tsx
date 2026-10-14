@@ -1,4 +1,5 @@
 "use client";
+import ProgressBar from "@/components/ui/ProgressBar";
 import { gradeText, gradeHex } from "@/lib/letter";
 import { useEffect, useMemo, useState } from "react";
 import { loadGraded, calcView, qOf, COBB_SCALE_URL, type GA, type GradedData } from "@/lib/graded";
@@ -40,10 +41,7 @@ export default function GradedAssignments({ courseKey, demo }: { courseKey: stri
         {!cv ? <p className="text-ash">Weights not published for this class (ParentVUE shows no category breakdown).</p> : <div className="space-y-1">
           {cv.cats.map(c => <div key={c.category} className="grid grid-cols-[minmax(0,7rem)_1fr_auto] items-center gap-2">
             <span className="truncate text-snow" title={c.category}>{c.category}</span>
-            <div className="relative h-3 rounded bg-navy-2/80" aria-label={`${c.category}: weight ${c.weight}%, score ${c.pct == null ? "none yet" : c.pct.toFixed(1) + "%"}`}>
-              <div className="absolute inset-y-0 left-0 rounded bg-cyan/25" style={{ width: `${c.weight}%` }} />
-              {c.pct != null && <div className={`absolute inset-y-[3px] left-0 rounded ${c.pct < 74 ? "grade-low grade-low-bar" : ""}`} style={{ width: `${c.weight * c.pct / 100}%`, background: gradeHex(c.pct), boxShadow: "0 0 6px currentColor" }} />}
-            </div>
+            <ProgressBar kind="grade" value={c.pct ?? 0} label={`${c.category} (weight ${c.weight}%)`} height={9} />
             <span className="whitespace-nowrap font-mono text-[11px]"><span className="text-cyan">{c.weight}%</span> · <span className={tone(c.pct)}>{c.pct == null ? "no grades" : `${c.pct.toFixed(1)}%`}</span></span>
           </div>)}
           {cv.overall != null && <>

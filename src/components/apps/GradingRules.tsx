@@ -1,4 +1,5 @@
 "use client";
+import ProgressBar from "@/components/ui/ProgressBar";
 import { useEffect, useState } from "react";
 import { LETTER_STYLE, gradeHex, gradeText, isLow, type Letter } from "@/lib/letter";
 import LetterBadge from "@/components/ui/LetterBadge";
@@ -41,7 +42,7 @@ export default function GradingRules({ classes }: { classes: RuleClass[] }) {
       <ul className="space-y-2">{graded.map(c => { const L = letterOf(c.percent); const to90 = 90 - c.percent; const next = BANDS.find(b => b.lo > c.percent && b.lo <= 90 && BANDS.indexOf(b) === BANDS.indexOf(L) - 1);
         return <li key={c.key}>
           <div className="flex items-center gap-2"><LetterBadge pct={c.percent} size="sm" /><span className="min-w-0 flex-1 truncate gr-txt" title={c.course}>{c.course}</span><span className={`font-mono ${gradeText(c.percent)}`}>{c.percent.toFixed(c.percent % 1 ? 1 : 0)}</span></div>
-          <div className="gr-track"><div className={`gr-fill${isLow(c.percent) ? " grade-low grade-low-bar" : ""}`} style={{ width: on ? `${Math.min(100, c.percent)}%` : 0, background: gradeHex(c.percent) }} /><span className="gr-90" title="90 = A" /></div>
+          <ProgressBar kind="grade" value={c.percent} label={`${c.course} grade`} message height={10} />
           <div className="gr-note">{to90 <= 0 ? `In the A band, ${(c.percent - 90).toFixed(1)} pts of cushion above 90.` : `${to90.toFixed(1)} pts to 90 (A)${next && next.l !== "A" ? ` · ${(next.lo - c.percent).toFixed(1)} to ${next.l}` : ""}.`}</div>
         </li>; })}</ul></div>}
 

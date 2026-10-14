@@ -1,6 +1,7 @@
 "use client";
 // v3 cockpit operations: DEFCON readiness, shields focus timer, mission briefing, incoming transmissions,
 // warp jump, ship status bars, medals/ranks, holo globe. All driven by real cockpit data.
+import ProgressBar from "@/components/ui/ProgressBar";
 import { useEffect, useRef, useState } from "react";
 import CrystalBot from "@/components/CrystalBot";
 import { sfx, speak, stopSpeech, haptic } from "@/lib/synth";
@@ -25,7 +26,7 @@ export function DefconMeter({ level, reasons, manual }: { level: number; reasons
 
 export function StatusBars({ shields, hull, energy, labels }: { shields: number; hull: number; energy: number; labels: [string, string, string] }) {
   const B = ({ n, v, c, l }: { n: string; v: number; c: string; l: string }) => (<div title={l} className="w-full"><div className="flex justify-between font-mono text-[9px]"><span className="text-slate">{n}</span><span style={{ color: c }}>{Math.round(v)}%</span></div>
-    <div className="h-1.5 overflow-hidden rounded-full bg-navy-2" role="progressbar" aria-label={`${n}: ${l}`} aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max(2, v)}%`, background: `linear-gradient(90deg, ${c}88, ${c})`, boxShadow: `0 0 8px ${c}` }} /></div></div>);
+    <ProgressBar value={Math.max(2, v)} label={`${n}: ${l}`} color={c} height={6} /></div>);
   return <div className="flex h-full w-[130px] shrink-0 flex-col justify-center gap-1.5 rounded-md border border-cyan/20 bg-navy/60 px-2" aria-label="Ship status">
     <B n="SHIELDS" v={shields} c="#3ef2e0" l={labels[0]} /><B n="HULL" v={hull} c="#7dffc8" l={labels[1]} /><B n="ENERGY" v={energy} c={energy < 25 ? "#ff3b5c" : "#ffd166"} l={labels[2]} /></div>;
 }
@@ -39,7 +40,7 @@ export function ShieldsTimer({ endsAt, total, onEnd, onAbort }: { endsAt: number
   return (<div data-safe-avoid className="glass neon-frame fixed left-1/2 top-14 z-[46] w-[min(420px,calc(100vw-1rem))] -translate-x-1/2 rounded-2xl px-4 py-2" role="timer" aria-label={`Battle stations: ${mm} minutes ${ss} seconds left`}>
     <div className="flex items-center gap-3"><span className="hud-label !text-cyan">⛨ Battle stations</span><span className="flex-1 text-center font-mono text-2xl text-snow" style={{ textShadow: "0 0 12px #3ef2e0" }}>{String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}</span>
       <button onClick={onAbort} className="btn btn-ghost !px-2 !py-1 text-xs">Stand Down</button></div>
-    <div className="mt-1 h-2 overflow-hidden rounded-full bg-navy-2"><div className="h-full rounded-full bg-gradient-to-r from-cyan via-mint to-cyan transition-[width] duration-300" style={{ width: `${pct}%`, boxShadow: "0 0 12px #3ef2e0" }} /></div>
+    <ProgressBar className="mt-1" value={pct} label="Progress" color="#3ef2e0" height={8} />
     <p className="mt-1 text-center text-[10px] text-slate">Shields up: feeds muted, non-essential applets dimmed.</p></div>);
 }
 
@@ -94,7 +95,7 @@ export function MedalsPanel({ xp, rank, next, medals }: { xp: number; rank: stri
   return (<div>
     <div className="mb-3 flex items-center gap-3"><div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-cyan text-2xl neon-border" aria-hidden>✦</div>
       <div className="flex-1"><div className="hud-label">Rank</div><div className="text-lg font-semibold text-snow">{rank}</div>
-        <div className="mt-1 h-1.5 rounded-full bg-navy-2"><div className="h-full rounded-full bg-gradient-to-r from-cyan to-mint" style={{ width: `${next ? Math.min(100, xp / next * 100) : 100}%` }} /></div>
+        <ProgressBar className="mt-1" value={next ? Math.min(100, xp / next * 100) : 100} label="XP to next rank" color="#7dffc8" height={6} />
         <div className="text-[10px] text-slate">{xp} XP{next ? ` · ${next - xp} to promotion` : " · max rank"}</div></div></div>
     <ul className="grid grid-cols-3 gap-2">{medals.map(m => <li key={m.id} title={m.desc} className={`tap rounded-xl border p-2 text-center ${m.earned ? "border-mint/50 bg-mint/10" : "border-slate/30 opacity-45 grayscale"}`}><div className="text-2xl" aria-hidden>{m.icon}</div><div className="text-[10px] text-snow">{m.name}</div><div className="sr-only">{m.earned ? "earned" : "locked"}: {m.desc}</div></li>)}</ul>
   </div>);

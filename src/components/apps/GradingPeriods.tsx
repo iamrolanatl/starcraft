@@ -1,4 +1,5 @@
 "use client";
+import ProgressBar from "@/components/ui/ProgressBar";
 import { useMemo, useState } from "react";
 import { periods, span, type Span } from "@/lib/periods";
 const fmt = (d: string | null) => d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "date not available";
@@ -9,7 +10,7 @@ function Countdown({ label, s }: { label: string; s: Span | undefined }) {
     <div className="hud-label truncate">{label} · {s.id}</div>
     <div className="font-mono text-base text-snow">{s.daysLeft}<span className="ml-1 text-xs text-ash">calendar days left</span></div>
     {s.schoolDaysLeft != null && <div className="text-xs text-cyan">{s.schoolDaysLeft} school days left</div>}
-    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-cyan/10" role="progressbar" aria-label={`${s.name} progress`} aria-valuenow={s.pct ?? 0} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-cyan" style={{ width: `${s.pct ?? 0}%` }} /></div>
+    <ProgressBar className="mt-1" value={s.pct ?? 0} label={`${s.name} progress`} height={7} />
     <div className="mt-0.5 text-[10px] text-slate">{s.pct}% · ends {fmt(s.end)}</div>
   </div>);
 }
