@@ -27,3 +27,7 @@ export function partOfDay(d = new Date(), tz = "America/New_York"): "morning" | 
   const h = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(d)); return h < 12 ? "morning" : h < 18 ? "afternoon" : "evening";
 }
 export function greeting(p: Profile | null | undefined, d = new Date()): string { return `Good ${partOfDay(d, p?.timezone || "America/New_York")}, ${greetName(p)}!`; }
+/** Top-bar chip: profile display/full name (proper case) → first+last → email only if no name exists. */
+export function fullName(p: Profile | null | undefined, email?: string | null): string { return normalizeName(p?.display_name) || [normalizeName(p?.first_name), normalizeName(p?.last_name)].filter(Boolean).join(" ") || (email ?? ""); }
+/** Chip label: "Firstname L." (e.g. "Rolan C."); email only if no name exists. */
+export function shortName(p: Profile | null | undefined, email?: string | null): string { const f = fullName(p); if (!f) return email ?? ""; const parts = f.split(/\s+/); const first = normalizeName(p?.first_name) || parts[0]; const last = normalizeName(p?.last_name) || (parts.length > 1 ? parts[parts.length - 1] : ""); return last ? `${first} ${last[0].toUpperCase()}.` : first; }

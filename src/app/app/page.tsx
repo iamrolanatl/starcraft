@@ -45,7 +45,7 @@ import { waitEscalation, escText } from "@/lib/escalation";
 import { safeJSON, lsRaw, lsSet } from "@/lib/safe";
 import { useSafeArea, lastPointer } from "@/lib/safearea";
 import { tile } from "@/lib/tile";
-import { greeting as greetText, greetName, type Profile } from "@/lib/names";
+import { greeting as greetText, greetName, fullName, shortName, type Profile } from "@/lib/names";
 import { getProfile, loadProfile } from "@/lib/profile";
 import { getSettings, saveSettings, applySettings, BG_PRESETS, type Settings } from "@/lib/settings";
 const SettingsCenter = dynamic(() => import("@/components/SettingsCenter"), { ssr: false });
@@ -418,7 +418,7 @@ export default function Cockpit() {
             <button className="btn btn-primary !py-1.5 text-sm" disabled={cmdBusy}>{cmdBusy ? "…" : "Go"}</button>
           </form>
           <button onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open Command Palette"><kbd>⌘K</kbd></button>
-          <span className="ml-auto hidden max-w-[12rem] truncate text-xs text-ash md:inline">{demo ? "Demo mode" : user} · <span className="text-cyan">{RANKS[rankI]}</span></span>
+          <span data-testid="user-chip" title={demo ? "Demo mode" : [fullName(profile), user].filter(Boolean).join(" · ")} className="ml-auto hidden max-w-[14rem] truncate text-xs text-ash md:inline">{demo ? "Demo mode" : shortName(profile, user)} · <span className="text-cyan">{RANKS[rankI]}</span></span>
           <button onClick={() => setSettings(s => !s)} aria-expanded={settings} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Quick Settings">⚙</button>
           <button onClick={() => setCenter("Profile")} className="tap grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-cyan/40 bg-navy-2 text-sm" aria-label="Profile and Settings">{profile.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : (greetName(profile)[0] ?? "C")}</button>
           <button onClick={closeAll} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Close All Applets" title="Close All (Esc · Shift+Esc · Alt+0)">✕ All</button>
