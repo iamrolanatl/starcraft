@@ -96,7 +96,7 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
       {data.demo && <span className="rounded bg-amber-300/15 px-1.5 text-amber-200">demo data</span>}
     </div>
     <div className="grid grid-cols-3 gap-2 text-center">
-      {([["missing", "Missing", <span key="m" className={missing.length ? "text-alert" : "text-mint"}>{missing.length}</span>, "#ff3b5c"], ["due", "Due soon", <span key="d" className="text-cyan">{upcoming.length}</span>, "#22d3ee"], ["att", "Absent / tardy", <span key="a" className="text-snow">{(at.excused ?? 0) + (at.unexcused ?? 0)} / {at.tardies ?? 0}</span>, "#fcd34d"]] as const).map(([id, label, val, c]) =>
+      {([["missing", "Missing", <span key="m" className={missing.length ? "text-alert" : "text-mint"}>{missing.length}</span>, "#ff3b5c"], ["due", "Due Soon", <span key="d" className="text-cyan">{upcoming.length}</span>, "#22d3ee"], ["att", "Absent / Tardy", <span key="a" className="text-snow">{(at.excused ?? 0) + (at.unexcused ?? 0)} / {at.tardies ?? 0}</span>, "#fcd34d"]] as const).map(([id, label, val, c]) =>
         <button key={id} type="button" aria-expanded={peek === id} aria-controls="edu-peek" onClick={() => setPeek(peek === id ? null : id)} style={{ "--glow": c } as React.CSSProperties}
           className={`rounded-lg border py-1.5 transition-shadow hover:shadow-[0_0_12px_var(--glow)] focus-visible:shadow-[0_0_12px_var(--glow)] focus-visible:outline-none ${peek === id ? "border-[color:var(--glow)] bg-navy-2/80 shadow-[0_0_12px_var(--glow)]" : "border-transparent bg-navy-2/60"}`}>
           <div className="hud-label">{label} <span aria-hidden>{peek === id ? "▴" : "▾"}</span></div><div className="font-mono text-lg">{val}</div></button>)}
