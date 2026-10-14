@@ -2,6 +2,7 @@
 // Crystal strolls along the top edge of the bottom HUD, strikes poses and teases now and then.
 // Cheap: one transform transition per walk + CSS keyframe poses; timers stop while the tab is hidden.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import CrystalBot, { type Mood } from "./CrystalBot";
 import { getSettings, resolvedMotion } from "@/lib/settings";
 
@@ -24,16 +25,19 @@ export default function RobotWalker() {
   const [mode, setMode] = useState<"lively" | "calm" | "off">("off");
   const [x, setX] = useState(40); const [walkMs, setWalkMs] = useState(0); const [face, setFace] = useState<1 | -1>(1);
   const [pose, setPose] = useState<Pose>("idle"); const [say, setSay] = useState<string | undefined>();
-  const [small, setSmall] = useState(false);
+  const [small, setSmall] = useState(false); const [navH, setNavH] = useState(64); const [vw, setVw] = useState(1200);
   const t = useRef<number[]>([]); const lastSay = useRef(Date.now()); const xRef = useRef(40); const busy = useRef(false);
   const later = (fn: () => void, ms: number) => { t.current.push(window.setTimeout(fn, ms)); };
   const clear = () => { t.current.forEach(clearTimeout); t.current = []; busy.current = false; };
 
   useEffect(() => {
     const read = () => { const s = getSettings(); const os = matchMedia("(prefers-reduced-motion: reduce)").matches; setMode(s.robot === "off" ? "off" : s.robot === "calm" || os || resolvedMotion(s) === "off" ? "calm" : "lively"); };
-    const sz = () => setSmall(innerWidth < 640);
+    const sz = () => { setSmall(innerWidth < 640); setVw(innerWidth); };
+    // Sit on the HUD's top edge: track its height (it grows when the dock / radar expands).
+    let ro: ResizeObserver | undefined; const hook = () => { const n = document.querySelector('nav[aria-label="Cockpit HUD"]'); if (!n) return false; ro = new ResizeObserver(() => setNavH(n.getBoundingClientRect().height)); ro.observe(n); return true; };
+    const iv = window.setInterval(() => { if (hook()) clearInterval(iv); }, 500); hook() && clearInterval(iv);
     read(); sz(); addEventListener("crystal-settings", read); addEventListener("resize", sz);
-    return () => { removeEventListener("crystal-settings", read); removeEventListener("resize", sz); };
+    return () => { clearInterval(iv); ro?.disconnect(); removeEventListener("crystal-settings", read); removeEventListener("resize", sz); };
   }, []);
 
   const speak = useCallback((txt?: string) => { setSay(txt ?? pick(TAUNTS)); lastSay.current = Date.now(); later(() => setSay(undefined), 5000); }, []);
@@ -68,13 +72,14 @@ export default function RobotWalker() {
   if (mode === "off") return null;
   const size = small ? 40 : 58;
   const poke = () => { if (busy.current) return; clear(); speak(); doPose(pick(POSES), () => later(step, 4000)); };
-  return (
-    <div aria-hidden={false} className="robot-lane pointer-events-none absolute inset-x-0 bottom-full z-[31] overflow-visible" style={{ height: size * 1.15 }} data-testid="robot-walker">
-      <div className="robot-mover absolute bottom-0" style={{ transform: `translateX(${x}px)`, transition: `transform ${walkMs}ms linear`, ["--walk-ms" as string]: `${walkMs}ms`, willChange: "transform" }}>
+  const bw = Math.min(220, vw - 16), bl = Math.max(8, Math.min(vw - bw - 8, x + size / 2 - bw / 2));
+  return createPortal(
+    <div className="robot-lane pointer-events-none fixed inset-x-0 z-[46]" style={{ bottom: navH, height: size * 1.15 }} data-testid="robot-walker">
+      {say && <span key={say} role="status" className="robot-bubble glass absolute rounded-xl px-2.5 py-1.5 text-xs text-snow" style={{ left: bl, bottom: "100%", width: "max-content", maxWidth: bw, marginBottom: 4 }}>{say}</span>}
+      <div className="robot-mover absolute bottom-0 left-0" style={{ transform: `translateX(${x}px)`, transition: `transform ${walkMs}ms linear`, ["--walk-ms" as string]: `${walkMs}ms`, willChange: "transform" }}>
         <div className={`robot-pose robot-${pose}`} style={{ ["--face" as string]: face }}>
-          <div className="pointer-events-auto"><CrystalBot size={size} mood={MOOD[pose]} say={say} bubbleSide="top" onClick={poke} label="Crystal the robot: tap for a joke" /></div>
+          <div className={pose === "idle" || pose === "walk" ? "pointer-events-auto" : "pointer-events-none"}><CrystalBot size={size} mood={MOOD[pose]} onClick={poke} label="Crystal the robot: tap for a joke" /></div>
         </div>
       </div>
-    </div>
-  );
+    </div>, document.body);
 }

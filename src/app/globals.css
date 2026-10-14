@@ -413,7 +413,6 @@ html[data-calm="1"][data-video="off"] .bg-video { opacity: 1 !important; }
 
 /* ---- Robot buddy on the bottom HUD ---- */
 .robot-pose{transform-origin:50% 100%;transform:scaleX(var(--face,1))}
-.robot-pose .bubble{transform:translateX(-50%) scaleX(var(--face,1))}
 .robot-walk{animation:rb-walk .5s ease-in-out infinite}
 .robot-dance{animation:rb-dance .65s ease-in-out 4}
 .robot-flex{animation:rb-flex .55s ease-in-out 4}
@@ -433,5 +432,4 @@ html[data-calm="1"][data-video="off"] .bg-video { opacity: 1 !important; }
 @media (prefers-reduced-motion: reduce){.robot-walk,.robot-dance,.robot-spin,.robot-fall{animation:none}}
 /* Robot "Lively" is an explicit opt-in: keep its stroll smooth even with Reduced UI animations (OS reduce-motion / UI Off still force Calm). */
 html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(--walk-ms) !important; }
-.robot-pose .bubble{animation:rb-bubble .3s cubic-bezier(.34,1.56,.64,1) both;max-width:min(220px,70vw)}
-@keyframes rb-bubble{0%{opacity:0;transform:translateX(-50%) scaleX(var(--face,1)) translateY(6px) scale(.85)}100%{opacity:1;transform:translateX(-50%) scaleX(var(--face,1))}}
+.robot-bubble{animation:bubble .3s cubic-bezier(.34,1.56,.64,1) both}
