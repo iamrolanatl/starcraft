@@ -46,6 +46,6 @@ export function applyVideo(rate: number) {
   if (typeof document === "undefined") return; const r = Math.max(0, Math.min(1.5, rate));
   const set = (v: HTMLVideoElement) => { try { if (r === 0) { v.pause(); v.currentTime = 0; } else { v.playbackRate = Math.max(.25, r); if (v.paused && v.autoplay) v.play().catch(() => {}); } } catch { /* not ready */ } };
   document.querySelectorAll<HTMLVideoElement>("video.bg-video").forEach(set);
-  if (!watching) { watching = true; document.addEventListener("loadeddata", e => { const v = e.target as HTMLVideoElement; if (v?.classList?.contains("bg-video")) set2(v); }, true); document.addEventListener("play", e => { const v = e.target as HTMLVideoElement; if (v?.classList?.contains("bg-video") && getSettings().bgSpeed === 0) v.pause(); }, true); }
-  function set2(v: HTMLVideoElement) { const k = getSettings().bgSpeed; if (k === 0) { v.pause(); } else v.playbackRate = Math.max(.25, Math.min(1.5, k)); }
+  if (!watching) { watching = true; document.addEventListener("loadeddata", e => { const v = e.target as HTMLVideoElement; if (v?.classList?.contains("bg-video")) set2(v); }, true); document.addEventListener("play", e => { const v = e.target as HTMLVideoElement; if (v?.classList?.contains("bg-video") && getSettings().bgSpeed === 0 && !document.documentElement.dataset.calm) v.pause(); }, true); }
+  function set2(v: HTMLVideoElement) { const k = document.documentElement.dataset.calm ? 0.5 : getSettings().bgSpeed; if (k === 0) { v.pause(); } else v.playbackRate = Math.max(.25, Math.min(1.5, k)); }
 }

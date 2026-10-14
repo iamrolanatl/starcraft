@@ -406,3 +406,7 @@ html:is([data-motion=off],[data-motion=reduced]) .hf-cue{animation:none;outline:
 .pb-msg { margin-top: 4px; font-size: 13px; font-weight: 600; line-height: 1.35; }
 html:is([data-motion=off],[data-motion=reduced]) .pb-fill { transition: none; } html:is([data-motion=off],[data-motion=reduced]) .pb-fill::after { display: none; } html:is([data-motion=off],[data-motion=reduced]) .pb-met { animation: none; }
 @media (prefers-reduced-motion: reduce) { .pb-fill { transition: none; } .pb-fill::after { display: none; } .pb-met { animation: none; } }
+
+/* Pre-login landing: Calm background motion for every skin, regardless of saved prefs */
+html[data-calm="1"] body::before { animation-play-state: running !important; }
+html[data-calm="1"][data-video="off"] .bg-video { opacity: 1 !important; }

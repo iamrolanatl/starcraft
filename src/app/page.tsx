@@ -23,7 +23,7 @@ const MODULES: [string, string, string][] = [
 
 export default function Landing() {
   return (<>
-    <SpaceBackground />
+    <SpaceBackground calm />
     <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
       <a href="/" className="neon text-lg font-bold tracking-[.3em]">◆ CRYSTAL</a>
       <nav className="flex gap-3 text-sm"><a href="#features" className="hidden text-ash hover:text-cyan sm:inline">Features</a><a href="#launch" className="btn btn-ghost py-1.5 text-sm">Log in</a></nav>
