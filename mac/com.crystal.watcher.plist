@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.crystal.watcher</string>
+  <key>ProgramArguments</key>
+  <array><string>/usr/bin/python3</string><string>__BIN__/crystal_sync.py</string><string>watch</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>__LOGS__/watcher.out.log</string>
+  <key>StandardErrorPath</key><string>__LOGS__/watcher.err.log</string>
+</dict>
+</plist>
