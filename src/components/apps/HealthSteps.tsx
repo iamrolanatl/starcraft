@@ -82,7 +82,7 @@ export function StepsPanel({ rows, onLog }: { rows: Row[]; onLog: (v: number) =>
     </div>
     <div>
       <div className="mb-1 flex items-center gap-2 text-xs"><span className="text-ash">Daily steps</span>
-        {([7, 30] as const).map(n => <button key={n} onClick={() => setRange(n)} aria-pressed={range === n} className={`rounded px-2 py-0.5 ${range === n ? "bg-cyan/20 text-cyan" : "text-ash"}`}>{n} Days</button>)}
+        {([7, 30] as const).map(n => <button key={n} onClick={() => setRange(n)} aria-pressed={range === n} className={`shrink-0 whitespace-nowrap rounded px-2 py-0.5 ${range === n ? "bg-cyan/20 text-cyan" : "text-ash"}`}>{n} Days</button>)}
         <label className="ml-auto flex items-center gap-1 text-ash">Goal <input type="number" inputMode="numeric" min={500} step={500} defaultValue={goal} key={goal} onBlur={e => setGoal(Number(e.target.value))} className="input w-20 py-0.5 text-xs" aria-label="Daily step goal" /></label></div>
       <Bars days={range === 7 ? d7 : d30} by={by} goal={goal} />
     </div>
