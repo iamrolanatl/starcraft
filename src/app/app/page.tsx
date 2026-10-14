@@ -4,8 +4,12 @@ import SpaceBackground from "@/components/SpaceBackground";
 import CrystalBot, { type Mood } from "@/components/CrystalBot";
 import ChatPanel from "@/components/ChatPanel";
 import Applet from "@/components/Applet";
-import { HudBar, type Ability, type FeedItem } from "@/components/hud/Hud";
-import { Priorities, TaskList, Weather, Calendar, ComingSoon } from "@/components/apps/Apps";
+import { HudBar, type Ability, type FeedItem, type Squad, type Contact } from "@/components/hud/Hud";
+import { Priorities, TaskList, Weather, Calendar } from "@/components/apps/Apps";
+import { Health, Comms, Finance, Shopping, SchoolHub } from "@/components/apps/Modules";
+import Ocr from "@/components/apps/Ocr";
+import { list as listRows, insert as insertRow, setDemo as setStoreDemo, onChange as onStoreChange, type Row } from "@/lib/store";
+import { schoolDay } from "@/lib/school";
 import Education from "@/components/apps/Education";
 import { listTasks, addTask, usingLocal, type Task } from "@/lib/tasks";
 import { sb } from "@/lib/supabase";
@@ -14,9 +18,8 @@ import { call, Routes, type AppId, type CommandRequest, type CommandResponse } f
 
 const META: Record<AppId, { title: string; icon: string }> = {
   home: { title: "Top Priorities", icon: "◎" }, tasks: { title: "To-Do List", icon: "✓" }, weather: { title: "Weather", icon: "☁" }, calendar: { title: "Calendar", icon: "▦" },
-  crystal: { title: "Crystal Co-Pilot", icon: "🤖" }, health: { title: "Health", icon: "♥" }, comms: { title: "Communications", icon: "✉" }, education: { title: "Education", icon: "🎓" }, finance: { title: "Finance", icon: "$" }, shopping: { title: "Shopping", icon: "🛒" },
+  crystal: { title: "Crystal Co-Pilot", icon: "🤖" }, health: { title: "Health", icon: "♥" }, comms: { title: "Communications", icon: "✉" }, education: { title: "Education", icon: "🎓" }, school: { title: "School Hub", icon: "🔔" }, ocr: { title: "OCR Scanner", icon: "📷" }, finance: { title: "Finance", icon: "$" }, shopping: { title: "Shopping", icon: "🛒" },
 };
-const SOON: Partial<Record<AppId, string[]>> = { health: ["Steps", "Blood glucose", "Medications"], comms: ["Mail", "Email", "Drive"], finance: ["Bill payments", "Credit monitoring", "Stock tracker"], shopping: ["Shopping list", "Wish list"] };
 const HOME: AppId[] = ["home", "tasks", "weather", "calendar"];
 type Win = { id: AppId; title: string; minimized: boolean };
 
@@ -26,6 +29,8 @@ export default function Cockpit() {
   const [focus, setFocus] = useState<AppId>("home"); const [alert, setAlert] = useState(false); const [mood, setMood] = useState<Mood>("idle");
   const [feed, setFeed] = useState<FeedItem[]>([]); const [cmd, setCmd] = useState(""); const [cmdBusy, setCmdBusy] = useState(false); const [toast, setToast] = useState("");
   const sparkRoot = useRef<HTMLDivElement>(null);
+  const [mod, setMod] = useState<Record<string, Row[]>>({});
+  const loadMods = useCallback(async () => { const T = ["health_logs", "meds", "bills", "shop_items", "comms_notes"] as const; const out: Record<string, Row[]> = {}; await Promise.all(T.map(async t => { try { out[t] = await listRows(t); } catch { out[t] = []; } })); setMod(out); }, []);
 
   const log = useCallback((text: string, tone: FeedItem["tone"] = "info") => setFeed(f => [...f, { t: Date.now() + Math.random(), text, tone }]), []);
   const reload = useCallback(async () => { try { setTasks(await listTasks()); } catch (e) { log(`Task sync error: ${(e as Error).message}`, "warn"); } }, [log]);
@@ -36,12 +41,14 @@ export default function Cockpit() {
     const done = (email: string | null) => { setUser(email); setReady(true); };
     c.auth.getSession().then(({ data }) => {
       if (data.session) done(data.session.user.email ?? "pilot");
-      else if (isDemo) { setDemo(true); localStorage.setItem("crystal-local-tasks", localStorage.getItem("crystal-local-tasks") || "[]"); done("demo pilot"); }
+      else if (isDemo) { setDemo(true); setStoreDemo(true); localStorage.setItem("crystal-local-tasks", localStorage.getItem("crystal-local-tasks") || "[]"); done("demo pilot"); }
       else setTimeout(() => c.auth.getSession().then(({ data: d }) => d.session ? done(d.session.user.email ?? "pilot") : location.replace("/#launch")), 1500);
     });
     const { data: sub } = c.auth.onAuthStateChange((_e, s) => { if (s) done(s.user.email ?? "pilot"); });
     return () => sub.subscription.unsubscribe();
   }, []);
+  useEffect(() => { if (!ready) return; loadMods(); return onStoreChange(loadMods); }, [ready, loadMods]);
+  useEffect(() => { const h = (e: ErrorEvent | PromiseRejectionEvent) => { const err = "reason" in e ? e.reason : e.error; fetch("/api/log", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: String(err?.message || ("message" in e ? e.message : err)), stack: String(err?.stack || ""), url: location.pathname }) }).catch(() => {}); }; addEventListener("error", h); addEventListener("unhandledrejection", h); return () => { removeEventListener("error", h); removeEventListener("unhandledrejection", h); }; }, []);
   useEffect(() => { if (ready) { reload().then(() => { log("Systems online. Welcome aboard, pilot.", "ok"); if (usingLocal()) log("Tasks table not found — using on-device storage.", "warn"); }); } }, [ready, reload, log]);
 
   const sparks = (x = innerWidth / 2, y = innerHeight / 2) => {
@@ -56,12 +63,14 @@ export default function Cockpit() {
   const logout = async () => { sfx("close"); if (!demo) await sb().auth.signOut(); location.href = "/"; };
   const toggleAlert = () => { const n = !alert; setAlert(n); sfx(n ? "alert" : "ping"); setMood(n ? "alert" : "happy"); log(n ? "RED ALERT — DEFCON 1. Overdue + high priority missions highlighted." : "Stand down. DEFCON 5.", n ? "warn" : "ok"); if (!n) setTimeout(() => setMood("idle"), 1500); };
 
-  async function runCommand(e: React.FormEvent) {
-    e.preventDefault(); const text = cmd.trim(); if (!text || cmdBusy) return; setCmdBusy(true); setMood("thinking"); sfx("click"); log(`> ${text}`);
+  async function runCommand(e: React.FormEvent) { e.preventDefault(); await execCommand(cmd.trim()); }
+  async function execCommand(text: string) {
+    if (!text || cmdBusy) return; setCmdBusy(true); setMood("thinking"); sfx("click"); log(`> ${text}`);
     try {
       const r = await call<CommandRequest, CommandResponse>(Routes.command, { text, nowIso: new Date().toISOString(), tzOffsetMinutes: new Date().getTimezoneOffset() });
       const it = r.intent;
       if (it.kind === "create_task") { await addTask({ title: it.title, due_date: it.dueDate, priority: it.priority }); await reload(); setToast(`Task filed: ${it.title}${it.dueDate ? ` · due ${it.dueDate}` : ""}`); log(`Task created: ${it.title}${it.dueDate ? ` (due ${it.dueDate})` : ""}`, "ok"); sfx("success"); sparks(); react("happy"); }
+      else if (it.kind === "create_item") { await insertRow(it.table, it.row); setToast(it.summary); log(it.summary, "ok"); sfx("success"); sparks(); react("happy"); openApp(it.app); }
       else if (it.kind === "open_app") { openApp(it.app); react("wave"); }
       else { setToast(it.reply); log(`Crystal: ${it.reply.slice(0, 120)}`); react("happy", 2500); }
       setCmd("");
@@ -73,13 +82,43 @@ export default function Cockpit() {
   const abilities: Ability[] = [
     { id: "home", icon: "⌂", label: "Home", cooldown: 0, run: goHome },
     { id: "tasks", icon: "✓", label: "Tasks", cooldown: 0, run: () => openApp("tasks") },
-    { id: "cal", icon: "▦", label: "Calendar", cooldown: 0, run: () => openApp("calendar") },
+    { id: "ocr", icon: "📷", label: "Scan", cooldown: 0, run: () => openApp("ocr") },
     { id: "edu", icon: "🎓", label: "School", cooldown: 0, run: () => openApp("education") },
     { id: "ai", icon: "🤖", label: "Crystal", cooldown: 0, run: () => openApp("crystal") },
-    { id: "scan", icon: "◉", label: "Scan", cooldown: 8, run: () => { sfx("ping"); reload(); sparks(); log(`Scan complete: ${open.length} open, ${open.filter(t => t.due_date && t.due_date < new Date().toISOString().slice(0, 10)).length} overdue.`, "ok"); } },
+    { id: "scan", icon: "◉", label: "Sweep", cooldown: 8, run: () => { sfx("ping"); reload(); loadMods(); sparks(); log(`Sweep complete: ${open.length} open, ${open.filter(t => t.due_date && t.due_date < new Date().toISOString().slice(0, 10)).length} overdue.`, "ok"); } },
     { id: "focus", icon: "⏱", label: "Focus 25", cooldown: 1500, run: () => { sfx("success"); log("Focus burn engaged: 25 minutes. Comms silenced.", "ok"); setTimeout(() => { sfx("chirp"); log("Focus burn complete. Take five, pilot.", "ok"); }, 1500000); } },
     { id: "boost", icon: "⚡", label: "Boost", cooldown: 30, run: () => { sparks(); react("happy"); const m = ["You've got this, pilot!", "One mission at a time.", "Shields up, distractions down.", "Crystal believes in you ✨"]; log(`Crystal: ${m[Math.floor(Math.random() * m.length)]}`, "ok"); sfx("chirp"); } },
     { id: "alert", icon: "⚠", label: "Alert", cooldown: 3, run: toggleAlert },
+  ];
+
+  const t0 = new Date().toISOString().slice(0, 10);
+  const M = (k: string) => mod[k] || [];
+  const unpaid = M("bills").filter(r => !r.paid); const overdueBills = unpaid.filter(r => r.due_date && String(r.due_date) < t0);
+  const stepsToday = M("health_logs").filter(r => r.kind === "steps" && r.logged_on === t0).reduce((a, r) => a + Number(r.value || 0), 0);
+  const glu = M("health_logs").filter(r => r.kind === "glucose")[0]; const gluBad = glu && (Number(glu.value) > 180 || Number(glu.value) < 70);
+  const medsDue = M("meds").filter(r => r.active !== false && String(r.last_taken || "").slice(0, 10) !== t0);
+  const shop = M("shop_items").filter(r => r.list === "shopping" && !r.done); const comms = M("comms_notes").filter(r => !r.done);
+  const sd = schoolDay(new Date());
+  const squad: Squad[] = [
+    { id: "home", label: "Home", status: open.some(t => t.due_date && t.due_date < t0) ? "warn" : "ok", detail: `${open.length} open` },
+    { id: "health", label: "Health", status: gluBad ? "warn" : M("health_logs").length || M("meds").length ? "ok" : "off", detail: `${stepsToday.toLocaleString()} steps · ${medsDue.length} meds due` },
+    { id: "comms", label: "Comms", status: comms.some(r => r.due_date && String(r.due_date) < t0) ? "warn" : comms.length ? "ok" : "off", detail: `${comms.length} to handle` },
+    { id: "school", label: "School", status: sd.kind === "none" ? "off" : "ok", detail: sd.label },
+    { id: "finance", label: "Finance", status: overdueBills.length ? "warn" : unpaid.length ? "ok" : "off", detail: `${unpaid.length} bills${overdueBills.length ? `, ${overdueBills.length} late` : ""}` },
+    { id: "shopping", label: "Shop", status: shop.length ? "ok" : "off", detail: `${shop.length} items` },
+  ];
+  const contacts: Contact[] = [
+    ...open.map(t => ({ label: t.title, sector: 0, hot: !!t.due_date && t.due_date < t0 })),
+    ...medsDue.map(r => ({ label: `Med: ${r.name}`, sector: 1 })), ...(gluBad ? [{ label: "Glucose out of range", sector: 1, hot: true }] : []),
+    ...comms.map(r => ({ label: String(r.title), sector: 2, hot: !!r.due_date && String(r.due_date) < t0 })),
+    ...unpaid.map(r => ({ label: `Bill: ${r.name}`, sector: 4, hot: !!r.due_date && String(r.due_date) < t0 })),
+    ...shop.map(r => ({ label: String(r.name), sector: 5 })),
+  ];
+  const tactical: FeedItem[] = [
+    ...contacts.filter(c => c.hot).map((c, i) => ({ t: i + 1, text: `HOSTILE: ${c.label}`, tone: "warn" as const })),
+    ...medsDue.map((r, i) => ({ t: 100 + i, text: `Med due: ${r.name}${r.schedule ? ` (${r.schedule})` : ""}`, tone: "info" as const })),
+    ...unpaid.filter(r => r.due_date && String(r.due_date) >= t0).slice(0, 3).map((r, i) => ({ t: 200 + i, text: `Bill ${r.name} due ${r.due_date}`, tone: "info" as const })),
+    { t: 300, text: `School: ${sd.label}`, tone: "ok" as const },
   ];
 
   if (!ready) return (<><SpaceBackground /><div className="flex h-dvh items-center justify-center"><p className="neon animate-glow font-mono">Establishing uplink…</p></div></>);
@@ -92,7 +131,13 @@ export default function Cockpit() {
       case "calendar": return <Calendar tasks={tasks} />;
       case "crystal": return <ChatPanel mode="pilot" onMood={setMood} className="h-[340px]" greeting="Hey pilot! 🚀 What are we tackling today?" />;
       case "education": return <Education demo={demo} log={log} />;
-      default: return <ComingSoon name={META[id].title} items={SOON[id] || []} />;
+      case "school": return <SchoolHub log={log} />;
+      case "health": return <Health log={log} />;
+      case "comms": return <Comms log={log} />;
+      case "finance": return <Finance log={log} />;
+      case "shopping": return <Shopping log={log} />;
+      case "ocr": return <Ocr log={log} onCommand={execCommand} />;
+      default: return null;
     }
   };
   const visible = wins.filter(w => !w.minimized);
@@ -129,16 +174,16 @@ export default function Cockpit() {
           {!visible.length && <div className="glass rounded-2xl p-6 text-center text-ash md:col-span-2 xl:col-span-3">All applets closed. Tap ⌂ Home to restore.</div>}
         </div>
         <section className="mt-6" aria-label="Modules"><div className="hud-label mb-2">Modules</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {(["health", "comms", "education", "finance", "shopping"] as AppId[]).map(id => (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {(["health", "comms", "education", "school", "finance", "shopping", "ocr"] as AppId[]).map(id => (
               <button key={id} onClick={() => openApp(id)} className="glass relative rounded-xl p-3 text-left transition hover:-translate-y-0.5 hover:border-cyan/50">
                 <div className="text-xl text-cyan">{META[id].icon}</div><div className="text-sm font-semibold text-snow">{META[id].title}</div>
-                {id === "education" ? <span className="absolute right-2 top-2 rounded-full bg-mint/20 px-2 py-0.5 text-[9px] uppercase tracking-wider text-mint">Live</span> : <span className="absolute right-2 top-2 rounded-full bg-slate/30 px-2 py-0.5 text-[9px] uppercase tracking-wider text-ash">Coming soon</span>}
+                {squad.find(q => q.id === id) && <span className="absolute right-2 top-2 max-w-[60%] truncate text-[9px] text-ash">{squad.find(q => q.id === id)!.detail}</span>}
               </button>))}
           </div>
         </section>
       </main>
-      <HudBar abilities={abilities} feed={feed} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={wins} onRestore={id => openApp(id)} />
+      <HudBar pilot={demo ? "demo pilot" : (user?.split("@")[0] ?? "pilot")} mood={mood} onPilot={() => { openApp("crystal"); react("wave"); sfx("chirp"); }} squad={squad} contacts={contacts} tactical={tactical} abilities={abilities} feed={feed} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={wins} onRestore={id => openApp(id)} />
     </div>
   );
 }

@@ -10,9 +10,16 @@ const FEATURES = [
   ["☁", "Live weather", "Local forecast in your cockpit before you head out."],
   ["▦", "Calendar view", "Every due date on a clean month grid, from any device."],
   ["🤖", "AI co-pilot", "Crystal chats, plans and nudges, powered by Cloudflare Workers AI at the edge."],
-  ["⌁", "Command HUD", "Radar sweep, 3×3 ability grid with cooldowns, comm feed and Red Alert mode."],
+  ["⌁", "Command HUD", "Pilot view, 360 + tactical radar, 3×3 ability grid with cooldowns, squad status, tactical and comm feeds, Red Alert."],
+  ["📷", "OCR scanner", "Snap a receipt, flyer or handout; Crystal reads it on-device and turns it into tasks or list items."],
 ];
-const SOON = ["Health", "Communications", "Education", "Finance", "Shopping"];
+const MODULES: [string, string, string][] = [
+  ["♥", "Health", "Steps, glucose trends and medication check-offs."],
+  ["✉", "Communications", "Mail, email and Drive follow-ups in one queue."],
+  ["🎓", "Education", "Grades, assignments, check-ins with handouts, school calendar and live bell schedule."],
+  ["$", "Finance", "Bills with due-date radar, credit score tracking, live stock quotes."],
+  ["🛒", "Shopping", "Shopping list and wish list, filled by voice-style commands."],
+];
 
 export default function Landing() {
   return (<>
@@ -44,9 +51,9 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <div className="glass mt-6 rounded-2xl p-5">
-          <div className="hud-label mb-2">Incoming modules</div>
-          <div className="flex flex-wrap gap-2">{SOON.map(s => <span key={s} className="rounded-full border border-slate/50 px-3 py-1 text-sm text-ash">{s} · soon</span>)}</div>
+        <div className="hud-label mb-2 mt-10">Modules online</div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{MODULES.map(([i, t, d]) => (
+          <div key={t} className="glass rounded-2xl p-4"><div className="text-xl text-cyan">{i}</div><h3 className="font-semibold text-snow">{t}</h3><p className="mt-1 text-xs text-ash">{d}</p></div>))}
         </div>
       </section>
 

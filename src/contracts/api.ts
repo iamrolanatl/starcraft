@@ -10,16 +10,20 @@ export interface CommandRequest { text: string; nowIso: string; tzOffsetMinutes:
 export type CommandIntent =
   | { kind: "create_task"; title: string; dueDate: string | null; priority: 1 | 2 | 3 }
   | { kind: "open_app"; app: AppId }
+  | { kind: "create_item"; table: ItemTable; row: Record<string, string | number | boolean | null>; summary: string; app: AppId }
   | { kind: "chat"; reply: string };
+export type ItemTable = "health_logs" | "meds" | "bills" | "credit_scores" | "stocks" | "shop_items" | "comms_notes" | "edu_checkins";
 export interface CommandResponse { intent: CommandIntent; provider: ChatResponse["provider"] }
 
-export type AppId = "home" | "tasks" | "weather" | "calendar" | "health" | "comms" | "education" | "finance" | "shopping" | "crystal";
+export type AppId = "home" | "tasks" | "weather" | "calendar" | "health" | "comms" | "education" | "finance" | "shopping" | "crystal" | "school" | "ocr";
 
 export interface ApiError { error: string }
 
 export const Routes = {
   chat: "/api/chat",
   command: "/api/command",
+  quote: "/api/quote",
+  log: "/api/log",
 } as const;
 
 export async function call<Req, Res>(route: string, body: Req): Promise<Res> {
