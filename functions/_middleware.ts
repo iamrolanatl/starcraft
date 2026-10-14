@@ -1,15 +1,16 @@
 // Edge hardening for every request: per-IP rate limits on /api/*, security headers, and server error capture.
 // Limits are per isolate (best-effort); swap for a Durable Object / Rate Limiting binding at scale.
 const LIMITS: Record<string, [number, number]> = { "/api/chat": [20, 60], "/api/command": [40, 60], "/api/quote": [60, 60], "/api/log": [30, 60], "/api/transcribe": [15, 60], "/api/support": [12, 60], "/api/health/steps": [60, 60] };
+const ADMIN_LIM: [number, number] = [90, 60];
 const hits = new Map<string, { n: number; reset: number }>();
 const SEC = {
   "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin",
   "permissions-policy": "camera=(self), geolocation=(self), microphone=(self)", "strict-transport-security": "max-age=31536000; includeSubDomains",
 };
 export const onRequest: PagesFunction = async (ctx) => {
-  const url = new URL(ctx.request.url); const lim = LIMITS[url.pathname];
+  const url = new URL(ctx.request.url); const lim = LIMITS[url.pathname] ?? (url.pathname.startsWith("/api/admin/") ? ADMIN_LIM : undefined);
   if (lim) {
-    const ip = ctx.request.headers.get("cf-connecting-ip") || "anon"; const k = `${url.pathname}|${ip}`; const now = Date.now();
+    const ip = ctx.request.headers.get("cf-connecting-ip") || "anon"; const k = `${url.pathname.startsWith("/api/admin/") ? "/api/admin" : url.pathname}|${ip}`; const now = Date.now();
     let h = hits.get(k); if (!h || h.reset < now) { h = { n: 0, reset: now + lim[1] * 1000 }; hits.set(k, h); }
     h.n++;
     // Global counter in a Durable Object (one per route+IP); falls back to the isolate counter.

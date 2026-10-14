@@ -12,6 +12,7 @@ export interface Settings {
   autoDraft: boolean; signature: string; sendDelay: number;
   stepGoal: number; units: "imperial" | "metric";
   weekStart: "sun" | "mon"; calSources: { tasks: boolean; school: boolean; district: boolean; google: boolean }; timezone: string;
+  robot: "lively" | "calm" | "off";
 }
 export const DEFAULTS: Settings = {
   theme: "cockpit", accent: "#3ef2e0", textSize: "M", highContrast: false, reading: false, video: "on", glassOpacity: 84, uiMotion: "reduced", bgSpeed: 0.5, dv: 2, /* Rolan defaults (Oct 14): Calm background, Reduced UI motion */
@@ -23,6 +24,7 @@ export const DEFAULTS: Settings = {
   autoDraft: false, signature: "", sendDelay: 30,
   stepGoal: 8000, units: "imperial",
   weekStart: "sun", calSources: { tasks: true, school: true, district: true, google: true }, timezone: "America/New_York",
+  robot: "lively",
 };
 /** Defaults v2: values still equal to the old v1 defaults (bgSpeed 1, uiMotion "system") were never explicitly changed → adopt the new defaults. */
 export function upgradeDefaults(s: Partial<Settings>): Partial<Settings> { if (s.dv === 2) return s; const o = { ...s }; if (o.bgSpeed === 1) delete o.bgSpeed; if (o.uiMotion === "system") delete o.uiMotion; o.dv = 2; return o; }

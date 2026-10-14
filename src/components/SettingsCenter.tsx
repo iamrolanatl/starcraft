@@ -82,6 +82,7 @@ export default function SettingsCenter({ open, onClose, initialTab = "Profile" }
             <Row label="Background Video" tip="Show, hide or rotate the space background"><Seg label="Background Video" v={s.video} on={v => set({ video: v })} opts={[["on", "On"], ["off", "Off"], ["rotate", "Rotate"]]} /></Row>
             <Row label="Background Motion" tip="Video speed: 0 pauses on the poster image"><input type="range" min={0} max={1.5} step={0.25} value={s.bgSpeed} onChange={e => set({ bgSpeed: +e.target.value })} aria-label="Background Motion" /><span className="w-12 text-sm text-ash">{s.bgSpeed === 0 ? "Paused" : `${s.bgSpeed}×`}</span>
               <Seg label="Motion Presets" v={(Object.entries(BG_PRESETS).find(([, v]) => v === s.bgSpeed)?.[0] ?? "") as keyof typeof BG_PRESETS} on={k => set({ bgSpeed: BG_PRESETS[k] })} opts={Object.keys(BG_PRESETS).map(k => [k, k]) as [keyof typeof BG_PRESETS, string][]} /></Row>
+            <Row label="Robot Buddy" tip="Crystal the robot strolls on the bottom toolbar, strikes poses and cracks jokes. Calm = stays put, poses now and then."><Seg label="Robot Buddy" v={s.robot} on={v => set({ robot: v })} opts={[["lively", "Lively"], ["calm", "Calm"], ["off", "Off"]]} /></Row>
             <Row label="UI Animations" tip="Interface animation intensity (separate from video speed)"><Seg label="UI Animations" v={s.uiMotion} on={v => set({ uiMotion: v })} opts={[["system", "System"], ["off", "Off"], ["reduced", "Reduced"], ["full", "Full"]]} /></Row>
           </>}
           {tab === "Layout" && <>
