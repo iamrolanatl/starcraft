@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 // Random pool of seamless, pre-darkened 3D space loops (see public/media/bg/CREDITS.md).
 // One clip is picked per page load; only that clip is fetched. Reduced motion => poster only.
-export const BG_POOL = ["teal-nebula", "wormhole", "nebula-warp", "nebula-flythrough", "energy-tunnel", "holo-tunnel", "starfield-drift"] as const;
+export const BG_POOL = ["wormhole", "nebula-warp", "nebula-flythrough", "energy-tunnel", "holo-tunnel", "teal-drift", "galaxy-arm", "galaxy-drift", "dark-matter", "hazy-nebula"] as const;
 let chosen: string | null = null;
 function pick() {
   if (!chosen) chosen = BG_POOL[Math.floor(Math.random() * BG_POOL.length)];

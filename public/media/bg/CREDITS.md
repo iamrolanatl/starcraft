@@ -4,10 +4,13 @@ Clips were re-encoded, colour-graded toward navy/cyan, darkened and loop-crossfa
 
 | File prefix | Mixkit clip | Source URL |
 |---|---|---|
-| teal-nebula | Impressive space nebula (#14185) | https://mixkit.co/free-stock-video/impressive-space-nebula-14185/ |
 | wormhole | Worm hole seen inside (#18791) | https://mixkit.co/free-stock-video/worm-hole-seen-inside-18791/ |
 | nebula-warp | Discovering the galaxy (#19218) | https://mixkit.co/free-stock-video/discovering-the-galaxy-19218/ |
 | nebula-flythrough | Traveling through the nebulae of space (#30889) | https://mixkit.co/free-stock-video/traveling-through-the-nebulae-of-space-30889/ |
 | energy-tunnel | Space energy tunnel loop video (#35304) | https://mixkit.co/free-stock-video/space-energy-tunnel-loop-video-35304/ |
 | holo-tunnel | Flying in a virtual tunnel with blue walls loop video (#19583) | https://mixkit.co/free-stock-video/flying-in-a-virtual-tunnel-with-blue-walls-loop-video-19583/ |
-| starfield-drift | Stars in space background (#1610) | https://mixkit.co/free-stock-video/stars-in-space-background-1610/ |
+| teal-drift | Traveling in space towards a star through nebulae (#26797) | https://mixkit.co/free-stock-video/traveling-in-space-towards-a-star-through-nebulae-26797/ |
+| galaxy-arm | The cosmos (#10410) | https://mixkit.co/free-stock-video/the-cosmos-10410/ |
+| galaxy-drift | Nebula texture in space (#10409) | https://mixkit.co/free-stock-video/nebula-texture-in-space-10409/ |
+| dark-matter | Flying through dark matter in space (#30563) | https://mixkit.co/free-stock-video/flying-through-dark-matter-in-space-30563/ |
+| hazy-nebula | Traveling slowly through hazy space (#31589) | https://mixkit.co/free-stock-video/traveling-slowly-through-hazy-space-31589/ |
