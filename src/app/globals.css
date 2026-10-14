@@ -365,3 +365,8 @@ html:is([data-motion=off],[data-motion=reduced]) .grade-low:not(.grade-low-bar):
 .grade-low-badge{position:relative}
 html:is([data-motion=off],[data-motion=reduced]) .grade-low-badge::after{content:"⚠";position:absolute;top:-.55em;right:-.55em;font-size:.6em;color:#fca5a5}
 @media (prefers-reduced-motion:reduce){.grade-low-badge::after{content:"⚠"!important;position:absolute;top:-.55em;right:-.55em;font-size:.6em;color:#fca5a5}}
+
+/* Hands-Free first-tap cue lives in the toolbar button (never covers applets) */
+@keyframes hf-cue{0%,100%{box-shadow:0 0 0 0 rgb(62 242 224/.0)}50%{box-shadow:0 0 0 4px rgb(62 242 224/.35)}}
+.hf-cue{animation:hf-cue 1.6s ease-in-out infinite}
+html:is([data-motion=off],[data-motion=reduced]) .hf-cue{animation:none;outline:2px solid #3ef2e0;outline-offset:1px}
