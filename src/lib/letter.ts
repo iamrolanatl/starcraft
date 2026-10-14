@@ -9,7 +9,7 @@ export function letterGrade(pct: number | null | undefined): Letter | null {
 export const LETTER_STYLE: Record<Letter, { bg: string; fg: string; ring: string; label: string }> = {
   A: { bg: "#22c55e", fg: "#04140a", ring: "#86efac", label: "A (90–100)" },
   B: { bg: "#facc15", fg: "#1a1400", ring: "#fde68a", label: "B (80–89)" },
-  C: { bg: "#c81e1e", fg: "#ffffff", ring: "#fca5a5", label: "C (74–79)" },
+  C: { bg: "#b91c1c", fg: "#ffffff", ring: "#fca5a5", label: "C (74–79)" },
   D: { bg: "#b91c1c", fg: "#ffffff", ring: "#fca5a5", label: "D (70–73)" },
   F: { bg: "#b91c1c", fg: "#ffffff", ring: "#fca5a5", label: "F (0–69)" },
 };

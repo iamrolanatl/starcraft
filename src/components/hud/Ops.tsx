@@ -97,7 +97,7 @@ export function MedalsPanel({ xp, rank, next, medals }: { xp: number; rank: stri
       <div className="flex-1"><div className="hud-label">Rank</div><div className="text-lg font-semibold text-snow">{rank}</div>
         <ProgressBar className="mt-1" value={next ? Math.min(100, xp / next * 100) : 100} label="XP to next rank" color="#7dffc8" height={6} />
         <div className="text-[10px] text-slate">{xp} XP{next ? ` · ${next - xp} to promotion` : " · max rank"}</div></div></div>
-    <ul className="grid grid-cols-3 gap-2">{medals.map(m => <li key={m.id} title={m.desc} className={`tap rounded-xl border p-2 text-center ${m.earned ? "border-mint/50 bg-mint/10" : "border-slate/30 opacity-45 grayscale"}`}><div className="text-2xl" aria-hidden>{m.icon}</div><div className="text-[10px] text-snow">{m.name}</div><div className="sr-only">{m.earned ? "earned" : "locked"}: {m.desc}</div></li>)}</ul>
+    <ul className="grid grid-cols-3 gap-2">{medals.map(m => <li key={m.id} title={m.desc} className={`tap rounded-xl border p-2 text-center ${m.earned ? "border-mint/50 bg-mint/10" : "border-dashed border-slate/40 opacity-80 grayscale"}`}><div className="text-2xl" aria-hidden>{m.icon}</div><div className="text-[10px] text-snow">{m.name}</div><div className="sr-only">{m.earned ? "earned" : "locked"}: {m.desc}</div></li>)}</ul>
   </div>);
 }
 

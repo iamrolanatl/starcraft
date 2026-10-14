@@ -28,4 +28,4 @@ export function catFor(o: { district?: string; pv?: boolean; due?: boolean; pers
   if (TEST.test(o.title)) return "test";
   return o.due || o.pv ? "due" : "school";
 }
-export const scoreColor = (s: number) => s >= 90 ? { bg: "#22c55e", fg: "#04140a" } : s >= 80 ? { bg: "#facc15", fg: "#1a1400" } : { bg: "#c81e1e", fg: "#ffffff" };
+export const scoreColor = (s: number) => s >= 90 ? { bg: "#22c55e", fg: "#04140a" } : s >= 80 ? { bg: "#facc15", fg: "#1a1400" } : { bg: "#b91c1c", fg: "#ffffff" };
