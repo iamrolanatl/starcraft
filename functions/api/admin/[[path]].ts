@@ -10,6 +10,8 @@ const GET_OPS: Record<string, (q: URLSearchParams) => [string, Record<string, un
   user: q => ["admin_user_detail", { p_uid: q.get("id") }], tables: () => ["admin_tables", {}],
   table: q => ["admin_table_info", { t: q.get("t") }],
   browse: q => ["admin_browse", { t: q.get("t"), p_col: q.get("col") || null, p_val: q.get("val") || null, p_limit: Number(q.get("limit") || 50), p_offset: Number(q.get("offset") || 0) }],
+  health: () => ["admin_health", {}],
+  logs: q => ["admin_logs", { p_q: q.get("q") || "", p_sev: q.get("sev") || "", p_src: q.get("src") || "", p_rid: q.get("rid") || "", p_limit: Number(q.get("limit") || 200), p_before: q.get("before") ? Number(q.get("before")) : null }],
   sync: () => ["admin_sync", {}], devices: () => ["sync_admin_devices", {}], audit: q => ["admin_audit_list", { p_limit: Number(q.get("limit") || 100), p_q: q.get("q") || "" }],
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
