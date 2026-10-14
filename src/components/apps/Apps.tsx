@@ -4,6 +4,8 @@ import type { Task } from "@/lib/tasks";
 import { addTask, deleteTask, updateTask, restoreTask } from "@/lib/tasks";
 import { toast, undoableDelete, TrashBtn, Empty } from "@/components/ui/kit";
 import { sfx } from "@/lib/synth";
+import { SrcBadge } from "./ExtSync";
+import { useExt, extDays, extTime, SRC } from "@/lib/ext";
 
 export interface TaskProps { tasks: Task[]; reload: () => Promise<void>; log: (s: string, tone?: "info" | "ok" | "warn") => void }
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -66,6 +68,7 @@ export function TaskList({ tasks, reload, log }: TaskProps) {
         ) : (<button className={`flex-1 text-left ${t.done ? "text-[var(--text-muted)] line-through" : "text-[#E8F4FF]"}`} onDoubleClick={() => { setEdit(t.id); setEditText(t.title); }} title="Double-click to edit">{t.title}</button>)}
         {t.due_date && <span className={`text-xs ${!t.done && t.due_date < today() ? "text-alert" : "text-ash"}`}>{fmt(t.due_date)}</span>}
         <button onClick={() => { setEdit(t.id); setEditText(t.title); }} aria-label={`Edit ${t.title}`} className="del-btn tap grid h-7 w-7 place-items-center rounded-md text-[var(--text-muted)] hover:text-cyan">✎</button>
+        <SrcBadge src="local" />
         <TrashBtn onClick={() => del([t], `Deleted "${t.title}"`)} label={t.title} />
       </li>))}
       {!view.length && <li><Empty title="No tasks yet" hint="Add one above, or say “remind me tomorrow to…”" /></li>}
@@ -96,24 +99,32 @@ export function Weather() {
 }
 
 export function Calendar({ tasks }: { tasks: Task[] }) {
-  const [off, setOff] = useState(0);
+  const [off, setOff] = useState(0); const [ext] = useExt(); const [sel, setSel] = useState<string | null>(null);
+  type C = { id: string; title: string; color: string; done: boolean; time: string; src: string };
+  const byDay = useMemo(() => { const m = new Map<string, C[]>(); const add = (k: string, c: C) => { const a = m.get(k) ?? []; a.push(c); m.set(k, a); };
+    tasks.forEach(t => t.due_date && add(t.due_date, { id: t.id, title: t.title, color: SRC.local.color, done: t.done, time: "", src: SRC.local.label }));
+    ext.forEach(x => extDays(x).forEach(k => add(k, { id: x.id + k, title: x.title, color: SRC[x.source].color, done: x.kind === "task" && (x.pending_action ? x.pending_action === "complete" : x.done), time: extTime(x), src: SRC[x.source].label + (x.kind === "task" ? " to-do" : "") })));
+    return m; }, [tasks, ext]);
   const { cells, label } = useMemo(() => {
     const n = new Date(); const first = new Date(n.getFullYear(), n.getMonth() + off, 1);
     const start = new Date(first); start.setDate(1 - first.getDay());
-    const cells = Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; return { d, k, inMonth: d.getMonth() === first.getMonth(), items: tasks.filter(t => t.due_date === k) }; });
+    const cells = Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; return { d, k, inMonth: d.getMonth() === first.getMonth(), items: byDay.get(k) ?? [] }; });
     return { cells, label: first.toLocaleDateString([], { month: "long", year: "numeric" }) };
-  }, [off, tasks]);
-  const t0 = today();
+  }, [off, byDay]);
+  const t0 = today(); const detail = sel ? byDay.get(sel) ?? [] : [];
   return (<div>
     <div className="mb-2 flex items-center justify-between"><button onClick={() => setOff(o => o - 1)} className="btn btn-ghost !py-1 text-xs" aria-label="Previous month">‹</button><span className="font-semibold text-snow">{label}</span><button onClick={() => setOff(o => o + 1)} className="btn btn-ghost !py-1 text-xs" aria-label="Next month">›</button></div>
     <div className="grid grid-cols-7 gap-px text-[10px]">
       {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} className="py-1 text-center text-slate">{d}</div>)}
-      {cells.map(c => (<div key={c.k} className={`min-h-[52px] rounded p-1 ${c.inMonth ? "bg-navy-2/50" : "opacity-40"} ${c.k === t0 ? "neon-border" : ""}`}>
+      {cells.map(c => (<button type="button" key={c.k} onClick={() => setSel(c.k)} aria-label={`${c.k}: ${c.items.length} items`} className={`min-h-[52px] rounded p-1 text-left ${c.inMonth ? "bg-navy-2/50" : "opacity-40"} ${c.k === t0 ? "neon-border" : ""} ${sel === c.k ? "ring-1 ring-cyan" : ""}`}>
         <div className={c.k === t0 ? "text-cyan" : "text-ash"}>{c.d.getDate()}</div>
-        {c.items.slice(0, 2).map(t => <div key={t.id} className={`truncate rounded px-0.5 ${t.done ? "text-slate line-through" : "bg-cyan/15 text-ice"}`} title={t.title}>{t.title}</div>)}
+        {c.items.slice(0, 2).map(t => <div key={t.id} className={`truncate rounded px-0.5 ${t.done ? "line-through opacity-60" : ""}`} style={{ color: t.color, background: t.color + "22" }} title={`${t.title} (${t.src})`}>{t.title}</div>)}
         {c.items.length > 2 && <div className="text-slate">+{c.items.length - 2}</div>}
-      </div>))}
+      </button>))}
     </div>
+    {sel && <div className="mt-2 rounded-lg bg-[#060b18] p-2 text-sm"><div className="font-semibold">{new Date(sel + "T12:00").toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div>
+      {detail.length ? <ul className="mt-1 space-y-0.5">{detail.map(x => <li key={x.id} className="flex items-start gap-2"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: x.color }} /><span className={x.done ? "line-through opacity-60" : ""}>{x.time && <span className="text-ash">{x.time} </span>}{x.title} <span className="text-xs" style={{ color: x.color }}>({x.src})</span></span></li>)}</ul> : <p className="text-ash">Nothing scheduled.</p>}</div>}
+    <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">{(Object.keys(SRC) as (keyof typeof SRC)[]).map(k => <li key={k} className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: SRC[k].color }} />{SRC[k].label}</li>)}</ul>
   </div>);
 }
 

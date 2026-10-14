@@ -36,6 +36,8 @@ import { waitEscalation, escText } from "@/lib/escalation";
 import { safeJSON, lsRaw, lsSet } from "@/lib/safe";
 import { useSafeArea, lastPointer } from "@/lib/safearea";
 import { Boundary, useGlobalErrorHooks, OfflineBanner } from "@/components/ui/Guard";
+import { ExtTasks } from "@/components/apps/ExtSync";
+import { captureGoogleToken } from "@/lib/ext";
 import { call, Routes, type AppId, type CommandRequest, type CommandResponse } from "@/contracts/api";
 
 const META: Record<AppId, { title: string; icon: string }> = {
@@ -87,7 +89,7 @@ export default function Cockpit() {
       else if (isDemo) { setStoreDemo(true); done("demo pilot", true); }
       else setTimeout(() => c.auth.getSession().then(({ data: d }) => d.session ? done(d.session.user.email ?? "pilot") : location.replace("/#launch")), 1500);
     });
-    const { data: sub } = c.auth.onAuthStateChange((_e, s) => { if (s) done(s.user.email ?? "pilot"); });
+    const { data: sub } = c.auth.onAuthStateChange((_e, s) => { if (s) done(s.user.email ?? "pilot"); if (s?.provider_refresh_token) captureGoogleToken().then(ok => { if (ok && location.search.includes("google=connected")) { toast("Google connected: Tasks + Calendar will sync within 15 min"); history.replaceState(null, "", "/app/"); } }); });
     const mq = matchMedia("(min-width: 1100px) and (not (pointer: coarse))"); const upd = () => setDesk(mq.matches); upd(); mq.addEventListener("change", upd);
     setNight(pref("theme") === "night"); const pt = () => setPrefTick(x => x + 1); addEventListener("crystal-prefs", pt);
     return () => { sub.subscription.unsubscribe(); mq.removeEventListener("change", upd); removeEventListener("crystal-prefs", pt); };
@@ -295,7 +297,7 @@ export default function Cockpit() {
   const content = (id: AppId) => {
     switch (id) {
       case "home": return <><ErrorNote err={taskErr} /><Priorities reload={reload} tasks={alert ? tasks.filter(t => !t.done && (t.priority === 1 || (t.due_date ?? "9") < t0)) : tasks} /></>;
-      case "tasks": return <><ErrorNote err={taskErr} /><TaskList tasks={tasks} reload={reload} log={log} /></>;
+      case "tasks": return <><ErrorNote err={taskErr} /><TaskList tasks={tasks} reload={reload} log={log} /><ExtTasks /></>;
       case "weather": return <Weather />;
       case "calendar": return <Calendar tasks={tasks} />;
       case "crystal": return <ChatPanel mode="pilot" onMood={setMood} className="h-full min-h-[300px]" greeting="Hey pilot! 🚀 What are we tackling today?" />;
