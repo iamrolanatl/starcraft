@@ -50,13 +50,17 @@ function ClassCard({ u, res, shared }: { u: LearnUnit; res: LearnRes[]; shared: 
 }
 
 export default function Learn({ demo }: { demo: boolean }) {
-  const [d, setD] = useState<LearnData | null>(null);
-  useEffect(() => { loadLearn(demo).then(setD); }, [demo]);
+  const [d, setD] = useState<LearnData | null>(null); const [err, setErr] = useState("");
+  useEffect(() => { loadLearn(demo).then(setD).catch(e => setErr(String(e?.message || e))); }, [demo]);
+  if (err) return <p className="rounded-lg border border-alert/30 bg-alert/10 px-2 py-1 text-xs text-snow">Couldn&apos;t load Learn: {err}</p>;
   if (!d) return <p className="text-xs text-ash">Loading Learn…</p>;
+  if (d === "demo") return <p className="text-xs text-ash">Learn shows each class&apos;s current unit and checked study links. Sign in to see Eli&apos;s.</p>;
+  if (d === "missing") return <p className="text-xs text-ash">Learn isn&apos;t set up yet (migration 015 needs to be run).</p>;
+  if (d === "empty") return <p className="text-xs text-ash">No units researched yet. The weekly Learn refresh fills this in.</p>;
   const shared = d.resources.filter(r => r.class_name === "All");
   const units = [...d.units].sort((a, b) => (ORDER.indexOf(a.class_name) + 99) % 99 - (ORDER.indexOf(b.class_name) + 99) % 99);
   return <div className="space-y-2">
-    <p className="text-[11px] text-ash">Current units are worked out from Eli&apos;s ParentVUE assignments and Cobb&apos;s curriculum maps. Last researched {fmtD(d.researched)}.{d.origin === "snapshot" ? " Showing a built-in snapshot until migration 015 is run." : ""} Every link was checked before it was added.</p>
+    <p className="text-[11px] text-ash">Current units are worked out from Eli&apos;s ParentVUE assignments and Cobb&apos;s curriculum maps. Last researched {fmtD(d.researched)}.Every link was checked before it was added.</p>
     {units.map(u => <ClassCard key={u.class_name} u={u} res={d.resources.filter(r => r.class_name === u.class_name)} shared={u.status === "current" ? shared : []} />)}
   </div>;
 }
