@@ -4,9 +4,9 @@ const fmt = (iso: string | null | undefined) => iso ? new Date(iso).toLocaleStri
 const day = (d: string | null) => d ? new Date(d.slice(0, 10) + "T12:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }) : "no date";
 const SUBJ: [RegExp, RegExp][] = [
   [/\bmath|algebra|geometry\b/i, /math|algebra|geometry/i], [/\bscience|bio|chem|physics\b/i, /science|bio|chem|physic/i], [/\breading\b/i, /reading/i],
-  [/\b(la|ela|language arts|english|writing)\b/i, /language arts|\bela\b|english|\bla\b/i], [/\b(social studies|ss|history|civics|geography)\b/i, /social|history|civics|geograph/i],
+  [/\b(la|ela|language arts|english|writing)\b/i, /language arts|\bela\b|english|\bla\b/i], [/\b(social studies|ss|history|civics|geography)\b/i, /social|\bsoc\b|stdy|history|civics|geograph/i],
   [/\bchorus|choir|music|band|orchestra\b/i, /chorus|choir|music|band|orchestra/i], [/\bpltw|engineering|stem|robotics\b/i, /pltw|engineer|stem|robot/i],
-  [/\b(pe|p\.e\.|gym|health|physical)\b/i, /\bpe\b|physical|health|gym/i], [/\bspanish|french|german|chinese|latin\b/i, /spanish|french|german|chinese|latin/i], [/\bart\b/i, /\bart\b/i],
+  [/\b(pe|p\.e\.|gym|health|physical)\b/i, /\bpe\b|phys|health|gym/i], [/\bspanish|french|german|chinese|latin\b/i, /spanish|french|german|chinese|latin/i], [/\bart\b/i, /\bart\b/i],
 ];
 /** One row per course: latest snapshot, plus latest numeric/final grade when the latest is empty. */
 export function courseTable(g: Grade[]) {
