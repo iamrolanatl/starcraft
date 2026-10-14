@@ -56,3 +56,8 @@ export function speak(text: string, onEnd?: () => void) {
     const v = s.getVoices().find(v => /samantha|zira|female|google us english|aria|jenny/i.test(v.name)); if (v) u.voice = v; u.onend = () => onEnd?.(); u.onerror = () => onEnd?.(); s.speak(u); } catch { onEnd?.(); }
 }
 export const stopSpeech = () => { try { window.speechSynthesis?.cancel(); } catch {} };
+/** iOS only plays speech queued from a user gesture until the engine has spoken once: call from a tap. */
+export function unlockSpeech() { try { const s = window.speechSynthesis; if (!s) return; s.getVoices(); const u = new SpeechSynthesisUtterance(" "); u.volume = 0; s.speak(u); s.resume(); } catch {} }
+/** Resolves once nothing is speaking or queued (with a short grace for speech that is about to start). */
+export async function speechDone(maxMs = 60000) { const s = typeof window !== "undefined" ? window.speechSynthesis : undefined; if (!s) return; const t0 = Date.now();
+  await new Promise(r => setTimeout(r, 350)); while ((s.speaking || s.pending) && Date.now() - t0 < maxMs) await new Promise(r => setTimeout(r, 200)); }

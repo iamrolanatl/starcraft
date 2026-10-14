@@ -36,8 +36,9 @@ import { list as listRows, remove as removeRow, restore as restoreRow, insert as
 import { loadEducation, loadSyncStatus, type EduData, type SyncStatus } from "@/lib/education";
 import { schoolDay } from "@/lib/school";
 import { sb } from "@/lib/supabase";
-import { sfx, ambient, haptic, isMuted, stopSpeech, speak } from "@/lib/synth";
-import { listenOnce, wakeWord, voiceSupported, hasWebSpeech, type Listen } from "@/lib/voice";
+import { sfx, ambient, haptic, isMuted, stopSpeech, speak, unlockSpeech } from "@/lib/synth";
+import { listenOnce, voiceSupported, hasWebSpeech, type Listen } from "@/lib/voice";
+import { startHandsFree, handsFreeSupported, type HFState } from "@/lib/handsfree";
 import { loadPrefs, savePrefs, type Clarity } from "@/lib/prefs";
 import { askPilot } from "@/lib/ask";
 import { waitEscalation, escText } from "@/lib/escalation";
@@ -289,10 +290,13 @@ export default function Cockpit() {
       onEnd: () => { setListening(false); ptt.current = null; setMood(m => m === "thinking" ? "idle" : m); } });
   };
   useEffect(() => () => { ptt.current?.stop(); clearTimeout(capT.current); }, []);
-  useEffect(() => { if (!handsFree) return; const w = wakeWord(t => runVoice.current(t), t => showCap(t, 3000), m => { toast(m, "warn"); setHandsFree(false); });
-    if (!w) { toast("Hands-free needs a browser with live speech recognition (Chrome/Edge/Safari). Use push-to-talk instead.", "warn"); setHandsFree(false); return; }
-    showCap("Hands-free on. Say “Hey Crystal…”", 3000); return () => w.stop(); }, [handsFree]);
-  useEffect(() => { if (!ready) return; loadPrefs().then(p => { setClarity(p.glass ?? "balanced"); if (p.win) setWinPref(p.win); }); }, [ready, user, demo]);
+  const [hf, setHf] = useState<HFState>({ kind: "off" });
+  const setHandsFreeOn = (v: boolean) => { if (v) { unlockSpeech(); stopSpeech(); } setHandsFree(v); savePrefs({ handsFree: v }); if (!v) setHf({ kind: "off" }); };
+  useEffect(() => { if (!handsFree) return;
+    if (!handsFreeSupported()) { setHf({ kind: "error", text: "Voice isn't supported in this browser.", hint: "Use Chrome or Safari, or type your command." }); setHandsFree(false); return; }
+    const w = startHandsFree(async t => { setCmd(t); await execCommand(t, true); }, s => { setHf(s); if (s.kind === "error") console.warn("[hands-free]", s.text); }, () => setHandsFree(false));
+    return () => w.stop(); }, [handsFree]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!ready) return; loadPrefs().then(p => { setClarity(p.glass ?? "balanced"); if (p.win) setWinPref(p.win); if (p.handsFree) { setHf({ kind: "error", text: "Hands-Free was on last time.", hint: "Tap Start to resume (browsers need a tap to use the mic)." }); } }); }, [ready, user, demo]);
   const [coarse, setCoarse] = useState(false); useEffect(() => { setCoarse(matchMedia("(pointer: coarse)").matches); }, []);
   const safeRect = useSafeArea(wins.some(w => !w.minimized && w.max));
   const winRect = useMemo(() => { if (!safeRect || !desk || winPref !== "normal") return safeRect; const w = Math.min(safeRect.w, Math.max(560, Math.round(safeRect.w * 0.62))), h = Math.min(safeRect.h, Math.max(420, Math.round(safeRect.h * 0.8)));
@@ -365,13 +369,19 @@ export default function Cockpit() {
       <div className="pointer-events-none fixed inset-0 z-[1]" style={{ boxShadow: `inset 0 0 160px ${DEFCON_COLOR[level as 1]}22` }} />
       <div ref={sparkRoot} className="pointer-events-none fixed inset-0 z-[90]" />
       {warp && <Warp on={warp} />}<Toaster /><OfflineBanner />
+      {(handsFree || hf.kind === "error") && <div role="status" aria-live="polite" data-testid="hf-bar" className="fixed inset-x-0 bottom-[190px] z-[49] mx-auto flex w-fit max-w-[94vw] items-center gap-2 rounded-2xl border border-cyan/40 bg-navy/90 px-3 py-1.5 text-sm text-[#E8F4FF]">
+        <span aria-hidden>{hf.kind === "error" ? "⚠️" : hf.kind === "speaking" ? "🔊" : hf.kind === "thinking" ? "💭" : "🎙️"}</span>
+        <span className="min-w-0"><b>{handsFree ? "Hands-Free On" : "Hands-Free Off"}</b> · {({ off: "Off", starting: "Starting mic…", listening: hf.text ? `Listening: ${hf.text}` : "Listening…", heard: `Heard: “${hf.text}”`, thinking: hf.text === "Transcribing…" ? "Transcribing…" : "Thinking…", speaking: "Speaking…", error: hf.text } as Record<HFState["kind"], string | undefined>)[hf.kind]}{hf.hint && <span className="block text-xs text-[#a9afc0]">{hf.hint}</span>}</span>
+        {handsFree ? <button className="btn btn-ghost px-2 py-0.5 text-xs" title="Stop Hands-Free" onClick={() => setHandsFreeOn(false)}>Stop</button> : <button className="btn btn-ghost px-2 py-0.5 text-xs" title="Start Hands-Free" onClick={() => setHandsFreeOn(true)}>Start</button>}
+        {!handsFree && <button className="btn btn-ghost px-2 py-0.5 text-xs" title="Dismiss" aria-label="Dismiss" onClick={() => setHf({ kind: "off" })}>✕</button>}</div>}
       {caption && <div role="status" aria-live="polite" className="caption-bar fixed inset-x-0 bottom-[150px] z-[48] mx-auto w-fit max-w-[92vw] rounded-full border border-cyan/40 bg-navy/90 px-4 py-1.5 text-center text-sm text-[#E8F4FF]">{listening && <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-alert" aria-hidden />}{caption}</div>}
       {settings && <div role="dialog" aria-label="Settings" className="glass fixed right-3 top-14 z-[50] w-72 rounded-2xl p-4 text-sm">
         <h2 className="mb-2 font-semibold text-[#E8F4FF]">Settings</h2>
         <fieldset><legend className="hud-label mb-1">Glass clarity</legend>
           <div className="grid grid-cols-3 gap-1">{(["clear", "balanced", "solid"] as Clarity[]).map(c => <label key={c} className={`cursor-pointer rounded-md border px-2 py-1 text-center capitalize ${clarity === c ? "border-cyan bg-cyan/15 text-cyan" : "border-slate/50"}`}><input type="radio" name="clarity" className="sr-only" checked={clarity === c} onChange={() => { setClarity(c); savePrefs({ glass: c }); }} />{c}</label>)}</div>
           <input type="range" min={0} max={2} step={1} value={["clear", "balanced", "solid"].indexOf(clarity)} onChange={e => { const c = (["clear", "balanced", "solid"] as Clarity[])[Number(e.target.value)]; setClarity(c); savePrefs({ glass: c }); }} aria-label="Glass clarity slider" className="mt-2 w-full accent-cyan" /></fieldset>
-        <label className="mt-3 flex items-center justify-between gap-2">Hands-free “Hey Crystal”<input type="checkbox" checked={handsFree} onChange={e => setHandsFree(e.target.checked)} /></label>
+        <label className="mt-3 flex items-center justify-between gap-2">Hands-Free Voice (talk, Crystal answers aloud)<input type="checkbox" checked={handsFree} onChange={e => setHandsFreeOn(e.target.checked)} /></label>
+        <p className="mt-1 text-xs text-slate">Say “stop” or tap Stop to end. The mic pauses while Crystal speaks.</p>
         <p className="mt-1 text-xs text-slate">Voice is transcribed live and never recorded or stored.</p>
         <button className="btn btn-ghost mt-3 w-full text-xs" onClick={() => setSettings(false)}>Close</button></div>}
       <header data-safe-top className="glass sticky top-0 z-30 !rounded-none border-x-0 border-t-0">
@@ -379,7 +389,7 @@ export default function Cockpit() {
           <button onClick={goHome} className="neon font-bold tracking-[.3em]" aria-label="Crystal home">◆ CRYSTAL</button>
           <form onSubmit={e => { e.preventDefault(); execCommand(cmd.trim()); }} className="order-3 flex w-full gap-2 sm:order-none sm:w-auto sm:flex-1">
             <input ref={cmdRef} value={cmd} onChange={e => setCmd(e.target.value)} className="input py-1.5 text-sm" placeholder='Command Crystal… "add milk to shopping list" · press / or ⌘K' aria-label="Command bar" maxLength={300} enterKeyHint="go" />
-            <MicBtn on={listening} onClick={toggleMic} />
+            <MicBtn on={listening} onClick={toggleMic} /><button onClick={() => setHandsFreeOn(!handsFree)} aria-pressed={handsFree} title={handsFree ? "Hands-Free On: Tap To Stop" : "Hands-Free Voice: Tap To Start"} className={`btn btn-ghost px-2 text-xs ${handsFree ? "border-cyan text-cyan" : ""}`}>{handsFree ? "● Hands-Free" : "Hands-Free"}</button>
             <button className="btn btn-primary !py-1.5 text-sm" disabled={cmdBusy}>{cmdBusy ? "…" : "Go"}</button>
           </form>
           <button onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open command palette"><kbd>⌘K</kbd></button>
