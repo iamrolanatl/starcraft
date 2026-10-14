@@ -27,7 +27,7 @@ export default function SpaceBackground({ dim = 0.35 }: { dim?: number }) {
         <video ref={a} className={style} style={{ opacity: front === 0 ? 1 : 0 }} src="/media/nebula.mp4" poster="/media/nebula-poster.jpg" muted playsInline autoPlay preload="auto" onEnded={e => e.currentTarget.pause()} />
         <video ref={b} className={style} style={{ opacity: front === 1 ? 1 : 0 }} src="/media/nebula.mp4" muted playsInline preload="auto" onEnded={e => e.currentTarget.pause()} />
       </>)}
-      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, rgba(6,11,26,${dim * 0.5}) 0%, rgba(6,11,26,${dim + 0.35}) 100%)` }} />
+      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, rgba(6,11,26,${dim * 0.2}) 0%, rgba(6,11,26,${dim + 0.15}) 100%)` }} />
       <div className="absolute inset-0 scanlines" />
     </div>
   );
