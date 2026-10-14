@@ -108,8 +108,10 @@ export default function Cockpit() {
     if (pref("tour") !== "done") setTour(true); else if (pref("brief-date") !== ymd()) setBrief(true);
     return () => { un(); clearInterval(iv); };
   }, [ready, demo, reload, loadMods, loadEdu, log]);
-  const [idle, setIdle] = useState(false);
-  useEffect(() => { const w = window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }; const f = () => setIdle(true); if (w.requestIdleCallback) w.requestIdleCallback(f, { timeout: 2500 }); else setTimeout(f, 1200); }, []);
+  // Progressive mount: stage 0 = shell, 1 = HUD, 2.. = home applets one per idle slice (keeps main-thread tasks short).
+  const [stage, setStage] = useState(0); const idle = stage > 0;
+  useEffect(() => { if (stage > 5) return; const w = window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (n: number) => void };
+    const f = () => setStage(s => s + 1); if (w.requestIdleCallback) { const id = w.requestIdleCallback(f, { timeout: stage === 0 ? 1500 : 400 }); return () => w.cancelIdleCallback?.(id); } const t = setTimeout(f, stage === 0 ? 800 : 120); return () => clearTimeout(t); }, [stage]);
   useGlobalErrorHooks();
 
   /* derived data */
@@ -325,6 +327,7 @@ export default function Cockpit() {
   const globeNodes = [{ id: "tasks" as AppId, icon: "✓", label: "Tasks", count: open.length, hot: overdue.length > 0 }, ...squad.filter(q => q.id !== "home").map(q => ({ id: q.id, icon: META[q.id].icon, label: q.label, count: contacts.filter(c => c.sector === ["home", "health", "comms", "education", "finance", "shopping"].indexOf(q.id)).length, hot: q.status === "warn" })), { id: "ocr" as AppId, icon: "📷", label: "Scan", count: 0, hot: false }];
 
   const content = (id: AppId) => {
+    if (HOME.includes(id) && stage < 2 + HOME.indexOf(id)) return <Ld />;
     switch (id) {
       case "home": return <><ErrorNote err={taskErr} /><Priorities reload={reload} tasks={alert ? tasks.filter(t => !t.done && (t.priority === 1 || (t.due_date ?? "9") < t0)) : tasks} /></>;
       case "tasks": return <><ErrorNote err={taskErr} /><TaskList tasks={tasks} reload={reload} log={log} /><ExtTasks /></>;
@@ -423,9 +426,9 @@ export default function Cockpit() {
         onMin={() => minimize(maxed.id)} onClose={() => close(maxed.id)} onToggleMax={toggleFull} canFloat={desk}>{content(maxed.id)}</Applet>}
 
       {focusEnd && <ShieldsTimer endsAt={focusEnd} total={25 * 60000} onEnd={shieldsDone} onAbort={() => { setFocusEnd(null); log("Shields down (aborted).", "info"); sfx("close"); }} />}
-      <Boundary name="HUD" compact><HudBar pilot={demo ? "demo pilot" : (user?.split("@")[0] ?? "pilot")} mood={mood} onPilot={() => { openApp("crystal"); react("wave"); sfx("chirp"); }} squad={squad} contacts={contacts} tactical={tactical}
+      <Boundary name="HUD" compact>{!idle ? <nav data-safe-bottom aria-label="HUD loading" className="fixed inset-x-0 bottom-0 z-30 h-16" /> : <HudBar pilot={demo ? "demo pilot" : (user?.split("@")[0] ?? "pilot")} mood={mood} onPilot={() => { openApp("crystal"); react("wave"); sfx("chirp"); }} squad={squad} contacts={contacts} tactical={tactical}
         radar={blips} pulse={pulse} defcon={{ level, reasons: manualAlert ? ["Manual red alert", ...dc.reasons] : dc.reasons }} bars={bars} feedsMuted={!!focusEnd}
-        abilities={abilities} feed={feed} onCloseAll={closeAll} hotkey={(id: AppId) => { const i = ORDER.indexOf(id); return i >= 0 ? `Alt+${i + 1}` : ""; }} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={wins} onRestore={id => openApp(id)} /></Boundary>
+        abilities={abilities} feed={feed} onCloseAll={closeAll} hotkey={(id: AppId) => { const i = ORDER.indexOf(id); return i >= 0 ? `Alt+${i + 1}` : ""; }} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={wins} onRestore={id => openApp(id)} />}</Boundary>
       <Boundary name="Overlays" compact><CommandPalette open={palette} onClose={() => setPalette(false)} actions={actions} onFreeText={t => execCommand(t)} />
       <Tour open={tour} onDone={() => { setTour(false); if (pref("brief-date") !== ymd()) setBrief(true); }} />
       <Briefing open={brief} onClose={() => { setBrief(false); setPref("brief-date", ymd()); }} name={demo ? "pilot" : (user?.split("@")[0] ?? "pilot")} objectives={objectives} defcon={level} weather="" />

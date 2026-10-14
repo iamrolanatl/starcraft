@@ -50,7 +50,7 @@ export function ambient(level: number | null) {
     amb.lfo.frequency.setTargetAtTime(.2 + tense * 2.6, t, .5); amb.g.gain.setTargetAtTime(.012 + tense * .018, t, .8);
   } catch {}
 }
-export function haptic(p: number | number[] = 12) { try { if (!matchMedia("(prefers-reduced-motion: reduce)").matches) navigator.vibrate?.(p); } catch {} }
+export function haptic(p: number | number[] = 12) { try { const ua = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation; if (ua && !ua.hasBeenActive) return; if (!matchMedia("(prefers-reduced-motion: reduce)").matches) navigator.vibrate?.(p); } catch {} }
 export function speak(text: string, onEnd?: () => void) {
   try { const s = window.speechSynthesis; if (!s || muted) { onEnd?.(); return; } s.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.04; u.pitch = 1.35;
     const v = s.getVoices().find(v => /samantha|zira|female|google us english|aria|jenny/i.test(v.name)); if (v) u.voice = v; u.onend = () => onEnd?.(); u.onerror = () => onEnd?.(); s.speak(u); } catch { onEnd?.(); }
