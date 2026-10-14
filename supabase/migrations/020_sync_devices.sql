@@ -47,16 +47,28 @@ create table if not exists public.sync_logs (
   step text check (char_length(step) <= 30), msg text not null check (char_length(msg) <= 1000));
 create index if not exists sync_logs_run on public.sync_logs (run_id, id);
 
+alter table public.sync_runs add column if not exists slot timestamptz;
+alter table public.sync_runs add column if not exists target_device uuid;
+-- Leader lease: one ParentVUE login per family per scheduled slot, even with several paired computers.
+create table if not exists public.sync_leases (
+  family_id uuid not null references public.families(id) on delete cascade,
+  slot timestamptz not null,
+  device_id uuid references public.sync_devices(id) on delete set null,
+  claimed_at timestamptz not null default now(), takeovers int not null default 0, done_at timestamptz,
+  primary key (family_id, slot));
+
 create table if not exists public.sync_pair_attempts (ip text primary key, failures int not null default 0, win timestamptz not null default now());
 
 -- ---------- RLS: family owner reads its own devices/runs/logs; nobody writes directly ----------
 do $$ declare t text; begin
-  foreach t in array array['sync_pairing_codes','sync_devices','sync_runs','sync_logs','sync_pair_attempts'] loop
+  foreach t in array array['sync_pairing_codes','sync_devices','sync_runs','sync_logs','sync_pair_attempts','sync_leases'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);
   end loop; end $$;
 grant select (id, family_id, name, platform, agent_version, key_hint, child_ids, created_at, last_seen_at, rotated_at, revoked_at) on public.sync_devices to authenticated;
-grant select on public.sync_runs, public.sync_logs to authenticated;
+grant select on public.sync_runs, public.sync_logs, public.sync_leases to authenticated;
+drop policy if exists "sync leases owner" on public.sync_leases;
+create policy "sync leases owner" on public.sync_leases for select to authenticated using (family_id = (select public.my_family_id()));
 grant select (id, family_id, hint, child_ids, created_at, expires_at, used_at, device_id) on public.sync_pairing_codes to authenticated;
 drop policy if exists "sync devices owner" on public.sync_devices;
 create policy "sync devices owner" on public.sync_devices for select to authenticated using (family_id = (select public.my_family_id()));
@@ -100,6 +112,22 @@ begin
   return d; end $$;
 revoke all on function public.sync_device(text) from public, anon, authenticated;
 
+-- primary = active device with the most recent successful run (ties: most recently seen); the rest are standby.
+create or replace function public.sync_device_roles(p_family uuid) returns table (device_id uuid, role text, last_ok_at timestamptz)
+language sql stable security definer set search_path = '' as $$
+  with d as (select x.id, x.last_seen_at, (select max(r.finished_at) from public.sync_runs r where r.device_id = x.id and r.status = 'ok') as ok
+             from public.sync_devices x where x.family_id = p_family and x.revoked_at is null)
+  select id, case when row_number() over (order by ok desc nulls last, last_seen_at desc nulls last) = 1 then 'primary' else 'standby' end, ok from d $$;
+revoke all on function public.sync_device_roles(uuid) from public, anon, authenticated;
+
+create or replace function public.sync_my_devices() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', d.id, 'name', d.name, 'platform', d.platform, 'agent_version', d.agent_version, 'child_ids', d.child_ids,
+    'last_seen_at', d.last_seen_at, 'revoked_at', d.revoked_at, 'created_at', d.created_at, 'role', coalesce(r.role, 'revoked'), 'last_ok_at', r.last_ok_at)
+    order by (r.role = 'primary') desc nulls last, d.created_at desc), '[]'::jsonb)
+  from public.sync_devices d left join public.sync_device_roles(d.family_id) r on r.device_id = d.id
+  where d.family_id = (select public.my_family_id()) $$;
+
 -- ---------- parent RPCs ----------
 create or replace function public.sync_pair_create(p_child_ids uuid[]) returns jsonb
 language plpgsql volatile security definer set search_path = '' as $$
@@ -133,7 +161,9 @@ begin
   if r is not null then return jsonb_build_object('run_id', r, 'already', true); end if;
   select count(*) into n from public.sync_runs where child_id = p_child and trigger = 'manual' and requested_at > now() - interval '1 hour';
   if n >= 6 then raise exception 'Sync Now limit reached (6 per hour)' using errcode = 'P0429'; end if;
-  insert into public.sync_runs (family_id, child_id, trigger, requested_by) values (fam, p_child, 'manual', auth.uid()) returning id into r;
+  insert into public.sync_runs (family_id, child_id, trigger, requested_by, target_device)
+    values (fam, p_child, 'manual', auth.uid(), (select x.device_id from public.sync_device_roles(fam) x join public.sync_devices d on d.id = x.device_id
+                                                 where p_child = any(d.child_ids) order by (x.role = 'primary') desc, d.last_seen_at desc nulls last limit 1)) returning id into r;
   return jsonb_build_object('run_id', r, 'already', false);
 end $$;
 
@@ -171,7 +201,7 @@ begin
   if not public.sync_admin_ok() then raise exception 'admin_forbidden' using errcode = '42501'; end if;
   return (select coalesce(jsonb_agg(jsonb_build_object('id', d.id, 'family_id', d.family_id, 'owner_email', u.email, 'name', d.name, 'platform', d.platform,
     'agent_version', d.agent_version, 'key_hint', d.key_hint, 'child_ids', d.child_ids, 'created_at', d.created_at, 'last_seen_at', d.last_seen_at,
-    'revoked_at', d.revoked_at, 'runs_24h', (select count(*) from public.sync_runs r where r.device_id = d.id and r.requested_at > now() - interval '24 hours'),
+    'revoked_at', d.revoked_at, 'role', coalesce((select x.role from public.sync_device_roles(d.family_id) x where x.device_id = d.id), 'revoked'), 'runs_24h', (select count(*) from public.sync_runs r where r.device_id = d.id and r.requested_at > now() - interval '24 hours'),
     'last_run', (select jsonb_build_object('status', r.status, 'at', coalesce(r.finished_at, r.started_at), 'error', r.error) from public.sync_runs r where r.device_id = d.id order by r.requested_at desc limit 1))
     order by d.created_at desc), '[]'::jsonb)
     from public.sync_devices d join public.families f on f.id = d.family_id left join auth.users u on u.id = f.owner);
@@ -214,12 +244,14 @@ begin
   if p_version is not null then update public.sync_devices set agent_version = left(p_version, 20) where id = d.id; end if;
   update public.sync_runs set status = 'expired', finished_at = now() where family_id = d.family_id and child_id = any(d.child_ids) and status = 'queued' and requested_at < now() - interval '30 minutes';
   select coalesce(jsonb_agg(jsonb_build_object('run_id', id, 'child_id', child_id, 'trigger', trigger) order by requested_at), '[]'::jsonb) into cmds
-    from public.sync_runs where family_id = d.family_id and child_id = any(d.child_ids) and status = 'queued';
+    from public.sync_runs r where r.family_id = d.family_id and r.child_id = any(d.child_ids) and r.status = 'queued'
+      and (r.target_device is null or r.target_device = d.id or r.requested_at < now() - interval '2 minutes'
+           or not exists (select 1 from public.sync_devices t where t.id = r.target_device and t.revoked_at is null and t.last_seen_at > now() - interval '2 minutes'));
   return jsonb_build_object('device_id', d.id, 'commands', cmds,
     'children', (select jsonb_agg(jsonb_build_object('id', id, 'name', first_name, 'grade', grade)) from public.children where id = any(d.child_ids)));
 end $$;
 
-create or replace function public.sync_run_start(p_key text, p_child uuid, p_run uuid default null, p_trigger text default 'schedule') returns jsonb
+create or replace function public.sync_run_start(p_key text, p_child uuid, p_run uuid default null, p_trigger text default 'schedule', p_slot timestamptz default null) returns jsonb
 language plpgsql volatile security definer set search_path = '' as $$
 declare d public.sync_devices := public.sync_device(p_key); r uuid;
 begin
@@ -229,10 +261,30 @@ begin
       where id = p_run and child_id = p_child and family_id = d.family_id and status = 'queued' returning id into r;
     if r is null then raise exception 'command not found or already taken' using errcode = '22023'; end if;
   else
-    insert into public.sync_runs (family_id, child_id, device_id, trigger, status, started_at)
-      values (d.family_id, p_child, d.id, case when p_trigger in ('schedule','first_run') then p_trigger else 'schedule' end, 'running', now()) returning id into r;
+    if p_slot is not null and not exists (select 1 from public.sync_leases where family_id = d.family_id and slot = p_slot and device_id = d.id and done_at is null) then
+      raise exception 'not the leader for this slot' using errcode = '42501'; end if;
+    insert into public.sync_runs (family_id, child_id, device_id, trigger, status, started_at, slot)
+      values (d.family_id, p_child, d.id, case when p_trigger in ('schedule','first_run') then p_trigger else 'schedule' end, 'running', now(), p_slot) returning id into r;
   end if;
   return jsonb_build_object('run_id', r); end $$;
+
+-- Leader lease for a scheduled slot (05:40 / 17:40 local). First claimer wins and is the only device that logs in to
+-- ParentVUE. If the leader hasn't finished within 10 minutes of claiming, the next claimer takes over (counted in takeovers).
+create or replace function public.sync_claim(p_key text, p_slot timestamptz) returns jsonb
+language plpgsql volatile security definer set search_path = '' as $$
+declare d public.sync_devices := public.sync_device(p_key); l public.sync_leases;
+begin
+  if p_slot is null or p_slot > now() + interval '5 minutes' or p_slot < now() - interval '12 hours' then raise exception 'bad slot' using errcode = '22023'; end if;
+  insert into public.sync_leases (family_id, slot, device_id) values (d.family_id, p_slot, d.id) on conflict do nothing;
+  select * into l from public.sync_leases where family_id = d.family_id and slot = p_slot for update;
+  if l.done_at is not null then return jsonb_build_object('leader', false, 'done', true, 'by', l.device_id); end if;
+  if l.device_id = d.id then return jsonb_build_object('leader', true, 'done', false); end if;
+  if l.device_id is null or l.claimed_at < now() - interval '10 minutes'
+     or exists (select 1 from public.sync_devices x where x.id = l.device_id and x.revoked_at is not null) then
+    update public.sync_leases set device_id = d.id, claimed_at = now(), takeovers = takeovers + 1 where family_id = l.family_id and slot = l.slot;
+    return jsonb_build_object('leader', true, 'done', false, 'takeover', true); end if;
+  return jsonb_build_object('leader', false, 'done', false, 'retry_after', greatest(0, extract(epoch from (l.claimed_at + interval '10 minutes' - now()))::int));
+end $$;
 
 create or replace function public.sync_log(p_key text, p_run uuid, p_lines jsonb) returns jsonb
 language plpgsql volatile security definer set search_path = '' as $$
@@ -255,6 +307,11 @@ begin
     counts = coalesce(counts, '{}') || coalesce(p_counts, '{}'), error = public.sync_mask(p_error)
     where id = p_run and device_id = d.id and status = 'running' returning id into r;
   if r is null then raise exception 'run not active' using errcode = '22023'; end if;
+  if p_status = 'ok' then
+    update public.sync_leases l set done_at = now() from public.sync_runs x
+      where x.id = r and x.slot is not null and l.family_id = x.family_id and l.slot = x.slot and l.device_id = d.id
+        and not exists (select 1 from unnest(d.child_ids) c where not exists (select 1 from public.sync_runs y where y.device_id = d.id and y.slot = x.slot and y.child_id = c and y.status = 'ok'));
+  end if;
   return jsonb_build_object('ok', true); end $$;
 
 -- Upload one child's normalized pull. Rows are forced to the family owner + that child's edu_students row.
@@ -326,9 +383,9 @@ begin
   return jsonb_build_object('ok', true, 'counts', cnt);
 end $$;
 
-revoke all on function public.sync_pair_create(uuid[]), public.sync_request_now(uuid), public.sync_status(), public.sync_device_revoke(uuid), public.sync_admin_devices(),
-  public.sync_pair_exchange(text, text, text, text, text), public.sync_rotate(text), public.sync_poll(text, text), public.sync_run_start(text, uuid, uuid, text),
+revoke all on function public.sync_my_devices(), public.sync_pair_create(uuid[]), public.sync_request_now(uuid), public.sync_status(), public.sync_device_revoke(uuid), public.sync_admin_devices(),
+  public.sync_pair_exchange(text, text, text, text, text), public.sync_rotate(text), public.sync_poll(text, text), public.sync_run_start(text, uuid, uuid, text, timestamptz), public.sync_claim(text, timestamptz),
   public.sync_log(text, uuid, jsonb), public.sync_run_finish(text, uuid, text, jsonb, text), public.sync_upload(text, uuid, uuid, jsonb), public.sync_admin_ok() from public;
-grant execute on function public.sync_pair_create(uuid[]), public.sync_request_now(uuid), public.sync_status(), public.sync_device_revoke(uuid), public.sync_admin_devices(), public.sync_admin_ok() to authenticated;
-grant execute on function public.sync_pair_exchange(text, text, text, text, text), public.sync_rotate(text), public.sync_poll(text, text), public.sync_run_start(text, uuid, uuid, text),
+grant execute on function public.sync_pair_create(uuid[]), public.sync_request_now(uuid), public.sync_status(), public.sync_device_revoke(uuid), public.sync_admin_devices(), public.sync_admin_ok(), public.sync_my_devices() to authenticated;
+grant execute on function public.sync_pair_exchange(text, text, text, text, text), public.sync_rotate(text), public.sync_poll(text, text), public.sync_run_start(text, uuid, uuid, text, timestamptz), public.sync_claim(text, timestamptz),
   public.sync_log(text, uuid, jsonb), public.sync_run_finish(text, uuid, text, jsonb, text), public.sync_upload(text, uuid, uuid, jsonb) to anon, authenticated;

@@ -18,7 +18,8 @@ class Api:
         return j
     def pair(self, code, name, platform): return self.call("pair", {"code": code, "name": name, "platform": platform, "version": __version__})
     def poll(self): return self.call("poll", {"version": __version__}, timeout=30)
-    def start(self, child_id, run_id=None, trigger="schedule"): return self.call("start", {"child_id": child_id, "run_id": run_id, "trigger": trigger})["run_id"]
+    def start(self, child_id, run_id=None, trigger="schedule", slot=None): return self.call("start", {"child_id": child_id, "run_id": run_id, "trigger": trigger, "slot": slot})["run_id"]
+    def claim(self, slot): return self.call("claim", {"slot": slot})
     def log(self, run_id, lines): return self.call("log", {"run_id": run_id, "lines": lines})
     def upload(self, run_id, child_id, payload): return self.call("upload", {"run_id": run_id, "child_id": child_id, "payload": payload}, timeout=120)
     def finish(self, run_id, status, counts=None, error=None): return self.call("finish", {"run_id": run_id, "status": status, "counts": counts or {}, "error": error})

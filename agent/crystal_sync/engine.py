@@ -113,7 +113,7 @@ def _unlock():
         except Exception: pass
         LOCK = None
 
-def run(child_id=None, run_id=None, trigger="schedule", echo=True):
+def run(child_id=None, run_id=None, trigger="schedule", echo=True, slot=None):
     """Sync one child (child_id) or every paired child. Returns overall status string."""
     c = config.load(); key = config.secret_get("device_key")
     if not c.get("device_id") or not key: print("Crystal Sync is not paired yet. Run setup."); return "unpaired"
@@ -123,7 +123,7 @@ def run(child_id=None, run_id=None, trigger="schedule", echo=True):
     try:
         kids = [k for k in c.get("children", []) if not child_id or k["id"] == child_id]
         for kid in kids:
-            try: rid = api.start(kid["id"], run_id if child_id else None, trigger)
+            try: rid = api.start(kid["id"], run_id if child_id else None, trigger, slot)
             except ApiError as e: print(f"could not start run: {e}"); status_all = "failed"; continue
             log = runlog.RunLog(api, rid, echo); t0 = time.time(); status, counts, err = "failed", {}, None
             work = Path(tempfile.mkdtemp(prefix="crystal-sync-")); raw = work / "raw"; raw.mkdir()
@@ -173,13 +173,29 @@ def daemon(interval=30):
         time.sleep(backoff)
 
 def slot_due(now=None):
-    """Most recent 05:40 / 17:40 slot (local time)."""
-    now = now or dt.datetime.now()
+    """Most recent 05:40 / 17:40 slot (local time, timezone-aware)."""
+    now = now or dt.datetime.now().astimezone()
     slots = [now.replace(hour=h, minute=40, second=0, microsecond=0) for h in (5, 17)]
     past = [s for s in slots if s <= now]
     return max(past) if past else slots[1] - dt.timedelta(days=1)
 
+def scheduled(echo=True):
+    """Leader lease: only the device that wins (family, slot) logs in to ParentVUE. Others stand by and take over
+    if the leader hasn't finished within 10 minutes. Returns 'done', 'standby', or the run status."""
+    c = config.load(); s = slot_due()
+    if c.get("last_slot") == s.isoformat(): return "done"
+    if dt.datetime.now().astimezone() - s > dt.timedelta(hours=6): return "done"
+    api = Api(c.get("server", config.DEFAULT_SERVER), config.secret_get("device_key"))
+    j = api.claim(s.isoformat())
+    if j.get("done"):
+        c["last_slot"] = s.isoformat(); config.save(c); print(f"slot {s:%H:%M} already synced by another computer", flush=True); return "done"
+    if not j.get("leader"):
+        print(f"standby: another computer is syncing slot {s:%H:%M}; will take over in {j.get('retry_after')}s if it doesn't finish", flush=True); return "standby"
+    print(f"leader for slot {s:%H:%M}{' (takeover)' if j.get('takeover') else ''}", flush=True)
+    st = run(trigger="schedule", echo=echo, slot=s.isoformat())
+    if st == "ok": c = config.load(); c["last_slot"] = s.isoformat(); config.save(c)
+    return st
+
 def catch_up():
-    c = config.load(); s = slot_due().isoformat()
-    if c.get("last_slot") != s and dt.datetime.now() - slot_due() < dt.timedelta(hours=6):
-        c["last_slot"] = s; config.save(c); run(trigger="schedule")
+    try: scheduled(echo=False)
+    except ApiError as e: print(f"claim: {e}", flush=True)

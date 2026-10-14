@@ -11,10 +11,11 @@ const s = (v: unknown, n: number) => String(v ?? "").slice(0, n);
 const OPS: Record<string, (b: B, key: string, ip: string) => [string, B] | string> = {
   pair: (b, _k, ip) => ["sync_pair_exchange", { p_code: s(b.code, 20), p_name: s(b.name, 80), p_platform: s(b.platform, 40), p_version: s(b.version, 20), p_ip: ip }],
   poll: (b, key) => ["sync_poll", { p_key: key, p_version: b.version ? s(b.version, 20) : null }],
-  start: (b, key) => UUID.test(s(b.child_id, 40)) ? ["sync_run_start", { p_key: key, p_child: b.child_id, p_run: UUID.test(s(b.run_id, 40)) ? b.run_id : null, p_trigger: s(b.trigger || "schedule", 20) }] : "child_id required",
+  start: (b, key) => UUID.test(s(b.child_id, 40)) ? ["sync_run_start", { p_key: key, p_child: b.child_id, p_run: UUID.test(s(b.run_id, 40)) ? b.run_id : null, p_trigger: s(b.trigger || "schedule", 20), p_slot: b.slot ? s(b.slot, 40) : null }] : "child_id required",
   log: (b, key) => UUID.test(s(b.run_id, 40)) && Array.isArray(b.lines) ? ["sync_log", { p_key: key, p_run: b.run_id, p_lines: (b.lines as B[]).slice(0, 200) }] : "run_id + lines required",
   upload: (b, key) => UUID.test(s(b.run_id, 40)) && UUID.test(s(b.child_id, 40)) && b.payload && typeof b.payload === "object" ? ["sync_upload", { p_key: key, p_run: b.run_id, p_child: b.child_id, p_payload: b.payload }] : "run_id, child_id, payload required",
   finish: (b, key) => UUID.test(s(b.run_id, 40)) ? ["sync_run_finish", { p_key: key, p_run: b.run_id, p_status: s(b.status, 20), p_counts: b.counts && typeof b.counts === "object" ? b.counts : {}, p_error: b.error ? s(b.error, 2000) : null }] : "run_id required",
+  claim: (b, key) => b.slot ? ["sync_claim", { p_key: key, p_slot: s(b.slot, 40) }] : "slot required",
   rotate: (_b, key) => ["sync_rotate", { p_key: key }],
 };
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {

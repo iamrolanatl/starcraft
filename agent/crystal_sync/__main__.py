@@ -21,8 +21,8 @@ def main(argv=None):
     if a.cmd == "status":
         c = config.load(); print({"paired": bool(c.get("device_id")), "children": [k["name"] for k in c.get("children", [])], "last": c.get("last"), "config_dir": str(config.base_dir())}); return 0
     if a.cmd == "run":
-        if a.scheduled:   # dedupe with the daemon's catch-up
-            c = config.load(); c["last_slot"] = engine.slot_due().isoformat(); config.save(c)
+        if a.scheduled:   # leader lease: only one paired computer logs in per slot
+            st = engine.scheduled(); return 0 if st in ("ok", "done", "standby") else 1
         st = engine.run(a.child, trigger="schedule"); return 0 if st == "ok" else 1
     if a.cmd == "daemon": engine.daemon(); return 0
     if a.cmd == "install": print(schedule.install()); return 0
