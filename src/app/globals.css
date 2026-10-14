@@ -483,3 +483,20 @@ html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(
   [data-m-tabbar] > * { scroll-snap-align: start; }
   html, body { overflow-x: hidden; }
 }
+
+/* ===== Site-wide scrollbars: thin, transparent track, dark-glass thumb (applet rules above stay more specific → neon) ===== */
+:root { color-scheme: dark; --sb-thumb: rgb(120 140 180 / .28); --sb-thumb-hover: rgb(140 165 210 / .45); }
+html[data-skin="brickcity"] { --sb-thumb: rgb(30 50 90 / .28); --sb-thumb-hover: rgb(30 50 90 / .45); }
+html { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+:where(*) { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+:where(*)::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+:where(*)::-webkit-scrollbar-track { background: transparent; }
+:where(*)::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+:where(*)::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); background-clip: padding-box; }
+:where(*)::-webkit-scrollbar-corner, :where(*)::-webkit-resizer { background: transparent; }
+:where(textarea, select, input, pre, code) { color-scheme: dark; }
+html[data-skin="brickcity"] :where(textarea, select, input) { color-scheme: light; }
+/* Applet neon thumbs: subtler */
+section[aria-label$="applet"] ::-webkit-scrollbar-track { background: transparent !important; }
+section[aria-label$="applet"] ::-webkit-scrollbar-thumb { box-shadow: none !important; opacity: .8; }
+section[aria-label$="applet"], section[aria-label$="applet"] * { scrollbar-color: color-mix(in srgb, var(--neon) 65%, transparent) transparent; }
