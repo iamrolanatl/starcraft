@@ -30,7 +30,7 @@ do $$ begin
   if to_regclass('public.mail_outbox') is not null then
     alter table public.mail_outbox add column if not exists kind text;
     alter table public.mail_outbox drop constraint if exists mail_outbox_kind_chk;
-    alter table public.mail_outbox add constraint mail_outbox_kind_chk check (kind is null or (kind in ('support','alert') and lower("to") = 'iamrolan@gmail.com'));
+    alter table public.mail_outbox add constraint mail_outbox_kind_chk check (kind is null or kind = 'invite' or (kind in ('support','alert') and lower("to") = 'iamrolan@gmail.com'));
   end if; end $$;
 
 create or replace function public.health_key_ok(p_key text) returns boolean language sql stable security definer set search_path = public, extensions, pg_temp as $$
