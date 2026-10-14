@@ -414,3 +414,26 @@ html[data-calm="1"][data-video="off"] .bg-video { opacity: 1 !important; }
 .mod-scroll{scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent);padding-inline:6px}
 .mod-scroll::-webkit-scrollbar{display:none}
 header[data-safe-top]>div{min-height:0}
+
+/* ---- Robot buddy on the bottom HUD ---- */
+.robot-pose{transform-origin:50% 100%;transform:scaleX(var(--face,1))}
+.robot-walk{animation:rb-walk .5s ease-in-out infinite}
+.robot-dance{animation:rb-dance .65s ease-in-out 4}
+.robot-flex{animation:rb-flex .55s ease-in-out 4}
+.robot-sit{animation:rb-sit 3.5s ease-in-out 1 both}
+.robot-peek{animation:rb-peek 2.6s ease-in-out 1 both}
+.robot-stretch{animation:rb-stretch 2.4s ease-in-out 1}
+.robot-fall{animation:rb-fall 2.6s ease-in-out 1 both}
+.robot-spin{animation:rb-spin 1.4s ease-in-out 1}
+@keyframes rb-walk{0%,100%{transform:scaleX(var(--face,1)) translateY(0) rotate(0)}25%{transform:scaleX(var(--face,1)) translateY(-3px) rotate(-4deg)}75%{transform:scaleX(var(--face,1)) translateY(-3px) rotate(4deg)}}
+@keyframes rb-dance{0%,100%{transform:scaleX(var(--face,1)) rotate(0)}25%{transform:scaleX(var(--face,1)) rotate(-12deg) translateY(-6px)}75%{transform:scaleX(var(--face,1)) rotate(12deg) translateY(-6px)}}
+@keyframes rb-flex{0%,100%{transform:scaleX(var(--face,1)) scale(1)}50%{transform:scaleX(var(--face,1)) scale(1.18,1.08)}}
+@keyframes rb-sit{0%,100%{transform:scaleX(var(--face,1))}15%,85%{transform:scaleX(var(--face,1)) scale(1.1,.78)}}
+@keyframes rb-peek{0%,100%{transform:scaleX(var(--face,1))}20%,80%{transform:scaleX(var(--face,1)) translateY(62%) rotate(-8deg)}}
+@keyframes rb-stretch{0%,100%{transform:scaleX(var(--face,1))}40%,60%{transform:scaleX(var(--face,1)) scale(.9,1.22)}}
+@keyframes rb-fall{0%{transform:scaleX(var(--face,1))}18%,55%{transform:scaleX(var(--face,1)) rotate(88deg) translate(12%,10%)}75%{transform:scaleX(var(--face,1)) rotate(-8deg) translateY(-8px)}100%{transform:scaleX(var(--face,1))}}
+@keyframes rb-spin{to{transform:scaleX(var(--face,1)) rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.robot-walk,.robot-dance,.robot-spin,.robot-fall{animation:none}}
+/* Robot "Lively" is an explicit opt-in: keep its stroll smooth even with Reduced UI animations (OS reduce-motion / UI Off still force Calm). */
+html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(--walk-ms) !important; }
+.robot-bubble{animation:bubble .3s cubic-bezier(.34,1.56,.64,1) both}

@@ -1,4 +1,5 @@
 "use client";
+import RobotWalker from "../RobotWalker";
 import { useEffect, useState } from "react";
 import type { AppId } from "@/contracts/api";
 import { sfx, isMuted, setMuted } from "@/lib/synth";
@@ -134,6 +135,7 @@ export function HudBar({ slim, onCloseAll, hotkey, abilities, feed, blips, alert
   const bar = phone || !!slim; const compact = bar && !expanded;
   return (
     <nav data-safe-bottom aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
+      <RobotWalker />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-glow" />
       {open.some(o => o.minimized) && (
         <div className="mb-1 flex gap-1 overflow-x-auto" aria-label="Dock: minimized applets">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} title={`Open ${o.title} full screen${hotkey?.(o.id) ? ` (${hotkey(o.id)})` : ""}`} className="shrink-0 whitespace-nowrap rounded border border-cyan/30 px-2 py-0.5 text-xs text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>
