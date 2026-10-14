@@ -54,7 +54,7 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
           <button onClick={() => leave("close")} onMouseEnter={() => sfx("hover")} aria-label={`Close ${title}`} className="tap h-7 w-7 rounded-md text-ash hover:bg-alert/20 hover:text-alert">✕</button>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3" onPointerDown={gesture}>{pull > 0 && <div className="mb-1 text-center text-xs text-cyan" aria-hidden>{pull > 70 ? "↻ Release to refresh" : "↓ Pull to refresh"}</div>}<Boundary name={title}>{children}</Boundary></div>
+      <div className="applet-body min-h-0 flex-1 overflow-y-auto overscroll-contain p-3" onPointerDown={gesture}>{pull > 0 && <div className="mb-1 text-center text-xs text-cyan" aria-hidden>{pull > 70 ? "↻ Release to refresh" : "↓ Pull to refresh"}</div>}<Boundary name={title}>{children}</Boundary></div>
       {mode === "float" && <div onPointerDown={e => startDrag(e, "size")} className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize" aria-hidden style={{ background: "linear-gradient(135deg, transparent 50%, rgba(62,242,224,.6) 50%)" }} />}
     </section>
   </>);

@@ -66,7 +66,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Due soon</div><div className="font-mono text-lg text-cyan">{upcoming.length}</div></div>
       <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Absent / tardy</div><div className="font-mono text-lg text-snow">{(at.excused ?? 0) + (at.unexcused ?? 0)} / {at.tardies ?? 0}</div></div>
     </div>
-    <div role="tablist" className="flex gap-1 border-b border-cyan/15">
+    <div role="tablist" data-sticky-tabs className="flex gap-1 border-b border-cyan/15">
       {TABS.map(([id, label, n]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`-mb-px border-b-2 px-2 py-1 text-xs ${tab === id ? "border-cyan text-cyan" : "border-transparent text-ash hover:text-snow"}`}>{label}{n ? <span className="ml-1 rounded-full bg-alert/30 px-1.5 text-[10px] text-snow">{n}</span> : null}</button>)}
     </div>
     {tab === "grades" && <div className="space-y-2">

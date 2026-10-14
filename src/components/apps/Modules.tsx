@@ -35,7 +35,7 @@ export function useRows(t: Table, log: Log) {
 }
 
 const Tabs = ({ tabs, cur, set }: { tabs: string[]; cur: string; set: (s: string) => void }) => (
-  <div role="tablist" className="mb-3 flex flex-wrap gap-1">{tabs.map(t => <button key={t} role="tab" aria-selected={cur === t} onClick={() => { sfx("click"); set(t); }} className={`rounded-md px-2.5 py-1 text-xs ${cur === t ? "bg-cyan/20 text-cyan neon-border" : "text-ash hover:text-cyan"}`}>{t}</button>)}</div>
+  <div role="tablist" data-sticky-tabs className="mb-3 flex flex-wrap gap-1">{tabs.map(t => <button key={t} role="tab" aria-selected={cur === t} onClick={() => { sfx("click"); set(t); }} className={`rounded-md px-2.5 py-1 text-xs ${cur === t ? "bg-cyan/20 text-cyan neon-border" : "text-ash hover:text-cyan"}`}>{t}</button>)}</div>
 );
 const LocalNote = ({ on }: { on: boolean }) => on ? <p className="mt-2 text-[10px] text-amber-200/80">Demo data on this device only. Sign in to save for real.</p> : null;
 type RowsHook = { loaded: boolean; err: { message: string; kind?: string } | null };
