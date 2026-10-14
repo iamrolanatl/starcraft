@@ -6,6 +6,7 @@ import ChatPanel from "@/components/ChatPanel";
 import Applet from "@/components/Applet";
 import { HudBar, type Ability, type FeedItem } from "@/components/hud/Hud";
 import { Priorities, TaskList, Weather, Calendar, ComingSoon } from "@/components/apps/Apps";
+import Education from "@/components/apps/Education";
 import { listTasks, addTask, usingLocal, type Task } from "@/lib/tasks";
 import { sb } from "@/lib/supabase";
 import { sfx } from "@/lib/synth";
@@ -15,7 +16,7 @@ const META: Record<AppId, { title: string; icon: string }> = {
   home: { title: "Top Priorities", icon: "◎" }, tasks: { title: "To-Do List", icon: "✓" }, weather: { title: "Weather", icon: "☁" }, calendar: { title: "Calendar", icon: "▦" },
   crystal: { title: "Crystal Co-Pilot", icon: "🤖" }, health: { title: "Health", icon: "♥" }, comms: { title: "Communications", icon: "✉" }, education: { title: "Education", icon: "🎓" }, finance: { title: "Finance", icon: "$" }, shopping: { title: "Shopping", icon: "🛒" },
 };
-const SOON: Partial<Record<AppId, string[]>> = { health: ["Steps", "Blood glucose", "Medications"], comms: ["Mail", "Email", "Drive"], education: ["Classes", "Learn", "Check-ins", "School calendars", "Bell schedules"], finance: ["Bill payments", "Credit monitoring", "Stock tracker"], shopping: ["Shopping list", "Wish list"] };
+const SOON: Partial<Record<AppId, string[]>> = { health: ["Steps", "Blood glucose", "Medications"], comms: ["Mail", "Email", "Drive"], finance: ["Bill payments", "Credit monitoring", "Stock tracker"], shopping: ["Shopping list", "Wish list"] };
 const HOME: AppId[] = ["home", "tasks", "weather", "calendar"];
 type Win = { id: AppId; title: string; minimized: boolean };
 
@@ -72,8 +73,8 @@ export default function Cockpit() {
   const abilities: Ability[] = [
     { id: "home", icon: "⌂", label: "Home", cooldown: 0, run: goHome },
     { id: "tasks", icon: "✓", label: "Tasks", cooldown: 0, run: () => openApp("tasks") },
-    { id: "wx", icon: "☁", label: "Weather", cooldown: 0, run: () => openApp("weather") },
     { id: "cal", icon: "▦", label: "Calendar", cooldown: 0, run: () => openApp("calendar") },
+    { id: "edu", icon: "🎓", label: "School", cooldown: 0, run: () => openApp("education") },
     { id: "ai", icon: "🤖", label: "Crystal", cooldown: 0, run: () => openApp("crystal") },
     { id: "scan", icon: "◉", label: "Scan", cooldown: 8, run: () => { sfx("ping"); reload(); sparks(); log(`Scan complete: ${open.length} open, ${open.filter(t => t.due_date && t.due_date < new Date().toISOString().slice(0, 10)).length} overdue.`, "ok"); } },
     { id: "focus", icon: "⏱", label: "Focus 25", cooldown: 1500, run: () => { sfx("success"); log("Focus burn engaged: 25 minutes. Comms silenced.", "ok"); setTimeout(() => { sfx("chirp"); log("Focus burn complete. Take five, pilot.", "ok"); }, 1500000); } },
@@ -90,6 +91,7 @@ export default function Cockpit() {
       case "weather": return <Weather />;
       case "calendar": return <Calendar tasks={tasks} />;
       case "crystal": return <ChatPanel mode="pilot" onMood={setMood} className="h-[340px]" greeting="Hey pilot! 🚀 What are we tackling today?" />;
+      case "education": return <Education demo={demo} log={log} />;
       default: return <ComingSoon name={META[id].title} items={SOON[id] || []} />;
     }
   };
@@ -131,7 +133,7 @@ export default function Cockpit() {
             {(["health", "comms", "education", "finance", "shopping"] as AppId[]).map(id => (
               <button key={id} onClick={() => openApp(id)} className="glass relative rounded-xl p-3 text-left transition hover:-translate-y-0.5 hover:border-cyan/50">
                 <div className="text-xl text-cyan">{META[id].icon}</div><div className="text-sm font-semibold text-snow">{META[id].title}</div>
-                <span className="absolute right-2 top-2 rounded-full bg-slate/30 px-2 py-0.5 text-[9px] uppercase tracking-wider text-ash">Coming soon</span>
+                {id === "education" ? <span className="absolute right-2 top-2 rounded-full bg-mint/20 px-2 py-0.5 text-[9px] uppercase tracking-wider text-mint">Live</span> : <span className="absolute right-2 top-2 rounded-full bg-slate/30 px-2 py-0.5 text-[9px] uppercase tracking-wider text-ash">Coming soon</span>}
               </button>))}
           </div>
         </section>
