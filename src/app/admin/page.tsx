@@ -67,7 +67,11 @@ export default function Admin() {
   const openTable = useCallback(async (t: string, pg = 0, col = fcol, val = fval) => { setTsel(t); setPage(pg); try {
     const [i, b] = await Promise.all([call(`table?t=${encodeURIComponent(t)}`), call(`browse?t=${encodeURIComponent(t)}&offset=${pg * 50}&limit=50${col ? `&col=${encodeURIComponent(col)}&val=${encodeURIComponent(val)}` : ""}`)]);
     setTinfo(i); setBrowse(b); } catch (e) { say(`ERR ${(e as Error).message}`); } }, [call, fcol, fval, say]);
-  const loadSync = useCallback(async () => { try { setSync(await call("sync")); } catch (e) { say(`ERR ${(e as Error).message}`); } }, [call, say]);
+  const [devices, setDevices] = useState<J[] | null>(null);
+  const loadDevices = useCallback(async () => { try { const d = await call("devices"); setDevices(Array.isArray(d) ? d : []); } catch (e) { setDevices([]); say(`ERR devices: ${(e as Error).message}`); } }, [call, say]);
+  const revokeDevice = useCallback(async (id: string) => { const c = prompt("Type REVOKE to disconnect this Crystal Sync device. It stops uploading immediately."); if (c !== "REVOKE") return;
+    try { await call("revoke-device", { method: "POST", body: JSON.stringify({ id, confirm: c }) }); say(`device ${id.slice(0, 8)} revoked`); loadDevices(); } catch (e) { say(`ERR ${(e as Error).message}`); } }, [call, say, loadDevices]);
+  const loadSync = useCallback(async () => { loadDevices(); try { setSync(await call("sync")); } catch (e) { say(`ERR ${(e as Error).message}`); } }, [call, say]);
   const loadAudit = useCallback(async (qq = "") => { try { const d = await call(`audit?q=${encodeURIComponent(qq)}`); setAudit(Array.isArray(d) ? d : []); } catch (e) { say(`ERR ${(e as Error).message}`); } }, [call, say]);
   const loadFam = useCallback(async () => { try {
     const g = (t: string) => call(`browse?t=${t}&limit=200`).then(d => d.rows as J[]);
@@ -190,7 +194,17 @@ export default function Admin() {
 
       {tab === "SYNC" && <section className="grid gap-3 lg:grid-cols-2">{!sync ? <p className="text-ash">Loading…</p> : Object.entries(sync).map(([k, v]) => <div key={k} className="glass rounded-xl p-3"><h2 className="mb-2 flex items-center justify-between text-sm font-bold tracking-[.1em] text-[#ffd166]">{k.toUpperCase()}<span className="text-xs font-normal text-ash">{Array.isArray(v) ? `${v.length} · ${v.filter(failed).length} failed` : "table missing"}</span></h2>
         {Array.isArray(v) && <div className="mb-2 flex h-6 items-end gap-px">{(v as J[]).slice().reverse().map((r, i) => <span key={i} title={`${et(tsOf(r))} ${r.status ?? ""}`} className="w-1.5 flex-1 rounded-sm" style={{ height: failed(r) ? "100%" : "55%", background: failed(r) ? "#ff3b5c" : "#7dffc8", boxShadow: failed(r) ? "0 0 6px #ff3b5c" : "none" }} />)}</div>}
-        <div className="max-h-72 overflow-auto">{Array.isArray(v) && <Rows rows={v as J[]} />}</div></div>)}</section>}
+        <div className="max-h-72 overflow-auto">{Array.isArray(v) && <Rows rows={v as J[]} />}</div></div>)}
+        <div className="glass rounded-xl p-3 lg:col-span-2"><h2 className="mb-2 flex items-center justify-between text-sm font-bold tracking-[.1em] text-[#7dd3fc]">CRYSTAL SYNC DEVICES<span className="text-xs font-normal text-ash">{devices ? `${devices.filter(d => !d.revoked_at).length} active · ${devices.length} total` : "…"}</span></h2>
+          {!devices?.length ? <p className="text-xs text-ash">No devices paired yet (or 020_sync_devices.sql not run).</p> : <div className="max-h-80 overflow-auto"><table className="w-full text-left text-xs"><thead className="text-ash"><tr><th className="p-1">DEVICE</th><th className="p-1">OWNER</th><th className="p-1">CHILDREN</th><th className="p-1">LAST SEEN</th><th className="p-1">LAST RUN</th><th className="p-1">24H</th><th className="p-1" /></tr></thead><tbody>
+            {devices.map(d => { const lr = d.last_run as J | null; return <tr key={String(d.id)} className="border-t border-white/5" style={{ opacity: d.revoked_at ? .45 : 1 }}>
+              <td className="p-1 font-mono">{String(d.name)} <span className="text-ash">{String(d.platform || "")} v{String(d.agent_version || "?")} …{String(d.key_hint || "")}</span></td>
+              <td className="p-1">{String(d.owner_email || "")}</td><td className="p-1">{(d.child_ids as string[] || []).length}</td>
+              <td className="p-1">{d.last_seen_at ? et(String(d.last_seen_at)) : "never"}</td>
+              <td className="p-1" style={{ color: lr?.status === "ok" ? "#7dffc8" : lr?.status ? "#ff3b5c" : undefined }}>{lr ? `${lr.status} ${lr.at ? et(String(lr.at)) : ""}` : "—"}</td>
+              <td className="p-1">{String(d.runs_24h ?? 0)}</td>
+              <td className="p-1 text-right">{d.revoked_at ? <span className="text-ash">REVOKED</span> : <button onClick={() => revokeDevice(String(d.id))} className="rounded border border-[#ff3b5c88] px-2 py-0.5 font-bold text-[#ff3b5c]">REVOKE</button>}</td></tr>; })}
+          </tbody></table></div>}</div></section>}
 
       {tab === "AUDIT" && <section className="glass rounded-xl p-3"><form onSubmit={e => { e.preventDefault(); loadAudit((e.currentTarget.elements.namedItem("aq") as HTMLInputElement).value); }} className="mb-2 flex gap-2"><input name="aq" className="input font-mono" placeholder="filter action / target / actor" /><button className="btn btn-ghost">FILTER</button></form>
         <Rows rows={audit.map(a => ({ at: et(a.at), actor: a.actor_email, action: a.action, target: a.target, before: a.before, after: a.after }))} /></section>}

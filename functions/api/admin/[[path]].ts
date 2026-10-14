@@ -10,7 +10,7 @@ const GET_OPS: Record<string, (q: URLSearchParams) => [string, Record<string, un
   user: q => ["admin_user_detail", { p_uid: q.get("id") }], tables: () => ["admin_tables", {}],
   table: q => ["admin_table_info", { t: q.get("t") }],
   browse: q => ["admin_browse", { t: q.get("t"), p_col: q.get("col") || null, p_val: q.get("val") || null, p_limit: Number(q.get("limit") || 50), p_offset: Number(q.get("offset") || 0) }],
-  sync: () => ["admin_sync", {}], audit: q => ["admin_audit_list", { p_limit: Number(q.get("limit") || 100), p_q: q.get("q") || "" }],
+  sync: () => ["admin_sync", {}], devices: () => ["sync_admin_devices", {}], audit: q => ["admin_audit_list", { p_limit: Number(q.get("limit") || 100), p_q: q.get("q") || "" }],
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const onRequest: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -33,13 +33,17 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     const b = await body<{ t?: string; id?: string; patch?: Record<string, unknown>; confirm?: string }>(request);
     if (!b?.t || !b.id || !b.patch) return json({ error: "t, id, patch required" }, 400);
     fn = "admin_row_update"; args = { t: b.t, p_id: String(b.id), p_patch: b.patch, p_confirm: b.confirm || "" };
+  } else if (request.method === "POST" && op === "revoke-device") {
+    const b = await body<{ id?: string; confirm?: string }>(request);
+    if (!UUID.test(String(b?.id)) || b?.confirm !== "REVOKE") return json({ error: "device id + confirm REVOKE required" }, 400);
+    fn = "sync_device_revoke"; args = { p_device: b!.id };
   } else return json({ error: "unknown op" }, 404);
   if (op === "user" && !UUID.test(String(args.p_uid))) return json({ error: "bad id" }, 400);
   const r = await fetch(`${base}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: anon, authorization: `Bearer ${jwt}`, "content-type": "application/json" }, body: JSON.stringify(args) });
   const txt = await r.text();
   if (r.ok) return new Response(txt, { status: 200, headers: { "content-type": "application/json", "cache-control": "no-store" } });
   let e: { code?: string; message?: string } = {}; try { e = JSON.parse(txt); } catch { /* */ }
-  if (e.code === "PGRST202" || r.status === 404) return json({ pending: true, error: "Migration 019_admin.sql has not been applied yet." }, 503);
+  if (e.code === "PGRST202" || r.status === 404) return json({ pending: true, error: (fn.startsWith("sync_") ? "Migration 020_sync_devices.sql" : "Migration 019_admin.sql") + " has not been applied yet." }, 503);
   if (e.code === "42501") return json({ error: "forbidden" }, 403);
   if (e.code === "P0429") return json({ error: "rate limited" }, 429);
   return json({ error: String(e.message || "error").slice(0, 300) }, 400);

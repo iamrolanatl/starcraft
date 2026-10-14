@@ -12,6 +12,7 @@ import GradedAssignments from "./GradedAssignments";
 import { Schedule, AttendanceTab, Unavailable } from "./SchoolExtras";
 import { loadEducation, loadSyncStatus, requestSync, jobStatus, type EduData, type GradeRow, type SyncStatus } from "@/lib/education";
 import { sfx } from "@/lib/synth";
+import { SyncLights } from "@/components/CrystalSync";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d: string | null) => d ? new Date(d.length === 10 ? d + "T12:00" : d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—";
@@ -61,6 +62,7 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
   const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["rules", "Grading Rules"], ["learn", "Learn"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "School Inboxes"], ["more", "More School Data"], ["sync", "Sync Log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
 
   return (<div className="space-y-3 text-sm">
+    {!demo && <SyncLights compact />}
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ash">
       <span className="font-semibold text-snow">{data.student.name}</span><span>Gr {Number(data.student.grade) || data.student.grade}</span><span className="truncate">{data.student.school}</span>
       <span className="text-cyan">{data.student.reporting_period?.name}</span>

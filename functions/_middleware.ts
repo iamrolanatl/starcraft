@@ -1,6 +1,6 @@
 // Edge hardening for every request: per-IP rate limits on /api/*, security headers, and server error capture.
 // Limits are per isolate (best-effort); swap for a Durable Object / Rate Limiting binding at scale.
-const LIMITS: Record<string, [number, number]> = { "/api/chat": [20, 60], "/api/command": [40, 60], "/api/quote": [60, 60], "/api/log": [30, 60], "/api/transcribe": [15, 60], "/api/support": [12, 60], "/api/health/steps": [60, 60] };
+const LIMITS: Record<string, [number, number]> = { "/api/chat": [20, 60], "/api/command": [40, 60], "/api/quote": [60, 60], "/api/log": [30, 60], "/api/transcribe": [15, 60], "/api/support": [12, 60], "/api/health/steps": [60, 60], "/api/sync/pair": [10, 600], "/api/sync/upload": [20, 3600], "/api/sync/poll": [90, 60], "/api/sync/log": [120, 60] };
 const ADMIN_LIM: [number, number] = [90, 60];
 const hits = new Map<string, { n: number; reset: number }>();
 const SEC = {
@@ -22,7 +22,7 @@ export const onRequest: PagesFunction = async (ctx) => {
     ctx.data = { rl };
     if (n > lim[0]) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { "content-type": "application/json", "retry-after": String(Math.ceil((h.reset - now) / 1000)), ...SEC } });
     if (hits.size > 5000) for (const [kk, v] of hits) if (v.reset < now) hits.delete(kk);
-    if (ctx.request.method === "POST" && Number(ctx.request.headers.get("content-length") || 0) > (url.pathname === "/api/transcribe" ? 4_200_000 : 64_000)) return new Response(JSON.stringify({ error: "Payload too large" }), { status: 413, headers: { "content-type": "application/json" } });
+    if (ctx.request.method === "POST" && Number(ctx.request.headers.get("content-length") || 0) > (url.pathname === "/api/transcribe" || url.pathname === "/api/sync/upload" ? 4_200_000 : 64_000)) return new Response(JSON.stringify({ error: "Payload too large" }), { status: 413, headers: { "content-type": "application/json" } });
   }
   try {
     const res = await ctx.next(); const out = new Response(res.body, res);
