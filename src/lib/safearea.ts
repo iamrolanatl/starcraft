@@ -14,7 +14,7 @@ export function computeSafe(): Rect {
   document.querySelectorAll("[data-safe-bottom]").forEach(el => { const r = vis(el); if (r && r.top < bottom && r.bottom > H / 2) bottom = r.top; });
   document.querySelectorAll("[data-safe-avoid]").forEach(el => { const r = vis(el); if (!r) return; if (r.top + r.height / 2 < H / 2) top = Math.max(top, r.bottom); else bottom = Math.min(bottom, r.top); });
   const left = i.l + GAP, right = W - i.r - GAP; top += GAP; bottom -= GAP;
-  const w = Math.max(0, Math.min(right - left, 1400)), h = Math.max(120, bottom - top);
+  const w = Math.max(0, right - left), h = Math.max(120, bottom - top);
   return { x: Math.round(left + (right - left - w) / 2), y: Math.round(top), w: Math.round(w), h: Math.round(h) };
 }
 /** Re-measures with ResizeObserver on every safe-area element plus resize/orientation changes. */

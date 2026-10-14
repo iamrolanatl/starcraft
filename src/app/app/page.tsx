@@ -62,7 +62,7 @@ function tileGeo(i: number, W: number): Geo { const cols = W >= 1500 ? 3 : 2; co
 export default function Cockpit() {
   const [user, setUser] = useState<string | null>(null); const [ready, setReady] = useState(false); const [demo, setDemo] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]); const [taskErr, setTaskErr] = useState<{ message: string; kind?: string } | null>(null); const [tasksLoaded, setTasksLoaded] = useState(false);
-  const [wins, setWins] = useState<Win[]>([]); const [focus, setFocus] = useState<AppId>("home"); const zTop = useRef(10); const origin = useRef({ x: -1, y: -1 });
+  const [wins, setWins] = useState<Win[]>([]); const [focus, setFocus] = useState<AppId>("home"); const zTop = useRef(10); const [winPref, setWinPref] = useState<"full" | "normal">("full"); const winPrefRef = useRef(winPref); winPrefRef.current = winPref; const origin = useRef({ x: -1, y: -1 });
   const [manualAlert, setManualAlert] = useState(false); const [mood, setMood] = useState<Mood>("idle"); const [say, setSay] = useState("");
   const [feed, setFeed] = useState<FeedItem[]>([]); const [cmd, setCmd] = useState(""); const [cmdBusy, setCmdBusy] = useState(false);
   const [mod, setMod] = useState<Record<string, Row[]>>({}); const [edu, setEdu] = useState<EduData | null>(null); const [sync, setSync] = useState<SyncStatus | null>(null);
@@ -167,9 +167,16 @@ export default function Cockpit() {
   const doOpen = (id: AppId) => { sfx("open"); haptic(10); zTop.current += 1; const z = zTop.current;
     origin.current = { ...lastPointer };
     // v4 window manager: opening anything minimizes ALL other applets to the dock and maximizes this one into the safe area.
-    setWins(w => { w = w.map(x => x.id === id ? x : { ...x, minimized: true, max: false }); return w.some(x => x.id === id) ? w.map(x => x.id === id ? { ...x, minimized: false, max: true, z } : x) : [...w, { id, title: META[id].title, minimized: false, max: true, z, geo: savedGeo(id) ?? { x: Math.max(12, innerWidth / 2 - 300), y: 20, w: 600, h: 520 } }]; });
+    const full = !desk || winPrefRef.current !== "normal"; const g0 = { x: Math.max(12, innerWidth / 2 - 330), y: 12, w: Math.min(660, innerWidth - 24), h: 540 };
+    setWins(w => { w = w.map(x => x.id === id ? x : { ...x, minimized: true, max: false }); return w.some(x => x.id === id) ? w.map(x => x.id === id ? { ...x, minimized: false, max: full, z, geo: x.geo ?? g0 } : x) : [...w, { id, title: META[id].title, minimized: false, max: full, z, geo: savedGeo(id) ?? g0 }]; });
     setFocus(id); log(`Applet opened: ${META[id].title}`); };
   const openApp = (id: AppId) => { if (HOME.includes(id) || reduced() || wins.some(w => w.id === id && !w.minimized)) return doOpen(id); origin.current = { ...lastPointer }; setWarp(true); sfx("whoosh"); haptic([10, 20, 30]); setTimeout(() => { doOpen(id); setWarp(false); }, 520); };
+  /** Dock / module order for Alt+1–9 and cycling. */
+  const ORDER: AppId[] = [...MODULES, "crystal"];
+  const closeAll = () => { setWins(w => w.map(x => ({ ...x, minimized: true, max: false }))); sfx("whoosh"); haptic(8); log("All applets minimized: clean cockpit."); };
+  const cycle = (d: number) => { const cur = wins.find(w => !w.minimized && w.max)?.id ?? focus; const i = ORDER.indexOf(cur); const n = ORDER[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + ORDER.length) % ORDER.length]; openApp(n); };
+  const toggleFull = () => { const m = wins.find(w => !w.minimized && w.max); if (m) { if (!desk) return; unMax(m.id); setWinPref("normal"); savePrefs({ win: "normal" }); toast("Normal window size (press F for full screen)", "info"); }
+    else { const f = wins.find(w => !w.minimized && w.id === focus) ?? wins.find(w => !w.minimized && !HOME.includes(w.id)); if (f) { setWinPref("full"); savePrefs({ win: "full" }); doOpen(f.id); } } };
   const minimize = (id: AppId) => setWins(w => w.map(x => x.id === id ? { ...x, minimized: true, max: false } : x));
   const unMax = (id: AppId) => { setWins(w => w.map(x => x.id === id ? { ...x, max: false } : x)); sfx("whoosh"); };
   const close = (id: AppId) => setWins(w => w.filter(x => x.id !== id));
@@ -241,9 +248,19 @@ export default function Cockpit() {
   useEffect(() => { const h = (e: KeyboardEvent) => {
     const t = e.target as HTMLElement; const typing = /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable;
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette(p => !p); return; }
+    if (listening) return; // ignore shortcuts during voice input
+    const overlay = palette || help || settings || tour || brief;
+    if (e.key === "Escape" && !typing) { if (!e.shiftKey && overlay) { setPalette(false); setHelp(false); setSettings(false); return; } e.preventDefault(); closeAll(); return; }
     if (e.key === "Escape") { setPalette(false); setHelp(false); return; }
-    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === "/") { e.preventDefault(); cmdRef.current?.focus(); } else if (e.key === "?") setHelp(h => !h); else if (e.key.toLowerCase() === "h") goHome(); else if (e.key === "A") toggleAlert(); else if (e.key.toLowerCase() === "n") setNight(n => !n); else if (e.key.toLowerCase() === "b") setBrief(true); else if (e.key.toLowerCase() === "f") shields(); else if (e.key.toLowerCase() === "s") sweep();
+    if (typing || e.metaKey || e.ctrlKey) return;
+    // Alt+0 close all · Alt+1–9 / 1–9 open one applet maximized · Alt+←/→ cycle
+    const dig = /^Digit([0-9])$/.exec(e.code)?.[1];
+    if (e.altKey && dig === "0") { e.preventDefault(); closeAll(); return; }
+    if (dig && dig !== "0" && !e.shiftKey) { const id = ORDER[Number(dig) - 1]; if (id) { e.preventDefault(); openApp(id); } return; }
+    if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); cycle(e.key === "ArrowRight" ? 1 : -1); return; }
+    if (e.altKey) return;
+    if (e.key === "F") { shields(); return; }
+    if (e.key === "/") { e.preventDefault(); cmdRef.current?.focus(); } else if (e.key === "?") setHelp(h => !h); else if (e.key.toLowerCase() === "h") goHome(); else if (e.key === "A") toggleAlert(); else if (e.key.toLowerCase() === "n") setNight(n => !n); else if (e.key.toLowerCase() === "b") setBrief(true); else if (e.key === "f") toggleFull(); else if (e.key.toLowerCase() === "s") sweep();
   }; addEventListener("keydown", h); return () => removeEventListener("keydown", h); });
 
   // ---- voice ----
@@ -263,7 +280,7 @@ export default function Cockpit() {
   useEffect(() => { if (!handsFree) return; const w = wakeWord(t => runVoice.current(t), t => showCap(t, 3000), m => { toast(m, "warn"); setHandsFree(false); });
     if (!w) { toast("Hands-free needs a browser with live speech recognition (Chrome/Edge/Safari). Use push-to-talk instead.", "warn"); setHandsFree(false); return; }
     showCap("Hands-free on. Say “Hey Crystal…”", 3000); return () => w.stop(); }, [handsFree]);
-  useEffect(() => { if (!ready) return; loadPrefs().then(p => setClarity(p.glass ?? "balanced")); }, [ready, user, demo]);
+  useEffect(() => { if (!ready) return; loadPrefs().then(p => { setClarity(p.glass ?? "balanced"); if (p.win) setWinPref(p.win); }); }, [ready, user, demo]);
   const [coarse, setCoarse] = useState(false); useEffect(() => { setCoarse(matchMedia("(pointer: coarse)").matches); }, []);
   const safeRect = useSafeArea(wins.some(w => !w.minimized && w.max));
   if (!ready) return (<><SpaceBackground /><div className="flex h-dvh flex-col items-center justify-center gap-3"><CrystalBot size={90} mood="thinking" label="Crystal loading" /><p className="neon animate-glow font-mono">Establishing uplink…</p></div></>);
@@ -353,6 +370,7 @@ export default function Cockpit() {
           <button onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open command palette"><kbd>⌘K</kbd></button>
           <span className="ml-auto hidden max-w-[12rem] truncate text-xs text-ash md:inline">{demo ? "Demo mode" : user} · <span className="text-cyan">{RANKS[rankI]}</span></span>
           <button onClick={() => setSettings(s => !s)} aria-expanded={settings} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Settings">⚙</button>
+          <button onClick={closeAll} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Close all applets" title="Close all (Esc · Shift+Esc · Alt+0)">✕ All</button>
           <button onClick={goHome} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Home">⌂</button>
           <button onClick={logout} className="btn btn-ghost !px-2 !py-1 text-xs">Log out</button>
         </div>
@@ -360,7 +378,7 @@ export default function Cockpit() {
 
       <main className="relative z-10 mx-auto max-w-[1600px] px-3 pb-[190px] pt-3">
         {demo && <div className="mb-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-xs text-amber-200">Demo mode: sample data stays on this device. <a href="/#launch" className="underline">Sign in</a> to save for real.</div>}
-        <div data-safe-top className="mb-3 flex items-center gap-4">
+        <div className="mb-3 flex items-center gap-4">
           <div className="relative shrink-0"><div className={listening ? "listen-ring" : ""}><CrystalBot size={76} mood={listening ? "thinking" : mood} say={caption || say} onClick={() => { openApp("crystal"); react("wave"); sfx("chirp"); speakBubble("Hi pilot! Need anything? 💙"); }} label="Open Crystal co-pilot chat" /></div>
             <button onClick={toggleMic} aria-pressed={listening} aria-label={listening ? "Stop listening" : "Talk to Crystal"} className={`absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border text-sm ${listening ? "border-alert bg-alert/30 text-white" : "border-cyan/60 bg-navy/90 text-cyan"}`}>🎙</button></div>
           <div className="min-w-0"><div className="hud-label">Pilot&apos;s assistant · <span style={{ color: DEFCON_COLOR[level as 1] }}>DEFCON {level}</span></div><p className="text-snow">{greeting()}, {demo ? "pilot" : (user?.split("@")[0] ?? "pilot")}. {open.length ? `${open.length} open mission${open.length > 1 ? "s" : ""}.` : "All clear."}</p>
@@ -379,7 +397,7 @@ export default function Cockpit() {
         {desk ? (
           <div className="relative" style={{ height: `max(calc(100dvh - 330px), ${Math.max(...visible.map(w => (w.geo?.y ?? 0) + (w.geo?.h ?? 0)), 400) + 20}px)` }}>
             {visible.filter(w => !w.max).map(w => <div key={w.id} className={focusEnd && !ESSENTIAL.includes(w.id) && focus !== w.id ? "focus-dim" : ""}>
-              <Applet title={w.title} icon={META[w.id].icon} mode="float" geo={w.geo} z={w.z} onGeo={g => setGeo(w.id, g)} focused={focus === w.id} onFocus={() => front(w.id)} onMin={() => minimize(w.id)} onClose={() => close(w.id)} onToggleMax={() => doOpen(w.id)}>{content(w.id)}</Applet></div>)}
+              <Applet title={w.title} icon={META[w.id].icon} mode="float" geo={w.geo} z={w.z} onGeo={g => setGeo(w.id, g)} focused={focus === w.id} onFocus={() => front(w.id)} onMin={() => minimize(w.id)} onClose={() => close(w.id)} onToggleMax={() => { setWinPref("full"); savePrefs({ win: "full" }); doOpen(w.id); }}>{content(w.id)}</Applet></div>)}
             {!visible.filter(w => !w.max).length && !maxed && <div className="glass flex flex-col items-center rounded-2xl p-6 text-center text-ash"><CrystalBot size={64} mood="wave" label="Crystal" />All applets closed. Press <kbd className="mx-1 rounded border border-slate/50 px-1">H</kbd> or ⌂ Home to restore.</div>}
           </div>
         ) : (
@@ -390,19 +408,19 @@ export default function Cockpit() {
         )}
       </main>
       {maxed && <Applet key={`max-${maxed.id}`} title={maxed.title} icon={META[maxed.id].icon} mode="max" rect={safeRect} origin={origin.current} z={maxed.z} focused onFocus={() => setFocus(maxed.id)}
-        onMin={() => minimize(maxed.id)} onClose={() => close(maxed.id)} onToggleMax={() => unMax(maxed.id)} canFloat={desk}>{content(maxed.id)}</Applet>}
+        onMin={() => minimize(maxed.id)} onClose={() => close(maxed.id)} onToggleMax={toggleFull} canFloat={desk}>{content(maxed.id)}</Applet>}
 
       {focusEnd && <ShieldsTimer endsAt={focusEnd} total={25 * 60000} onEnd={shieldsDone} onAbort={() => { setFocusEnd(null); log("Shields down (aborted).", "info"); sfx("close"); }} />}
       <Boundary name="HUD" compact><HudBar pilot={demo ? "demo pilot" : (user?.split("@")[0] ?? "pilot")} mood={mood} onPilot={() => { openApp("crystal"); react("wave"); sfx("chirp"); }} squad={squad} contacts={contacts} tactical={tactical}
         radar={blips} pulse={pulse} defcon={{ level, reasons: manualAlert ? ["Manual red alert", ...dc.reasons] : dc.reasons }} bars={bars} feedsMuted={!!focusEnd}
-        abilities={abilities} feed={feed} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={wins} onRestore={id => openApp(id)} /></Boundary>
+        abilities={abilities} feed={feed} onCloseAll={closeAll} hotkey={(id: AppId) => { const i = ORDER.indexOf(id); return i >= 0 ? `Alt+${i + 1}` : ""; }} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={wins} onRestore={id => openApp(id)} /></Boundary>
       <Boundary name="Overlays" compact><CommandPalette open={palette} onClose={() => setPalette(false)} actions={actions} onFreeText={t => execCommand(t)} />
       <Tour open={tour} onDone={() => { setTour(false); if (pref("brief-date") !== ymd()) setBrief(true); }} />
       <Briefing open={brief} onClose={() => { setBrief(false); setPref("brief-date", ymd()); }} name={demo ? "pilot" : (user?.split("@")[0] ?? "pilot")} objectives={objectives} defcon={level} weather="" />
       <IncomingTransmission tx={tx} onAck={t => { settleTx(t, -1); sfx("success"); openApp(t.app); }} onSnooze={t => { settleTx(t, Date.now() + 3600e3); sfx("close"); toast("Transmission snoozed for 1 hour", "info"); }} /></Boundary>
       {help && <div className="fade-in fixed inset-0 z-[72] flex items-center justify-center bg-navy/70 p-4" onClick={() => setHelp(false)}><div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" className="win-in glass neon-frame w-full max-w-md rounded-2xl p-5" onClick={e => e.stopPropagation()}>
         <h2 className="mb-3 font-semibold text-snow">Keyboard shortcuts</h2>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">{[["⌘/Ctrl K", "Command palette"], ["/", "Focus command bar"], ["1–9", "Fire ability (respects cooldown)"], ["H", "Home"], ["S", "Scan sweep"], ["F", "Battle stations focus"], ["B", "Mission briefing"], ["N", "Night ops / stealth"], ["Shift A", "Red Alert"], ["Alt+Arrows", "Move focused window"], ["Esc", "Close overlays"], ["?", "This help"]].map(([k, v]) => <Fragment key={k}><dt><kbd className="rounded border border-cyan/40 px-1.5 font-mono text-xs text-cyan">{k}</kbd></dt><dd className="text-ice">{v}</dd></Fragment>)}</dl>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">{[["⌘/Ctrl K", "Command palette"], ["/", "Focus command bar"], ["1–9 · Alt+1–9", "Open applet full screen (dock order)"], ["Alt+← / Alt+→", "Previous / next applet"], ["Esc · Shift+Esc · Alt+0", "Close all applets (clean cockpit)"], ["F · double-click title", "Toggle full screen / normal size"], ["Shift+1–9", "Fire ability (respects cooldown)"], ["H", "Home"], ["S", "Scan sweep"], ["Shift+F", "Battle stations focus"], ["B", "Mission briefing"], ["N", "Night ops / stealth"], ["Shift A", "Red Alert"], ["Alt+Shift+Arrows", "Move a normal-size window"], ["Esc", "Close overlays"], ["?", "This help"]].map(([k, v]) => <Fragment key={k}><dt><kbd className="rounded border border-cyan/40 px-1.5 font-mono text-xs text-cyan">{k}</kbd></dt><dd className="text-ice">{v}</dd></Fragment>)}</dl>
         <button autoFocus className="btn btn-primary mt-4 w-full" onClick={() => setHelp(false)}>Close</button></div></div>}
     </div>
   );

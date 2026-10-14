@@ -36,13 +36,13 @@ export function AbilityGrid({ abilities }: { abilities: Ability[] }) {
   const [cd, setCd] = useState<Record<string, number>>({}); const [now, setNow] = useState(Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 200); return () => clearInterval(i); }, []);
   const fire = (a: Ability) => { if ((cd[a.id] || 0) > Date.now()) { sfx("error"); haptic(40); return; } sfx("click"); haptic(10); a.run(); if (a.cooldown) setCd(c => ({ ...c, [a.id]: Date.now() + a.cooldown * 1000 })); };
-  useEffect(() => { const h = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable) return; const n = Number(e.key); if (n >= 1 && n <= 9 && abilities[n - 1]) { e.preventDefault(); fire(abilities[n - 1]); } }; addEventListener("keydown", h); return () => removeEventListener("keydown", h); });
+  useEffect(() => { const h = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable) return; if (!e.shiftKey) return; const n = Number(/^Digit(\d)$/.exec(e.code)?.[1] ?? 0); if (n >= 1 && n <= 9 && abilities[n - 1]) { e.preventDefault(); fire(abilities[n - 1]); } }; addEventListener("keydown", h); return () => removeEventListener("keydown", h); });
   return (
     <div className="grid h-full grid-cols-3 gap-1" role="toolbar" aria-label="Command matrix">
       {abilities.slice(0, 9).map((a, idx) => {
         const until = cd[a.id] || 0; const left = Math.max(0, until - now); const pct = a.cooldown ? left / (a.cooldown * 1000) : 0;
         return (
-          <button key={a.id} title={`${a.label} (${idx + 1})`} aria-label={a.label} disabled={left > 0}
+          <button key={a.id} title={`${a.label} (Shift+${idx + 1})`} aria-label={a.label} disabled={left > 0}
             onClick={() => fire(a)} onMouseEnter={() => sfx("hover")}
             className="relative flex flex-col items-center justify-center overflow-hidden rounded-md border border-cyan/25 bg-navy-2/70 text-cyan transition hover:border-cyan hover:bg-cyan/10 hover:shadow-[0_0_12px_rgba(62,242,224,.4)] disabled:cursor-wait">
             <span className="text-base leading-none sm:text-lg">{a.icon}</span>
@@ -121,11 +121,11 @@ export function SquadStatus({ squad, onOpen }: { squad: Squad[]; onOpen: (id: Ap
   );
 }
 
-export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogout, open, onRestore, pilot, mood, onPilot, squad, contacts, tactical, radar, pulse, defcon, bars, feedsMuted }: {
+export function HudBar({ onCloseAll, hotkey, abilities, feed, blips, alert, onAlert, onHome, onLogout, open, onRestore, pilot, mood, onPilot, squad, contacts, tactical, radar, pulse, defcon, bars, feedsMuted }: {
   abilities: Ability[]; feed: FeedItem[]; blips: number; alert: boolean; onAlert: () => void; onHome: () => void; onLogout: () => void;
   pilot: string; mood: Mood; onPilot: () => void; squad: Squad[]; contacts: Contact[]; tactical: FeedItem[];
   radar: Blip[]; pulse: number; defcon: { level: number; reasons: string[] }; bars: { shields: number; hull: number; energy: number; labels: [string, string, string] }; feedsMuted: boolean;
-  open: { id: AppId; title: string; minimized: boolean }[]; onRestore: (id: AppId) => void;
+  open: { id: AppId; title: string; minimized: boolean }[]; onRestore: (id: AppId) => void; onCloseAll?: () => void; hotkey?: (id: AppId) => string;
 }) {
   const [muted, setM] = useState(false); useEffect(() => setM(isMuted()), []);
   // Phones: HUD collapses to a compact bar; abilities open in a bottom sheet; radar/feeds expand on demand.
@@ -136,11 +136,12 @@ export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogou
     <nav data-safe-bottom aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-glow" />
       {open.some(o => o.minimized) && (
-        <div className="mb-1 flex gap-1 overflow-x-auto" aria-label="Dock: minimized applets">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} className="shrink-0 whitespace-nowrap rounded border border-cyan/30 px-2 py-0.5 text-xs text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>
+        <div className="mb-1 flex gap-1 overflow-x-auto" aria-label="Dock: minimized applets">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} title={`Open ${o.title} full screen${hotkey?.(o.id) ? ` (${hotkey(o.id)})` : ""}`} className="shrink-0 whitespace-nowrap rounded border border-cyan/30 px-2 py-0.5 text-xs text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>
       )}
       {phone && <div className="mb-1 flex items-center gap-1">
         <button onClick={() => setAbSheet(true)} className="btn btn-ghost flex-1 text-sm" aria-haspopup="dialog">⚡ Abilities</button>
         <button onClick={onHome} className="btn btn-ghost text-sm" aria-label="Return home">⌂</button>
+        {onCloseAll && <button onClick={onCloseAll} className="btn btn-ghost text-sm" aria-label="Close all applets">✕</button>}
         <button onClick={onAlert} aria-pressed={alert} aria-label="Red alert" className={`btn text-sm font-bold ${alert ? "bg-alert text-white" : "border border-alert/60 text-alert"}`}>!</button>
         <button onClick={() => setExpanded(x => !x)} aria-expanded={expanded} className="btn btn-ghost flex-1 text-sm">{expanded ? "▾ Hide radar/feeds" : "▴ Radar & feeds"}</button>
       </div>}

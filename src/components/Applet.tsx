@@ -34,7 +34,7 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
       if (axis === "y" && atTop && dy > 70) { window.dispatchEvent(new Event("crystal-refresh")); sfx("ping"); } setPull(0); };
     addEventListener("pointermove", mv); addEventListener("pointerup", up); addEventListener("pointercancel", up);
   };
-  const keyMove = (e: React.KeyboardEvent) => { if (mode !== "float" || !g.current || !e.altKey) return; const d = e.shiftKey ? 40 : 10; const n = { ...g.current }; if (e.key === "ArrowLeft") n.x -= d; else if (e.key === "ArrowRight") n.x += d; else if (e.key === "ArrowUp") n.y = Math.max(0, n.y - d); else if (e.key === "ArrowDown") n.y += d; else return; e.preventDefault(); onGeo?.(n); };
+  const keyMove = (e: React.KeyboardEvent) => { if (mode !== "float" || !g.current || !e.altKey || !e.shiftKey) return; const d = e.shiftKey ? 40 : 10; const n = { ...g.current }; if (e.key === "ArrowLeft") n.x -= d; else if (e.key === "ArrowRight") n.x += d; else if (e.key === "ArrowUp") n.y = Math.max(0, n.y - d); else if (e.key === "ArrowDown") n.y += d; else return; e.preventDefault(); onGeo?.(n); };
   const cls = anim === "in" ? "win-in" : anim === "min" ? "win-min" : "win-close";
   const ox = origin && origin.x >= 0 && rect ? `${origin.x - rect.x}px ${origin.y - rect.y}px` : "50% 50%";
   const style: React.CSSProperties = mode === "max" ? { position: "fixed", left: rect?.x ?? 8, top: rect?.y ?? 64, width: rect?.w ?? "calc(100vw - 16px)", height: rect?.h ?? "60vh", zIndex: 40, transformOrigin: ox } : mode === "float" && geo ? { position: "absolute", left: geo.x, top: geo.y, width: geo.w, height: geo.h, zIndex: z } : {};
@@ -45,7 +45,7 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
       className={`glass corner-ticks flex flex-col overflow-hidden ${base} ${mode === "max" ? (anim === "in" ? "win-spring" : cls) : mode !== "sheet" ? cls : anim !== "in" ? cls : ""} ${focused ? "neon-frame" : ""} ${drag ? "win-drag" : ""}`}
       data-maximized={mode === "max" ? "true" : undefined} role={mode === "sheet" ? "dialog" : undefined} aria-modal={mode === "sheet" ? true : undefined}>
       {mode === "sheet" && <div className="flex justify-center pt-2" onPointerDown={e => { const y0 = e.clientY; const up = (ev: PointerEvent) => { removeEventListener("pointerup", up); if (ev.clientY - y0 > 60) leave("min"); }; addEventListener("pointerup", up); }}><span className="h-1.5 w-12 rounded-full bg-slate/60" aria-hidden /></div>}
-      <header onPointerDown={e => startDrag(e, "move")} onDoubleClick={() => mode === "float" && g.current && onGeo?.({ ...g.current, w: g.current.w > 700 ? 420 : 760, h: g.current.h > 560 ? 420 : 620 })}
+      <header onPointerDown={e => startDrag(e, "move")} onDoubleClick={() => onToggleMax?.()}
         className={`flex items-center justify-between border-b border-cyan/15 bg-gradient-to-r from-navy-2/80 via-navy-2/40 to-transparent px-3 py-2 ${mode === "float" ? "cursor-grab select-none" : ""}`}>
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-snow"><span className={`text-cyan ${focused ? "animate-glow" : ""}`}>{icon}</span>{title}</h2>
         <div className="flex gap-1">
