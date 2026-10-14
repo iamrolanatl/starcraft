@@ -10,6 +10,7 @@ import { StepsPanel } from "./HealthSteps";
 const SchoolCalendar = dynamic(() => import("./SchoolCalendar"), { ssr: false });
 const Drive = dynamic(() => import("./Drive"), { ssr: false });
 const PinnedDocs = dynamic(() => import("./Drive").then(m => m.PinnedDocs), { ssr: false });
+const MailInbox = dynamic(() => import("./MailInbox"), { ssr: false });
 import { DMS, schoolDay, DMS_EVENTS, PORTALS, type Grade } from "@/lib/school";
 
 type Log = (s: string, tone?: "info" | "ok" | "warn") => void;
@@ -96,6 +97,7 @@ export function Comms({ log }: { log: Log }) {
   return (<div>
     <Tabs tabs={["Mail", "Email", "Drive"]} cur={tab} set={setTab} />
     {ch === "drive" && <><Drive /><div className="my-2 border-t border-slate/30" /></>}
+    {ch === "email" && <><MailInbox /><h4 className="mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-ash">Follow-ups</h4></>}
     <div className="mb-2 flex items-center justify-between text-xs"><span className="text-ash">{ch === "mail" ? "Physical mail to handle" : ch === "email" ? "Emails to follow up" : "Docs & files to track"}</span><a href={CH[ch].link} target="_blank" rel="noopener noreferrer" className="text-cyan underline">Open {CH[ch].label} ↗</a></div>
     <form className="mb-2 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!f.title.trim()) return; c.add({ channel: ch, title: f.title.trim(), url: f.url || null, due_date: f.due_date || null }, `${CH[ch].label} item added`); setF({ title: "", url: "", due_date: "" }); }}>
       <input className="input min-w-[9rem] flex-1 text-sm" placeholder={ch === "mail" ? "e.g. Car registration renewal" : ch === "email" ? "e.g. Reply to Mr. L'Esperance" : "e.g. Tax docs folder"} value={f.title} onChange={e => setF({ ...f, title: e.target.value })} aria-label="Item" />

@@ -24,7 +24,8 @@ export async function askPilot(messages: ChatMessage[], signal?: AbortSignal): P
 async function demoLife(t: { title: string; due_date: string | null; done: boolean }[]) {
   const g = async (n: Parameters<typeof list>[0]) => { try { return await list(n); } catch { return []; } };
   const [health, meds, bills, credit, stocks, shop, comms, checkins] = await Promise.all([g("health_logs"), g("meds"), g("bills"), g("credit_scores"), g("stocks"), g("shop_items"), g("comms_notes"), g("edu_checkins")]);
-  return { fetchedAt: new Date().toISOString(), tasks: t, health, meds, bills, credit, stocks, shop, comms, checkins };
+  const mail = await import("./mail").then(m => m.listMail()).catch(() => []);
+  return { fetchedAt: new Date().toISOString(), tasks: t, health, meds, bills, credit, stocks, shop, comms, checkins, mail };
 }
 /** Location for weather answers: only if the user already granted it (never prompts from chat). */
 async function coords(): Promise<{ lat: number; lon: number } | null> {

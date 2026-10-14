@@ -12,9 +12,10 @@ export interface Life {
   shop: { list: string; name: string; qty: number | null; price: number | null; done: boolean }[];
   comms: { channel: string; title: string; due_date: string | null; done: boolean }[];
   checkins: { title: string; note: string | null; checkin_on: string }[];
+  mail: { from: string | null; subject: string | null; date: string | null; snippet: string | null; is_read: boolean; school_tag: string | null }[];
   weather: { tempF: number; code: number; windMph: number; hiF?: number; loF?: number; rainPct?: number; at: string } | null;
 }
-export const emptyLife = (): Life => ({ fetchedAt: new Date().toISOString(), missing: [], tasks: [], health: [], meds: [], bills: [], credit: [], stocks: [], quotes: [], shop: [], comms: [], checkins: [], weather: null });
+export const emptyLife = (): Life => ({ fetchedAt: new Date().toISOString(), missing: [], tasks: [], health: [], meds: [], bills: [], credit: [], stocks: [], quotes: [], shop: [], comms: [], checkins: [], mail: [], weather: null });
 const SYM = /^[A-Z0-9.\-^=]{1,12}$/;
 export async function fetchQuotes(syms: string[]): Promise<Life["quotes"]> {
   const at = new Date().toISOString();
@@ -51,12 +52,13 @@ export async function loadLife(q: <T>(path: string) => Promise<T[] | null>, extr
     get<Life["comms"][number]>("comms_notes", "comms_notes?select=channel,title,due_date,done&order=done,due_date&limit=40"),
     get<Life["checkins"][number]>("edu_checkins", "edu_checkins?select=title,note,checkin_on&order=checkin_on.desc&limit=10"),
   ]);
+  L.mail = await get<Life["mail"][number]>("mail_messages", "mail_messages?select=from,subject,date,snippet,is_read,school_tag&order=date.desc&limit=40");
   L.quotes = await fetchQuotes([...L.stocks.map(s => s.symbol), ...extraSyms]);
   return L;
 }
 export function sanitizeLife(x: Partial<Life> | undefined): Life {
   const L = emptyLife(); if (!x || typeof x !== "object") return L; const arr = <T>(v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n) : []) as T[];
-  return { ...L, tasks: arr(x.tasks, 60), health: arr(x.health, 120), meds: arr(x.meds, 40), bills: arr(x.bills, 60), credit: arr(x.credit, 10), stocks: arr(x.stocks, 30), shop: arr(x.shop, 100), comms: arr(x.comms, 40), checkins: arr(x.checkins, 10), fetchedAt: typeof x.fetchedAt === "string" ? x.fetchedAt : L.fetchedAt };
+  return { ...L, tasks: arr(x.tasks, 60), health: arr(x.health, 120), meds: arr(x.meds, 40), bills: arr(x.bills, 60), credit: arr(x.credit, 10), stocks: arr(x.stocks, 30), shop: arr(x.shop, 100), comms: arr(x.comms, 40), checkins: arr(x.checkins, 10), mail: arr<Life["mail"][number]>(x.mail, 40).map(m => ({ from: String(m?.from ?? "").slice(0, 120), subject: String(m?.subject ?? "").slice(0, 200), date: typeof m?.date === "string" ? m.date : null, snippet: String(m?.snippet ?? "").slice(0, 200), is_read: !!m?.is_read, school_tag: typeof m?.school_tag === "string" ? m.school_tag : null })), fetchedAt: typeof x.fetchedAt === "string" ? x.fetchedAt : L.fetchedAt };
 }
 
 /* ---------- deterministic answers ---------- */
@@ -127,6 +129,7 @@ export function answerLife(q: string, L: Life, demo: boolean, assignments: Assig
     const pre = need(L, "credit_scores", "credit scores"); if (pre) return pre.trim();
     const c = L.credit[0]; return c ? `Latest credit score: ${c.score} (${c.bureau}, checked ${dday(c.checked_on)}).${cite("credit_scores", at, demo)}` : `No credit scores logged yet.${cite("credit_scores", at, demo)}`;
   }
+  const mailA = answerMail(q, L, demo); if (mailA) return mailA;
   if (/\b(follow[- ]?ups?|comms|emails? to (send|answer)|mail)\b/i.test(q)) {
     const pre = need(L, "comms_notes", "comms notes"); if (pre) return pre.trim();
     const c = L.comms.filter(x => !x.done); return c.length ? `Open follow-ups: ${c.map(x => `${x.channel}: ${x.title}${x.due_date ? ` (due ${dday(x.due_date)})` : ""}`).join("; ")}.${cite("comms_notes", at, demo)}` : `No open comms follow-ups.${cite("comms_notes", at, demo)}`;
@@ -147,6 +150,20 @@ export function answerLife(q: string, L: Life, demo: boolean, assignments: Assig
   }
   return null;
 }
+/** "any new emails from Ms. Sparks?", "unread school email", "emails from teachers" -> from the mirrored school inbox. */
+export function answerMail(q: string, L: Life, demo: boolean): string | null {
+  if (!/\b(e-?mails?|inbox|messages? from)\b/i.test(q) || /\bemails? to (send|answer)\b/i.test(q)) return null;
+  if (L.missing.includes("mail_messages")) return "I can't read your school email yet: the mail tables aren't set up (migration 012_mail.sql pending).";
+  const who = q.match(/\bfrom\s+(?:(?:mr|mrs|ms|miss|dr|coach)\.?\s+)?([a-z][a-z'\-]+(?:\s+[a-z][a-z'\-]+)?)/i)?.[1]?.replace(/\b(today|yesterday|this|recently|lately)\b.*$/i, "").trim();
+  let ms = L.mail;
+  if (who && !/^(school|teachers?|the school|district|ctls)$/i.test(who)) ms = ms.filter(m => (m.from || "").toLowerCase().includes(who.toLowerCase().split(" ").pop()!));
+  else if (/teacher/i.test(q)) ms = ms.filter(m => m.school_tag === "teacher"); else if (/district/i.test(q)) ms = ms.filter(m => m.school_tag === "district"); else if (/ctls/i.test(q)) ms = ms.filter(m => m.school_tag === "CTLS");
+  if (/\b(new|unread)\b/i.test(q)) ms = ms.filter(m => !m.is_read);
+  const name = (f: string | null) => (f || "").replace(/<[^>]+>/, "").replace(/"/g, "").trim();
+  const src = cite("school email (Gmail mirror)", L.fetchedAt, demo);
+  if (!ms.length) return `${who ? `No ${/new|unread/i.test(q) ? "new " : ""}school emails from ${who} in your inbox.` : /new|unread/i.test(q) ? "No unread school email." : "No matching school email."}${src}`;
+  return `${ms.length} ${/new|unread/i.test(q) ? "unread " : ""}school email${ms.length > 1 ? "s" : ""}${who ? ` from ${who}` : ""}: ${ms.slice(0, 6).map(m => `"${m.subject || "(no subject)"}" from ${name(m.from)} on ${dday(m.date)}${m.is_read ? "" : " (unread)"}`).join("; ")}.${src}`;
+}
 export function lifeBlock(L: Life, demo: boolean): string {
   const t0 = todayET(); const j = (a: string[]) => a.join(" | ") || "none";
   return [`LIFE DATA${demo ? " (DEMO, fake sample data)" : ""} fetched ${fmtT(L.fetchedAt)}; today is ${t0}${L.missing.length ? `; tables not set up: ${L.missing.join(", ")}` : ""}`,
@@ -158,6 +175,7 @@ export function lifeBlock(L: Life, demo: boolean): string {
     `stocks: ${j(L.stocks.map(s => { const q = L.quotes.find(x => x.symbol === s.symbol.toUpperCase()); return `${s.symbol} x${s.shares ?? 0} ${q?.price != null ? `$${q.price.toFixed(2)}` : "no quote"}`; }))}`,
     `shopping: ${j(L.shop.filter(s => s.list === "shopping" && !s.done).map(s => s.name))}`, `wish list: ${j(L.shop.filter(s => s.list === "wish" && !s.done).map(s => s.name))}`,
     `comms follow-ups: ${j(L.comms.filter(c => !c.done).map(c => `${c.channel}: ${c.title}`))}`, `check-ins: ${j(L.checkins.slice(0, 5).map(c => `${c.checkin_on}: ${c.title}`))}`,
+    `school email (newest first): ${j(L.mail.slice(0, 15).map(m => `${m.date?.slice(0, 10) ?? "?"} ${m.is_read ? "" : "UNREAD "}[${m.school_tag ?? "school"}] from ${m.from}: ${m.subject}`))}`,
     `weather: ${L.weather ? `${Math.round(L.weather.tempF)}F code ${L.weather.code}` : "unavailable"}`].join("\n");
 }
 

@@ -1,0 +1,74 @@
+{
+ "messages": [
+  {
+   "id": "18f0aa01",
+   "threadId": "18f0aa01",
+   "rfc_message_id": "<abc@cobbk12.org>",
+   "sender": "Ms. Jane Sparks <jane.sparks@cobbk12.org>",
+   "to_recipients": [
+    "iamrolan@gmail.com"
+   ],
+   "cc_recipients": [],
+   "subject": "Eli - Unit 3 math test",
+   "date": "2026-10-13T19:05:00Z",
+   "snippet": "Eli's test is Friday",
+   "plaintext_body": "Hi Mr. Chowdhury,\nEli's Unit 3 test is Friday. Study guide attached.\nMs. Sparks",
+   "html_body": "<p onclick=\"steal()\">Eli's Unit 3 test is <b>Friday</b>.</p><script>alert(1)</script><img src=\"https://track.example/p.gif\"><a href=\"javascript:x\">bad</a><a href=\"https://cobbk12.org\">ok</a>",
+   "label_ids": [
+    "INBOX",
+    "UNREAD"
+   ],
+   "attachments": [
+    {
+     "filename": "Unit3 Study Guide.pdf",
+     "mime_type": "application/pdf",
+     "size": 45,
+     "attachment_id": "ANGjdJ_1",
+     "data_base64": "JVBERi0xLjQKMSAwIG9iajw8Pj5lbmRvYmoKdHJhaWxlcjw8Pj4KJSVFT0YK"
+    }
+   ]
+  },
+  {
+   "id": "18f0aa02",
+   "threadId": "18f0aa02",
+   "sender": "Cobb Schools <noreply@cobbk12.org>",
+   "to_recipients": [
+    "iamrolan@gmail.com"
+   ],
+   "subject": "District update",
+   "date": "Tue, 13 Oct 2026 08:00:00 -0400",
+   "snippet": "Calendar reminder",
+   "plaintext_body": "Reminder",
+   "label_ids": [
+    "INBOX"
+   ]
+  },
+  {
+   "id": "18f0aa03",
+   "threadId": "18f0aa03",
+   "sender": "Amazon <ship@amazon.com>",
+   "to_recipients": [
+    "iamrolan@gmail.com"
+   ],
+   "subject": "Your order",
+   "snippet": "shipped",
+   "label_ids": [
+    "INBOX"
+   ]
+  },
+  {
+   "id": "18f0aa04",
+   "threadId": "18f0aa04",
+   "sender": "itslearning <no-reply@itslearning.com>",
+   "to_recipients": [
+    "iamrolan@gmail.com"
+   ],
+   "subject": "New assignment in CTLS",
+   "snippet": "Science lab",
+   "label_ids": [
+    "INBOX",
+    "UNREAD"
+   ]
+  }
+ ]
+}
