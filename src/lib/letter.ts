@@ -5,10 +5,20 @@ export function letterGrade(pct: number | null | undefined): Letter | null {
   if (pct == null || !Number.isFinite(Number(pct))) return null; const p = Number(pct);
   return p >= 90 ? "A" : p >= 80 ? "B" : p >= 74 ? "C" : p >= 70 ? "D" : "F";
 }
+// Colors (Rolan, Oct 14): A green; B yellow; C red; D/F red + flashing (~1 Hz pulse; static thick outline + ⚠ under reduced motion).
 export const LETTER_STYLE: Record<Letter, { bg: string; fg: string; ring: string; label: string }> = {
   A: { bg: "#22c55e", fg: "#04140a", ring: "#86efac", label: "A (90–100)" },
-  B: { bg: "#22b8cf", fg: "#03161b", ring: "#8ee6f2", label: "B (80–89)" },
-  C: { bg: "#f5b82e", fg: "#1d1300", ring: "#fde08a", label: "C (74–79)" },
-  D: { bg: "#fb8a3c", fg: "#1f0c00", ring: "#fdc29a", label: "D (70–73)" },
-  F: { bg: "#f0445a", fg: "#ffffff", ring: "#fda4b0", label: "F (0–69)" },
+  B: { bg: "#facc15", fg: "#1a1400", ring: "#fde68a", label: "B (80–89)" },
+  C: { bg: "#ef4444", fg: "#ffffff", ring: "#fca5a5", label: "C (74–79)" },
+  D: { bg: "#dc2626", fg: "#ffffff", ring: "#fca5a5", label: "D (70–73)" },
+  F: { bg: "#dc2626", fg: "#ffffff", ring: "#fca5a5", label: "F (0–69)" },
 };
+/** Below 74 (D/F) → flashing red. */
+export const isLow = (pct: number | null | undefined) => pct != null && Number.isFinite(Number(pct)) && Number(pct) < 74;
+/** Text color class for a numeric grade; includes the flash class when low. */
+export function gradeText(pct: number | null | undefined): string {
+  if (pct == null || !Number.isFinite(Number(pct))) return "text-slate"; const p = Number(pct);
+  return p >= 90 ? "g-a" : p >= 80 ? "g-b" : p >= 74 ? "g-c" : "g-c grade-low";
+}
+/** Fill color for grade bars. */
+export const gradeHex = (p: number) => p >= 90 ? "#22c55e" : p >= 80 ? "#facc15" : "#ef4444";

@@ -1,9 +1,10 @@
 "use client";
+import { gradeText, gradeHex } from "@/lib/letter";
 import { useEffect, useMemo, useState } from "react";
 import { loadGraded, calcView, qOf, COBB_SCALE_URL, type GA, type GradedData } from "@/lib/graded";
 
 const fd = (d: string | null) => d ? new Date(d + "T12:00").toLocaleDateString([], { month: "short", day: "numeric" }) : "—";
-const tone = (p: number | null) => p == null ? "text-slate" : p >= 90 ? "text-mint" : p >= 80 ? "text-cyan" : p >= 70 ? "text-amber-300" : "text-alert";
+const tone = (p: number | null) => gradeText(p);
 const LOW = 70;
 type F = "missing" | "low" | string;
 
@@ -41,7 +42,7 @@ export default function GradedAssignments({ courseKey, demo }: { courseKey: stri
             <span className="truncate text-snow" title={c.category}>{c.category}</span>
             <div className="relative h-3 rounded bg-navy-2/80" aria-label={`${c.category}: weight ${c.weight}%, score ${c.pct == null ? "none yet" : c.pct.toFixed(1) + "%"}`}>
               <div className="absolute inset-y-0 left-0 rounded bg-cyan/25" style={{ width: `${c.weight}%` }} />
-              {c.pct != null && <div className="absolute inset-y-[3px] left-0 rounded" style={{ width: `${c.weight * c.pct / 100}%`, background: c.pct >= 80 ? "#7dffc8" : c.pct >= 70 ? "#fcd34d" : "#ff3b5c", boxShadow: "0 0 6px currentColor" }} />}
+              {c.pct != null && <div className={`absolute inset-y-[3px] left-0 rounded ${c.pct < 74 ? "grade-low grade-low-bar" : ""}`} style={{ width: `${c.weight * c.pct / 100}%`, background: gradeHex(c.pct), boxShadow: "0 0 6px currentColor" }} />}
             </div>
             <span className="whitespace-nowrap font-mono text-[11px]"><span className="text-cyan">{c.weight}%</span> · <span className={tone(c.pct)}>{c.pct == null ? "no grades" : `${c.pct.toFixed(1)}%`}</span></span>
           </div>)}

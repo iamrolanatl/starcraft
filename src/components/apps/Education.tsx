@@ -1,4 +1,5 @@
 "use client";
+import { gradeText } from "@/lib/letter";
 import { useEffect, useMemo, useState } from "react";
 import { gradeView, type GRow } from "@/lib/gradeview";
 import GradingPeriods from "./GradingPeriods";
@@ -14,7 +15,7 @@ import { sfx } from "@/lib/synth";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d: string | null) => d ? new Date(d.length === 10 ? d + "T12:00" : d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—";
-const tone = (p: number | null) => p == null ? "text-slate" : p >= 90 ? "text-mint" : p >= 80 ? "text-cyan" : p >= 70 ? "text-amber-300" : "text-alert";
+const tone = (p: number | null) => gradeText(p);
 const ago = (iso: string | null) => { if (!iso) return "never"; const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000); return m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 type Tab = "grades" | "work" | "comms" | "calendar" | "sync" | "reportcards" | "msg" | "schedule" | "attendance" | "more" | "learn" | "rules";
 
