@@ -446,6 +446,7 @@ html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(
   [data-m-header] { padding-top: env(safe-area-inset-top); }
   [data-m-header] > div { gap: .375rem; padding-top: .375rem; padding-bottom: .375rem; }
   [data-m-header] .btn, [data-m-header] [aria-label="Profile and Settings"] { min-height: 44px; min-width: 44px; }
+  [data-m-header] form { flex-wrap: nowrap; } [data-m-header] form input { flex: 1 1 auto; min-width: 0; }
   [data-m-header] input { min-height: 44px; font-size: 16px; } /* 16px stops iOS zoom-on-focus */
   /* When an applet is open, the greeting row + module card strip step aside (modules live in the bottom tab bar) */
   main[data-m-open] [data-m-greet], main[data-m-open] [data-m-mods] { display: none; }
@@ -469,8 +470,8 @@ html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(
   section[aria-label$="applet"] table { display: block; }
   section[aria-label$="applet"] thead { display: none; }
   section[aria-label$="applet"] tbody, section[aria-label$="applet"] tr { display: block; }
-  section[aria-label$="applet"] tr { border: 1px solid rgb(62 242 224 / .15); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; background: rgb(255 255 255 / .02); }
-  section[aria-label$="applet"] td { display: block; padding: 2px 0 !important; border: 0 !important; }
+  section[aria-label$="applet"] tr { display: flex !important; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; border: 1px solid rgb(62 242 224 / .15); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; background: rgb(255 255 255 / .02); }
+  section[aria-label$="applet"] td { display: inline-block; padding: 2px 0 !important; border: 0 !important; }
   .applet-body { padding: 12px 12px calc(16px + env(safe-area-inset-bottom)) !important; font-size: 16px; }
   /* Sheets use the full height left between header and bottom bar */
   .sheet { max-height: 86dvh !important; }
