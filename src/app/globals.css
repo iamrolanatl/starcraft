@@ -236,12 +236,12 @@ section[aria-label$="applet"] > header { position: relative; z-index: 6; flex-sh
 
 /* v4: per-applet neon (--neon) drives the corner ticks and every scrollbar inside the applet, including nested lists/calendars. */
 section[aria-label$="applet"] { --neon: #3ef2e0; }
-section[aria-label^="Health "] { --neon: #ff7aa8; }
-section[aria-label^="Communications "] { --neon: #7db7ff; }
-section[aria-label^="Education "], section[aria-label^="School Hub "] { --neon: #c77dff; }
-section[aria-label^="Finance "] { --neon: #7dffc8; }
-section[aria-label^="Shopping "] { --neon: #ffd166; }
-section[aria-label^="OCR Scanner "], section[aria-label^="Rank & Medals "] { --neon: #ff9a5c; }
+section[aria-label^="Health"] { --neon: #ff7aa8; }
+section[aria-label^="Communications"] { --neon: #7db7ff; }
+section[aria-label^="Education"], section[aria-label^="School Hub"] { --neon: #c77dff; }
+section[aria-label^="Finance"] { --neon: #7dffc8; }
+section[aria-label^="Shopping"] { --neon: #ffd166; }
+section[aria-label^="OCR Scanner"], section[aria-label^="Rank"] { --neon: #ff9a5c; }
 .red-alert section[aria-label$="applet"] { --neon: #ff3b5c; }
 section[aria-label$="applet"].corner-ticks { background-image:
   linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)),
