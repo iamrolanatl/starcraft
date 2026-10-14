@@ -56,3 +56,41 @@ const DEMO: EduData = {
   ],
   attendance: [{ date: T(-12), kind: "absence", reason: "Unexcused", note: null }],
 };
+
+export interface SyncRun { id: number; ran_at: string; source: string | null; kind: string | null; status: string; counts: Record<string, number>; error: string | null; job_id: number | null; fetched_at: string | null }
+export interface EduAlert { id: number; created_at: string; kind: string; message: string; job_id: number | null }
+export interface Job { id: number; status: string; kind: string; requested_at: string; finished_at: string | null; message: string | null }
+export interface SyncStatus { runs: SyncRun[]; alerts: EduAlert[]; jobs: Job[] }
+
+export async function loadSyncStatus(demo: boolean): Promise<SyncStatus> {
+  if (demo) return DEMO_SYNC;
+  const c = sb();
+  const [r, a, j] = await Promise.all([
+    c.from("edu_sync_runs").select("*").order("ran_at", { ascending: false }).limit(12),
+    c.from("edu_alerts").select("*").order("created_at", { ascending: false }).limit(10),
+    c.from("sync_requests").select("id,status,kind,requested_at,finished_at,message").order("id", { ascending: false }).limit(5),
+  ]);
+  return { runs: (r.data || []) as SyncRun[], alerts: (a.data || []) as EduAlert[], jobs: (j.data || []) as Job[] };
+}
+
+/** Sync button: creates a pending job (or returns the active one). The laptop watcher claims it within ~10 s. */
+export async function requestSync(demo: boolean): Promise<Job> {
+  if (demo) return { id: 999, status: "pending", kind: "manual", requested_at: new Date().toISOString(), finished_at: null, message: null };
+  const { data, error } = await sb().rpc("request_sync", { p_message: "Sync pressed in Crystal" });
+  if (error) throw new Error(error.message);
+  return data as Job;
+}
+export async function jobStatus(id: number): Promise<Job | null> {
+  const { data } = await sb().from("sync_requests").select("id,status,kind,requested_at,finished_at,message").eq("id", id).maybeSingle();
+  return data as Job | null;
+}
+
+const DEMO_SYNC: SyncStatus = {
+  jobs: [],
+  runs: [
+    { id: 3, ran_at: ago(0.2), source: "laptop:scheduled", kind: "scheduled", status: "ok", counts: { grades: 14, assignments: 23, messages: 57, calendar: 33, attendance: 4 }, error: null, job_id: 3, fetched_at: ago(0.2) },
+    { id: 2, ran_at: ago(0.7), source: "laptop:scheduled", kind: "scheduled", status: "failed", counts: {}, error: "ParentVUE unreachable: The operation has timed out", job_id: 2, fetched_at: null },
+    { id: 1, ran_at: ago(1.2), source: "laptop:manual", kind: "manual", status: "ok", counts: { grades: 14, assignments: 22, messages: 55, calendar: 33, attendance: 4 }, error: null, job_id: 1, fetched_at: ago(1.2) },
+  ],
+  alerts: [{ id: 1, created_at: ago(0.7), kind: "laptop_failed", message: "Sync #2 (scheduled) failed: ParentVUE unreachable: The operation has timed out", job_id: 2 }],
+};

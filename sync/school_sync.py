@@ -97,7 +97,7 @@ def build(data, finals, uid, sid):
     return grades, asg, attendance, msgs, cal
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--force", action="store_true"); ap.add_argument("--dry-run", action="store_true")
+    ap = argparse.ArgumentParser(); ap.add_argument("--force", action="store_true"); ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--no-run-log", action="store_true")
     a = ap.parse_args()
     if not KEY: log("CRYSTAL_SUPABASE_SERVICE_ROLE_KEY not set"); return 1
     data = json.loads((DATA / "data.json").read_text())
@@ -125,11 +125,11 @@ def main():
                   "attendance": upsert("edu_attendance", att, "student_id,date,kind"),
                   "messages": upsert("edu_messages", msgs, "student_id,source,ext_id"),
                   "calendar": upsert("edu_calendar", cal, "student_id,date,title")}
-        rest("POST", "edu_sync_runs", [{"user_id": uid, "student_id": sid, "fetched_at": f_at, "source": "box:eli-dashboard", "status": "ok", "counts": counts}])
+        if not a.no_run_log: rest("POST", "edu_sync_runs", [{"user_id": uid, "student_id": sid, "fetched_at": f_at, "source": "box:eli-dashboard", "status": "ok", "counts": counts}])
     except LookupError as e:
         log(f"table {e} missing: run supabase/migrations/001_tasks.sql and 002_education.sql"); return 3
     STATE.parent.mkdir(parents=True, exist_ok=True); STATE.write_text(json.dumps({"fetched_at": f_at}))
-    log(f"synced pull {f_at}: {json.dumps(counts)}"); return 0
+    log(f"synced pull {f_at}"); print("COUNTS " + json.dumps(counts), flush=True); return 0
 
 if __name__ == "__main__":
     sys.exit(main())

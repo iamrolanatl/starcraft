@@ -1,32 +1,32 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-// Seamless looping nebula (generated in-house, scripts/gen_nebula.py). Two stacked
-// videos cross-fade at the loop point so restarts are invisible. Reduced motion => poster only.
+import { useEffect, useState } from "react";
+// Random pool of seamless, pre-darkened 3D space loops (see public/media/bg/CREDITS.md).
+// One clip is picked per page load; only that clip is fetched. Reduced motion => poster only.
+export const BG_POOL = ["teal-nebula", "wormhole", "nebula-warp", "nebula-flythrough", "energy-tunnel", "holo-tunnel", "starfield-drift"] as const;
+let chosen: string | null = null;
+function pick() {
+  if (!chosen) chosen = BG_POOL[Math.floor(Math.random() * BG_POOL.length)];
+  return chosen;
+}
 export default function SpaceBackground({ dim = 0.35 }: { dim?: number }) {
-  const [reduced, setReduced] = useState(false);
-  const a = useRef<HTMLVideoElement>(null), b = useRef<HTMLVideoElement>(null);
-  const [front, setFront] = useState<0 | 1>(0);
-  useEffect(() => { setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches); }, []);
+  const [clip, setClip] = useState<string | null>(null);
+  const [reduced, setReduced] = useState(true);
+  const [mobile, setMobile] = useState(false);
   useEffect(() => {
-    if (reduced) return;
-    const vids = [a.current!, b.current!];
-    const cur = vids[front], next = vids[front ^ 1];
-    const onTime = () => {
-      if (cur.duration && cur.duration - cur.currentTime < 1.2 && next.paused) {
-        next.currentTime = 0; next.play().catch(() => {}); setFront((front ^ 1) as 0 | 1);
-      }
-    };
-    cur.addEventListener("timeupdate", onTime);
-    cur.play().catch(() => {});
-    return () => cur.removeEventListener("timeupdate", onTime);
-  }, [front, reduced]);
-  const style = "absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] bg-video";
+    setClip(pick());
+    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setMobile(window.matchMedia("(max-width: 900px)").matches);
+  }, []);
+  const base = clip ? `/media/bg/${clip}` : null;
+  const res = mobile ? "720" : "1080";
   return (
-    <div aria-hidden className="fixed inset-0 -z-10 overflow-hidden bg-navy" style={{ backgroundImage: "url(/media/nebula-poster.jpg)", backgroundSize: "cover", backgroundPosition: "center" }}>
-      {!reduced && (<>
-        <video ref={a} className={style} style={{ opacity: front === 0 ? 1 : 0 }} src="/media/nebula.mp4" poster="/media/nebula-poster.jpg" muted playsInline autoPlay preload="auto" onEnded={e => e.currentTarget.pause()} />
-        <video ref={b} className={style} style={{ opacity: front === 1 ? 1 : 0 }} src="/media/nebula.mp4" muted playsInline preload="auto" onEnded={e => e.currentTarget.pause()} />
-      </>)}
+    <div aria-hidden className="fixed inset-0 -z-10 overflow-hidden bg-navy" style={base ? { backgroundImage: `url(${base}-poster.jpg)`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
+      {base && !reduced && (
+        <video key={base} className="absolute inset-0 h-full w-full object-cover bg-video" poster={`${base}-poster.jpg`} muted playsInline autoPlay loop preload="auto">
+          <source src={`${base}-${res}.webm`} type="video/webm" />
+          <source src={`${base}-${res}.mp4`} type="video/mp4" />
+        </video>
+      )}
       <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, rgba(6,11,26,${dim * 0.2}) 0%, rgba(6,11,26,${dim + 0.15}) 100%)` }} />
       <div className="absolute inset-0 scanlines" />
     </div>

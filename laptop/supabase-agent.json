@@ -1,0 +1,6 @@
+{
+  "_about": "Public, non-secret settings for the Eli laptop sync -> Crystal. The anon key is public by design: it only reaches the secret-checked agent RPCs and one-time ticketed uploads. NEVER put the service_role key or the agent secret here; the secret goes in agent-secret.txt.",
+  "supabase_url": "https://ogrrjkxkccbywbiikcak.supabase.co",
+  "publishable_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ncnJqa3hrY2NieXdiaWlrY2FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5NTI0MjYsImV4cCI6MjEwNzUyODQyNn0.Tp_fnTCIGvXBwmSJdsKhKfIS1i5wjeKVBijMwpuN95U",
+  "agent_name": "rolan-laptop"
+}
