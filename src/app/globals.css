@@ -243,9 +243,16 @@ section[aria-label^="Finance"] { --neon: #7dffc8; }
 section[aria-label^="Shopping"] { --neon: #ffd166; }
 section[aria-label^="OCR Scanner"], section[aria-label^="Rank"] { --neon: #ff9a5c; }
 .red-alert section[aria-label$="applet"] { --neon: #ff3b5c; }
-section[aria-label$="applet"].corner-ticks { background-image:
-  linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)),
-  linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)); }
+section[aria-label$="applet"].corner-ticks { background:
+  linear-gradient(var(--neon),var(--neon)) top left/10px 1px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) top left/1px 10px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) top right/10px 1px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) top right/1px 10px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) bottom left/10px 1px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) bottom left/1px 10px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) bottom right/10px 1px no-repeat,
+  linear-gradient(var(--neon),var(--neon)) bottom right/1px 10px no-repeat,
+  rgb(10 12 22 / .82); }
 section[aria-label$="applet"], section[aria-label$="applet"] * { scrollbar-width: thin; scrollbar-color: var(--neon) rgb(5 8 18 / .55); }
 section[aria-label$="applet"] ::-webkit-scrollbar, section[aria-label$="applet"]::-webkit-scrollbar { width: 6px; height: 6px; }
 section[aria-label$="applet"] ::-webkit-scrollbar-track { background: rgb(5 8 18 / .55); border-radius: 6px; }
@@ -253,3 +260,18 @@ section[aria-label$="applet"] ::-webkit-scrollbar-thumb { background: var(--neon
 section[aria-label$="applet"] ::-webkit-scrollbar-thumb:hover { filter: brightness(1.2); }
 section[aria-label$="applet"] ::-webkit-scrollbar-corner { background: transparent; }
 section[aria-label$="applet"] [role="tablist"] { scrollbar-width: none; }
+
+/* Readability: every applet is dark translucent glass; the neon/skin color is ONLY for borders, glow, title accents, scrollbars. */
+section[aria-label$="applet"] { --text-body: #e6e8ef; --text-muted: #a9afc0; color: #e6e8ef;
+  backdrop-filter: blur(18px) saturate(80%); -webkit-backdrop-filter: blur(18px) saturate(80%);
+  border-color: color-mix(in srgb, var(--neon) 55%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--neon) 25%, transparent), 0 0 22px -6px var(--neon), var(--depth-2) !important; }
+section[aria-label$="applet"].win-maxed { background-color: rgb(10 12 22 / .86); }
+section[aria-label$="applet"] > header { background: rgb(14 17 30 / .9) !important; }
+section[aria-label$="applet"] > header h2 > span:first-child { color: var(--neon); }
+section[aria-label$="applet"] .text-snow, section[aria-label$="applet"] .text-ice { color: #e6e8ef !important; }
+section[aria-label$="applet"] .text-ash, section[aria-label$="applet"] .text-slate { color: #a9afc0 !important; }
+/* inner cards / stat cards / tab strips: slightly lighter dark glass, never a neon fill */
+section[aria-label$="applet"] :is(.bg-navy-2\/60, .bg-navy-2\/50, .bg-navy-2\/40, .rounded-lg.bg-navy-2\/60) { background-color: rgb(28 32 48 / .72) !important; }
+section[aria-label$="applet"] [data-sticky-tabs] { background-color: rgb(14 17 30 / .94) !important; }
+section[aria-label$="applet"] [role="tab"][aria-selected="true"] { color: #e6e8ef; border-color: var(--neon); }
