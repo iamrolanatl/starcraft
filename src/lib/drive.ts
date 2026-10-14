@@ -1,6 +1,6 @@
 "use client";
 // Comm › Drive client. Calls Crystal's server routes (/api/google/drive, /api/google/file), which hold the Google token;
-// the browser only ever sends its Supabase session JWT. Pins are a normal RLS table (migration 010).
+// the browser only ever sends its Supabase session JWT. Pins are a normal RLS table (migration 011).
 import { sb } from "./supabase";
 import { isDemo } from "./store";
 async function authed(path: string, init: RequestInit = {}): Promise<Response> {

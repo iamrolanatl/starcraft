@@ -21,7 +21,7 @@ export async function svc<T = unknown>(e: GEnv, method: string, path: string, bo
   if (!e.SUPABASE_SERVICE_ROLE_KEY) throw new HttpErr(503, "Server is missing its Supabase service key.", "config");
   const r = await fetch(`${url(e)}/rest/v1/${path}`, { method, headers: { apikey: e.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${e.SUPABASE_SERVICE_ROLE_KEY}`, "content-type": "application/json", prefer }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text();
-  if (r.status === 404 || /PGRST205|PGRST202|42P01/.test(t)) throw new HttpErr(503, "Run migrations 009 and 010 in Supabase first.", "migration");
+  if (r.status === 404 || /PGRST205|PGRST202|42P01/.test(t)) throw new HttpErr(503, "Run migrations 009 and 011 in Supabase first.", "migration");
   if (!r.ok) throw new HttpErr(502, `Database: ${t.slice(0, 200)}`);
   return (t ? JSON.parse(t) : null) as T;
 }

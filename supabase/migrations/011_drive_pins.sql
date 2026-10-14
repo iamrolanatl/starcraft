@@ -1,4 +1,4 @@
--- Crystal 010: Drive section pins (pin a Google Drive file to a module, e.g. School Hub). Run after 009. Safe to re-run.
+-- Crystal 011: Drive section pins (pin a Google Drive file to a module, e.g. School Hub). Run after 009. Safe to re-run.
 create table if not exists public.drive_pins (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
