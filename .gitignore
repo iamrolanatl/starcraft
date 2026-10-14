@@ -46,3 +46,4 @@ out/
 shots/*.tmp
 shots/
 __pycache__/
+public/version.json
