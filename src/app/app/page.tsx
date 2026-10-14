@@ -318,6 +318,7 @@ export default function Cockpit() {
   useEffect(() => () => { ptt.current?.stop(); clearTimeout(capT.current); }, []);
   const [hf, setHf] = useState<HFState>({ kind: "off" });
   const setHandsFreeOn = (v: boolean) => { if (v) { unlockSpeech(); stopSpeech(); } setHandsFree(v); savePrefs({ handsFree: v }); if (!v) setHf({ kind: "off" }); };
+  useEffect(() => { const f = () => { setHandsFree(false); setHf({ kind: "off" }); }; window.addEventListener("crystal:voice-claim", f); return () => window.removeEventListener("crystal:voice-claim", f); }, []); // the Tutor owns the mic while it runs (Chrome allows one recognizer)
   useEffect(() => { if (!handsFree) return;
     if (!handsFreeSupported()) { setHf({ kind: "error", text: "Voice isn't supported in this browser.", hint: "Use Chrome or Safari, or type your command." }); setHandsFree(false); return; }
     const w = startHandsFree(async t => { setCmd(t); await execCommand(t, true); }, s => { setHf(s); if (s.kind === "error") console.warn("[hands-free]", s.text); }, () => setHandsFree(false));
