@@ -11,7 +11,16 @@ export const onRequest: PagesFunction = async (ctx) => {
   if (lim) {
     const ip = ctx.request.headers.get("cf-connecting-ip") || "anon"; const k = `${url.pathname}|${ip}`; const now = Date.now();
     let h = hits.get(k); if (!h || h.reset < now) { h = { n: 0, reset: now + lim[1] * 1000 }; hits.set(k, h); }
-    if (++h.n > lim[0]) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { "content-type": "application/json", "retry-after": String(Math.ceil((h.reset - now) / 1000)), ...SEC } });
+    h.n++;
+    // Per-colo counter in the edge cache so limits hold across isolates (best-effort, non-atomic).
+    let n = h.n;
+    try {
+      const win = Math.floor(now / (lim[1] * 1000)); const ck = new Request(`https://rl.crystal.internal/${encodeURIComponent(k)}/${win}`);
+      const c = caches.default; const prev = await c.match(ck); const cn = (prev ? Number(await prev.text()) : 0) + 1;
+      ctx.waitUntil(c.put(ck, new Response(String(cn), { headers: { "cache-control": `max-age=${lim[1]}` } })));
+      n = Math.max(n, cn);
+    } catch { /* cache unavailable: fall back to isolate counter */ }
+    if (n > lim[0]) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { "content-type": "application/json", "retry-after": String(Math.ceil((h.reset - now) / 1000)), ...SEC } });
     if (hits.size > 5000) for (const [kk, v] of hits) if (v.reset < now) hits.delete(kk);
     if (ctx.request.method === "POST" && Number(ctx.request.headers.get("content-length") || 0) > 64_000) return new Response(JSON.stringify({ error: "Payload too large" }), { status: 413, headers: { "content-type": "application/json" } });
   }
