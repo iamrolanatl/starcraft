@@ -47,3 +47,14 @@ shots/*.tmp
 shots/
 __pycache__/
 public/version.json
+
+# Crystal Sync build outputs (installers are deployed from public/downloads but not committed)
+/agent/build/
+/agent/dist/
+/agent/*.spec
+/public/downloads/*.AppImage
+/public/downloads/*.deb
+/public/downloads/*.dmg
+/public/downloads/*.pkg
+/public/downloads/*.exe
+__pycache__/
