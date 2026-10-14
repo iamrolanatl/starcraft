@@ -4,6 +4,8 @@ import { loadSchedule, loadAbsences, type Sched, type AbsP } from "@/lib/schoolx
 import { bellFor, hm, fmt12, BELL_SOURCE } from "@/lib/bell";
 import { DISTRICT } from "@/lib/school";
 import { eventsOn, isNoSchool } from "@/lib/district";
+import { periods, span } from "@/lib/periods";
+import { draftExcuse, loadExcuses, queueExcuse, cancelExcuse, studentIdentity, ATTENDANCE_EMAIL, ATTENDANCE_SOURCE, type Excuse, type Reason } from "@/lib/excuse";
 
 const ymdLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const fd = (d: string) => new Date(d + "T12:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
@@ -39,20 +41,69 @@ export function Schedule({ demo }: { demo: boolean }) {
   </div>);
 }
 
-export function AttendanceTab({ demo, totals }: { demo: boolean; totals: Record<string, number> }) {
-  const [rows, setRows] = useState<AbsP[] | "missing" | null>(null);
-  useEffect(() => { loadAbsences(demo).then(setRows).catch(() => setRows([])); }, [demo]);
-  const T = [["Excused", totals.excused], ["Unexcused", totals.unexcused], ["Tardies", totals.tardies], ["Activities", totals.activities]] as const;
+type Group = { key: string; date: string; kind: "absence" | "tardy"; rows: AbsP[]; status: string };
+const STATUS_TONE: Record<string, string> = { unexcused: "bg-alert/25 text-snow", unknown: "bg-amber-300/20 text-amber-100", excused: "bg-mint/20 text-mint", activity: "bg-cyan/15 text-cyan" };
+export function AttendanceTab({ demo, rp }: { demo: boolean; totals: Record<string, number>; rp?: Parameters<typeof periods>[0] }) {
+  const [rows, setRows] = useState<AbsP[] | "missing" | null>(null); const [ex, setEx] = useState<Excuse[] | "missing">([]); const [tick, setTick] = useState(0);
+  const [compose, setCompose] = useState<Group | null>(null);
+  useEffect(() => { loadAbsences(demo).then(setRows).catch(() => setRows([])); if (!demo) loadExcuses().then(setEx).catch(() => setEx([])); }, [demo, tick]);
+  useEffect(() => { const t = setInterval(() => setTick(x => x + 1), 60000); return () => clearInterval(t); }, []);
+  if (rows === null) return <p className="text-xs text-ash">Loading…</p>;
+  if (rows === "missing") return <Missing />;
+  const groups: Group[] = []; for (const r of rows) { const kind = (r.kind as "tardy") === "tardy" ? "tardy" : "absence"; const k = r.date + kind; let g = groups.find(x => x.key === k); if (!g) groups.push(g = { key: k, date: r.date, kind, rows: [], status: "excused" }); g.rows.push(r); }
+  for (const g of groups) g.status = g.rows.some(r => r.status === "unexcused") ? "unexcused" : g.rows.some(r => !r.status || r.status === "unknown") ? "unknown" : g.rows.every(r => r.status === "activity") ? "activity" : "excused";
+  const q = periods(rp).quarters.map(x => span(x, ymdLocal(new Date()))).find(x => x.current);
+  const inQ = (d: string) => !!q && !!q.start && !!q.end && d >= q.start && d <= q.end;
+  const count = (f: (g: Group) => boolean) => ({ y: groups.filter(f).length, q: groups.filter(g => f(g) && inQ(g.date)).length });
+  const C = [["Absence days", count(g => g.kind === "absence" && g.status !== "activity")], ["Unexcused", count(g => g.kind === "absence" && g.status === "unexcused")], ["Tardies", count(g => g.kind === "tardy")], ["School activity", count(g => g.status === "activity")]] as const;
+  const months = [...new Set(groups.map(g => g.date.slice(0, 7)))].sort(); const mx = Math.max(1, ...months.map(m => groups.filter(g => g.date.startsWith(m)).length));
+  const exFor = (g: Group) => ex === "missing" ? undefined : ex.find(e => e.kind === g.kind && e.dates.includes(g.date) && e.mail_outbox?.status !== "cancelled");
   return (<div className="space-y-2">
-    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">{T.map(([k, v]) => <div key={k} className="rounded-lg bg-navy-2/60 py-1.5 text-center"><div className="hud-label">{k}</div><div className="font-mono text-lg text-snow">{v ?? "—"}</div></div>)}</div>
-    {rows === null ? <p className="text-xs text-ash">Loading…</p> : rows === "missing" ? <Missing /> : !rows.length ? <p className="text-xs text-ash">No absences recorded in ParentVUE.</p> :
-      <ul className="space-y-1.5">{[...new Set(rows.map(r => r.date))].map(day => { const rs = rows.filter(r => r.date === day).sort((a, b) => a.period - b.period); return <li key={day} className="rounded-lg border border-cyan/10 bg-navy-2/50 px-2 py-1.5">
-        <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-semibold text-snow">{fd(day)}</span><span className="rounded bg-amber-300/15 px-1.5 text-amber-200">{rs[0].reason || rs[0].code}</span><span className="text-ash">{rs.length} period{rs.length > 1 ? "s" : ""}</span></div>
-        {rs[0].note && <div className="text-[11px] italic text-ice">“{rs[0].note}”</div>}
-        <div className="mt-1 flex flex-wrap gap-1">{rs.map(r => <span key={r.period} title={`${r.course ?? ""} · ${r.teacher ?? ""}`} className="rounded bg-black/30 px-1.5 py-0.5 text-[10px] text-ash">P{r.period} {r.course}</span>)}</div>
+    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">{C.map(([k, v]) => <div key={k} className="rounded-lg bg-navy-2/60 py-1.5 text-center"><div className="hud-label">{k}</div><div className="font-mono text-lg text-snow">{v.y}<span className="ml-1 text-[10px] text-ash">yr</span></div><div className="text-[10px] text-cyan">{q ? `${v.q} in ${q.id}` : "quarter n/a"}</div></div>)}</div>
+    {months.length > 0 && <div><div className="hud-label mb-1">Trend by month</div><div className="flex h-16 items-end gap-1.5" role="img" aria-label="Absences and tardies by month">{months.map(m => { const a = groups.filter(g => g.date.startsWith(m) && g.kind === "absence" && g.status !== "activity").length, t = groups.filter(g => g.date.startsWith(m) && g.kind === "tardy").length, s2 = groups.filter(g => g.date.startsWith(m) && g.status === "activity").length;
+      return <div key={m} className="flex flex-1 flex-col items-center gap-0.5"><div className="flex w-full flex-1 flex-col-reverse overflow-hidden rounded-sm bg-navy-2/50">
+        <div style={{ height: `${a / mx * 100}%`, background: "#ff3b5c", boxShadow: "0 0 6px #ff3b5c" }} title={`${a} absence day(s)`} /><div style={{ height: `${t / mx * 100}%`, background: "#fcd34d" }} title={`${t} tardy day(s)`} /><div style={{ height: `${s2 / mx * 100}%`, background: "#22d3ee" }} title={`${s2} school activity`} /></div>
+        <span className="text-[9px] text-slate">{new Date(m + "-15T12:00").toLocaleDateString([], { month: "short" })}</span></div>; })}</div>
+      <div className="mt-0.5 flex gap-2 text-[9px] text-ash"><span><i className="mr-0.5 inline-block h-2 w-2 bg-alert" />absence</span><span><i className="mr-0.5 inline-block h-2 w-2 bg-amber-300" />tardy</span><span><i className="mr-0.5 inline-block h-2 w-2 bg-cyan" />school activity</span></div></div>}
+    {!groups.length ? <p className="text-xs text-ash">No absences or tardies recorded in ParentVUE.</p> :
+      <ul className="space-y-1.5">{groups.map(g => { const e = exFor(g); const needs = g.status === "unexcused" || g.status === "unknown"; const st = e?.mail_outbox?.status;
+        return <li key={g.key} className="rounded-lg border border-cyan/10 bg-navy-2/50 px-2 py-1.5">
+        <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-semibold text-snow">{fd(g.date)}</span><span className="uppercase text-[10px] text-ash">{g.kind}</span>
+          <span className={`rounded px-1.5 text-[10px] ${STATUS_TONE[g.status]}`}>{g.status === "unknown" ? "unexplained" : g.status === "activity" ? "school activity" : g.status}</span>
+          <span className="text-[10px] text-ash">{g.rows[0].code}</span>
+          <span className="ml-auto">{e ? (st === "sent" ? <span className="text-[11px] text-mint">✓ Excuse sent {e.mail_outbox?.sent_at ? new Date(e.mail_outbox.sent_at).toLocaleDateString() : ""}</span>
+            : st === "queued" ? <span className="flex items-center gap-1 text-[11px] text-amber-200">Queued <button className="btn btn-ghost !px-1.5 !py-0 text-[10px]" onClick={() => cancelExcuse(e.outbox_id).then(() => setTick(x => x + 1)).catch(() => {})}>Cancel</button></span>
+            : st === "sending" ? <span className="text-[11px] text-cyan">Sending…</span> : st === "failed" ? <span className="text-[11px] text-alert" title={e.mail_outbox?.error ?? ""}>Send failed</span> : null)
+            : needs && ex !== "missing" && !demo ? <button className="btn btn-ghost !px-2 !py-0.5 text-[11px]" onClick={() => setCompose(g)}>✎ Draft excuse letter</button> : null}</span></div>
+        {g.rows[0].note && <div className="text-[11px] italic text-ice">“{g.rows[0].note}”</div>}
+        <div className="mt-1 flex flex-wrap gap-1">{g.rows.sort((a, b) => a.period - b.period).map(r => <span key={r.period} title={`${r.course ?? ""} · ${r.teacher ?? ""}`} className="rounded bg-black/30 px-1.5 py-0.5 text-[10px] text-ash">P{r.period}{r.course ? ` ${r.course}` : ""}</span>)}</div>
       </li>; })}</ul>}
-    <p className="text-[10px] text-slate">Source: ParentVUE attendance.</p>
+    <p className="text-[10px] text-slate">Source: ParentVUE attendance codes. Cobb requires excuses within 3 days.</p>
+    {compose && <ExcuseComposer g={compose} onClose={() => setCompose(null)} onQueued={() => { setCompose(null); setTick(x => x + 1); }} />}
   </div>);
+}
+
+function ExcuseComposer({ g, onClose, onQueued }: { g: Group; onClose: () => void; onQueued: () => void }) {
+  const [reason, setReason] = useState<Reason>("illness"); const [extra, setExtra] = useState(""); const [who, setWho] = useState<{ name: string; permId: string | null } | null>(null);
+  const [to, setTo] = useState(ATTENDANCE_EMAIL); const [subject, setSubject] = useState(""); const [body, setBody] = useState(""); const [edited, setEdited] = useState(false); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const pers = g.rows.map(r => r.period);
+  useEffect(() => { studentIdentity().then(setWho).catch(() => setWho({ name: "Eli", permId: null })); }, []);
+  useEffect(() => { if (!who || edited) return; const d = draftExcuse({ student: who.name, permId: who.permId, kind: g.kind, dates: [g.date], periods: pers, reason, extra }); setSubject(d.subject); setBody(d.body); }, [who, reason, extra, edited]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } }; window.addEventListener("keydown", k, true); return () => window.removeEventListener("keydown", k, true); }, [onClose]);
+  async function send() { setBusy(true); setErr(""); try { await queueExcuse({ to: to.trim(), subject, body, dates: [g.date], periods: pers, kind: g.kind, reason }); onQueued(); } catch (e) { setErr(String((e as Error).message)); } finally { setBusy(false); } }
+  return (<div role="dialog" aria-modal="true" aria-label="Draft excuse letter" className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-2 sm:items-center">
+    <div className="max-h-[92vh] w-full max-w-lg space-y-2 overflow-auto rounded-xl border border-cyan/30 bg-navy-2/95 p-3 text-xs shadow-[0_0_24px_rgba(0,255,255,.2)]">
+      <div className="flex items-center"><span className="hud-label">Excuse letter · {fd(g.date)} · {g.kind}</span><button className="btn btn-ghost ml-auto !px-2 !py-0.5" onClick={onClose} aria-label="Close">✕</button></div>
+      <div className="flex flex-wrap gap-1">{(["illness", "appointment", "family", "other"] as Reason[]).map(r => <button key={r} aria-pressed={reason === r} onClick={() => { setReason(r); setEdited(false); }} className={`rounded-full border px-2 py-0.5 capitalize ${reason === r ? "border-cyan bg-cyan/20 text-cyan" : "border-cyan/20 text-ash"}`}>{r}</button>)}</div>
+      <input value={extra} onChange={e => { setExtra(e.target.value); setEdited(false); }} placeholder="Optional details (e.g. dentist appointment)" className="w-full rounded border border-cyan/20 bg-black/40 px-2 py-1 text-snow" />
+      <label className="block text-ash">To <input value={to} onChange={e => setTo(e.target.value)} className="mt-0.5 w-full rounded border border-cyan/20 bg-black/40 px-2 py-1 text-snow" /></label>
+      <p className="text-[10px] text-slate">Attendance inbox from <a className="underline" href={ATTENDANCE_SOURCE} target="_blank" rel="noreferrer">Dickerson&apos;s attendance page</a>.</p>
+      <label className="block text-ash">Subject <input value={subject} onChange={e => { setSubject(e.target.value); setEdited(true); }} className="mt-0.5 w-full rounded border border-cyan/20 bg-black/40 px-2 py-1 text-snow" /></label>
+      <textarea value={body} onChange={e => { setBody(e.target.value); setEdited(true); }} rows={11} className="w-full rounded border border-cyan/20 bg-black/40 px-2 py-1 font-sans text-[12px] leading-relaxed text-snow" aria-label="Letter" />
+      {err && <p className="text-alert">{err}</p>}
+      <div className="flex items-center gap-2"><span className="text-[10px] text-slate">Queued for your Gmail; sends within ~5 min. You can cancel while queued.</span>
+        <button disabled={busy || !body.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to.trim())} onClick={send} className="btn ml-auto !px-3 !py-1">{busy ? "Queuing…" : "Send"}</button></div>
+    </div></div>);
 }
 
 const BLOCKED: [string, string, string][] = [

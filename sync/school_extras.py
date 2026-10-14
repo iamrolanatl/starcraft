@@ -38,7 +38,10 @@ def absences(z):
             if not (p.get("Name") or "").strip(): continue
             try: n = int(p.get("Number") or "")
             except ValueError: continue
-            out.append({"date": day, "period": n, "code": p.get("Name"), "reason": (p.get("Reason") or a.get("Reason") or "").strip() or None,
+            code = p.get("Name") or ""; low = code.lower()
+            kind = "tardy" if "tardy" in low else "absence"
+            status = "unexcused" if re.search(r"unexc|no note|unexplained", low) else "activity" if "activity" in low else "excused" if "excused" in low or "exc" in low else "unknown"
+            out.append({"date": day, "period": n, "code": code, "kind": kind, "status": status, "reason": (p.get("Reason") or a.get("Reason") or "").strip() or None,
                         "note": (a.get("Note") or "").strip() or None, "course": p.get("Course") or None, "teacher": p.get("Staff") or None})
     return out
 
@@ -77,8 +80,21 @@ def store(zbytes, url, key, uid, alert=None, state_dir=None, graded=None):
             post("edu_attendance_periods", "user_id,date,period", [{**a, "user_id": uid, "updated_at": now} for a in ab]); res["absence_periods"] = len(ab)
             if old:
                 for day in sorted({a["date"] for a in ab if (a["date"], a["period"]) not in old}):
-                    rs = [a for a in ab if a["date"] == day]; why = rs[0]["reason"] or rs[0]["code"]
-                    fire("absence", f"absence:{day}", f"New absence recorded for Eli on {day}: {why}{' (' + rs[0]['note'] + ')' if rs[0]['note'] else ''}, {len(rs)} period(s).")
+                    rs = [a for a in ab if a["date"] == day and (a["date"], a["period"]) not in old]
+                    for kind in ("absence", "tardy"):
+                        ks = [a for a in rs if a["kind"] == kind]
+                        if not ks: continue
+                        unexc = [a for a in ks if a["status"] in ("unexcused", "unknown")]
+                        lbl = "unexcused " + kind if unexc else kind
+                        fire("absence", f"{kind}:{day}", f"New {lbl} for Eli on {day}: {ks[0]['code']}{' (' + ks[0]['note'] + ')' if ks[0]['note'] else ''}, period(s) {', '.join(str(a['period']) for a in ks)}." + (" Draft an excuse in Education › Attendance (due within 3 days)." if unexc else ""))
+        cl = _root(z, "ChildList.xml")
+        if cl is not None:
+            ch = next((c for c in cl.iter("Child") if (c.get("ChildFirstName") or "").lower().startswith("eli")), None)
+            nm = ch.find("ChildName") if ch is not None else None
+            if ch is not None and ch.get("ChildPermID"):
+                requests.patch(f"{url}/rest/v1/edu_students", params={"user_id": f"eq.{uid}", "source_key": "eq.cobb:eli"},
+                               data=json.dumps({"perm_id": ch.get("ChildPermID"), **({"full_name": nm.text.strip()} if nm is not None and (nm.text or "").strip() else {})}),
+                               headers={**H, "Prefer": "return=minimal"}, timeout=30)
     except requests.HTTPError as e: res["error"] = f"014 tables: {e.response.status_code}"
     for r in (graded or {}).get("new_missing", []):
         fire("missing_assignment", f"missing:{r['course_key']}:{r['gradebook_id']}", f"Missing assignment in {r['course']}: {r['name']} (due {r['due_date'] or 'n/a'}).")

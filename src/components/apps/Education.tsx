@@ -113,7 +113,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
     {tab === "reportcards" && <ReportCards demo={data.demo} />}
     {tab === "msg" && <MsgHub messages={data.messages} />}
     {tab === "schedule" && <Schedule demo={data.demo} />}
-    {tab === "attendance" && <AttendanceTab demo={data.demo} totals={at} />}
+    {tab === "attendance" && <AttendanceTab demo={data.demo} totals={at} rp={data.student.reporting_period as Parameters<typeof GradingPeriods>[0]["rp"]} />}
     {tab === "more" && <Unavailable />}
     {tab === "sync" && <div className="space-y-2">
       {!!sync?.alerts.length && <div><div className="hud-label mb-1 text-alert">Alerts</div><ul className="space-y-1">{sync.alerts.map(a => <li key={a.id} className="rounded-lg border border-alert/30 bg-alert/10 px-2 py-1 text-xs"><span className="text-snow">{a.message}</span><div className="text-[10px] text-ash">{fmt(a.created_at)} {new Date(a.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {a.kind.replace("_", " ")}</div></li>)}</ul></div>}
