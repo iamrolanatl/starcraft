@@ -7,6 +7,7 @@ import GradeCell from "@/components/ui/GradeCell";
 import ReportCards from "./ReportCards";
 import MsgHub from "./MsgHub";
 import Learn from "./Learn";
+import Tutor from "./Tutor";
 import GradingRules from "./GradingRules";
 import GradedAssignments from "./GradedAssignments";
 import { Schedule, AttendanceTab, Unavailable } from "./SchoolExtras";
@@ -19,7 +20,7 @@ import type { Assignment } from "@/lib/education";
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d: string | null) => d ? new Date(d.length === 10 ? d + "T12:00" : d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—";
 const ago = (iso: string | null) => { if (!iso) return "never"; const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000); return m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
-type Tab = "grades" | "work" | "comms" | "calendar" | "sync" | "reportcards" | "msg" | "schedule" | "attendance" | "more" | "learn" | "rules";
+type Tab = "grades" | "work" | "comms" | "calendar" | "sync" | "reportcards" | "msg" | "schedule" | "attendance" | "more" | "learn" | "rules" | "tutor";
 
 function Spark({ pts }: { pts: number[] }) {
   if (pts.length < 2) return <span className="inline-block w-16 text-[10px] text-slate">no trend</span>;
@@ -84,7 +85,7 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
   const upcoming = data.assignments.filter(a => !a.missing && a.due_date && a.due_date >= today()).slice(0, 12);
   const cal = data.calendar.filter(c => c.date >= today()).slice(0, 14);
   const at = data.student.attendance_totals || {};
-  const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["rules", "Grading Rules"], ["learn", "Learn"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "School Inboxes"], ["more", "More School Data"], ["sync", "Sync Log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
+  const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["rules", "Grading Rules"], ["learn", "Learn"], ["tutor", "Tutor"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "School Inboxes"], ["more", "More School Data"], ["sync", "Sync Log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
 
   return (<div className="space-y-3 text-sm">
     {!demo && <SyncLights compact />}
@@ -141,6 +142,7 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
       <div className="truncate text-[10px] text-ash">{m.sender}{m.body ? ` — ${m.body}` : ""}</div></li>)}{!data.messages.length && <li className="text-xs text-ash">No messages.</li>}</ul>}
     {tab === "calendar" && <ul className="space-y-1">{cal.map(c => <li key={c.date + c.title} className="flex gap-2 rounded-lg bg-navy-2/50 px-2 py-1"><span className="w-20 shrink-0 font-mono text-xs text-cyan">{fmt(c.date)}</span><span className="text-snow">{c.title.replace(/\s+-\s+Score:\s*-?$/, "")}</span></li>)}{!cal.length && <li className="text-xs text-ash">No upcoming school events.</li>}</ul>}
     {tab === "learn" && <Learn demo={data.demo} />}
+    {tab === "tutor" && <Tutor name={data.student.name} grade={data.student.grade} />}
     {tab === "rules" && <GradingRules classes={gv.current.map(c => { /* same value + label as the Grades column (Q1 final by default; Q toggle respected) */
       const fq = c.final ? c.final.term.replace(/^Quarter\s*/i, "Q") : "Q1"; const lq = c.term.replace(/^Quarter\s*/i, "Q").replace(/^Progress Period\s*/i, "Q");
       const fp = c.final?.percent != null ? Number(c.final.percent) : null; const lp = c.posted && c.term !== c.final?.term && c.percent != null ? Number(c.percent) : null;
