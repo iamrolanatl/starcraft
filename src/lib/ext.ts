@@ -12,7 +12,7 @@ export const SRC: Record<Src, { label: string; short: string; color: string }> =
   o365: { label: "Eli · School O365", short: "Eli O365", color: "#9fb4ff" },
   local: { label: "Crystal (local)", short: "Crystal", color: "#3ef2e0" },
 };
-export const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks";
+export const GOOGLE_SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive.readonly";
 
 export async function loadExt(): Promise<ExtItem[]> {
   if (isDemo()) return [];

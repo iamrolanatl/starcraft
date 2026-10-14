@@ -8,6 +8,8 @@ import { lsRaw, lsSet, fetchJSON } from "@/lib/safe";
 import dynamic from "next/dynamic";
 import { StepsPanel } from "./HealthSteps";
 const SchoolCalendar = dynamic(() => import("./SchoolCalendar"), { ssr: false });
+const Drive = dynamic(() => import("./Drive"), { ssr: false });
+const PinnedDocs = dynamic(() => import("./Drive").then(m => m.PinnedDocs), { ssr: false });
 import { DMS, schoolDay, DMS_EVENTS, PORTALS, type Grade } from "@/lib/school";
 
 type Log = (s: string, tone?: "info" | "ok" | "warn") => void;
@@ -93,6 +95,7 @@ export function Comms({ log }: { log: Log }) {
   const rows = c.rows.filter(r => r.channel === ch);
   return (<div>
     <Tabs tabs={["Mail", "Email", "Drive"]} cur={tab} set={setTab} />
+    {ch === "drive" && <><Drive /><div className="my-2 border-t border-slate/30" /></>}
     <div className="mb-2 flex items-center justify-between text-xs"><span className="text-ash">{ch === "mail" ? "Physical mail to handle" : ch === "email" ? "Emails to follow up" : "Docs & files to track"}</span><a href={CH[ch].link} target="_blank" rel="noopener noreferrer" className="text-cyan underline">Open {CH[ch].label} ↗</a></div>
     <form className="mb-2 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!f.title.trim()) return; c.add({ channel: ch, title: f.title.trim(), url: f.url || null, due_date: f.due_date || null }, `${CH[ch].label} item added`); setF({ title: "", url: "", due_date: "" }); }}>
       <input className="input min-w-[9rem] flex-1 text-sm" placeholder={ch === "mail" ? "e.g. Car registration renewal" : ch === "email" ? "e.g. Reply to Mr. L'Esperance" : "e.g. Tax docs folder"} value={f.title} onChange={e => setF({ ...f, title: e.target.value })} aria-label="Item" />
@@ -106,7 +109,7 @@ export function Comms({ log }: { log: Log }) {
       {r.due_date ? <span className={`text-xs ${!r.done && String(r.due_date) < today() ? "text-alert" : "text-ash"}`}>{fmtD(r.due_date)}</span> : null}
       <Del onClick={() => c.del(r.id)} label={String(r.title)} /></li>))}
 </ul><State r={c} n={rows.length} empty="Nothing tracked here" hint="Try “email: reply to coach friday”" />
-    <p className="mt-2 text-[10px] text-slate">Inbox and Drive sync need Gmail/Drive API consent (Google Cloud). Notes are tracked here meanwhile.</p>
+    
     <LocalNote on={c.local} />
   </div>);
 }
@@ -224,7 +227,7 @@ export function SchoolHub({ log }: { log: Log }) {
         : <p className="text-sm text-ash">No school today.</p>}
       <p className="mt-2 text-[10px] text-slate">Mon–Wed master · Thu–Fri flex block · early-release days auto-detected. Source: <a className="underline" href="https://cobbk12.org/dickerson/class-schedules" target="_blank" rel="noopener noreferrer">cobbk12.org/dickerson</a></p>
     </>)}
-    {tab === "Calendar" && <SchoolCalendar />}
+    {tab === "Calendar" && <><SchoolCalendar /><PinnedDocs module="school" /></>}
     {tab === "Check-ins" && (<>
       <form className="mb-2 space-y-2" onSubmit={async e => {
         e.preventDefault(); if (!cf.title.trim()) return; setBusy(true);
