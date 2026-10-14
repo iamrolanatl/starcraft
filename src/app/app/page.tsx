@@ -78,7 +78,7 @@ function tileGeo(i: number, W: number): Geo { const cols = W >= 1500 ? 3 : 2; co
 
 export default function Cockpit() {
   const [fam, setFam] = useState<"child" | "viewer" | null>(null);   // family sharing (017): restricted, read-only school view
-  const MODS: AppId[] = fam === "child" ? ["education", "school", "shopping", "medals"] : fam === "viewer" ? ["education", "school"] : MODULES;
+  const MODS: AppId[] = MODULES;   // every role gets the full shell; RLS scopes the data (022)
   const [user, setUser] = useState<string | null>(null); const [ready, setReady] = useState(false); const [demo, setDemo] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]); const [taskErr, setTaskErr] = useState<{ message: string; kind?: string } | null>(null); const [tasksLoaded, setTasksLoaded] = useState(false);
   const [profile, setProfile] = useState<Profile>({}); const [center, setCenter] = useState<null | "Profile" | "Appearance">(null); const [qs, setQs] = useState<Settings | null>(null);
@@ -451,7 +451,7 @@ export default function Cockpit() {
             {dc.reasons.length > 0 && <p className="truncate text-xs text-slate">Threats: {dc.reasons.slice(0, 3).join(" · ")}</p>}</div>
         </div>
         {!demo && !fam && <div className="mb-3"><Approvals /></div>}
-        {fam && <div className="mb-3 rounded-lg border border-cyan/30 bg-cyan/10 px-3 py-2 text-sm text-snow">{fam === "child" ? "Family view: school information is read-only. Your own to-dos and check-ins are yours to change." : "Shared school view (read-only)."}</div>}
+        {fam && <div className="mb-3 rounded-lg border border-cyan/30 bg-cyan/10 px-3 py-2 text-sm text-snow">{fam === "child" ? "Family account: school info is read-only. Health, Finance, Communications and Scanner start as your own private space." : "Shared school view is read-only. Everything else here is your own private space."}</div>}
         <section data-safe-top data-m-mods data-testid="modules-toolbar" className={`relative z-[35] mb-3 ${slim ? "hidden" : ""}`} aria-label="Modules">
           <div className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-8 sm:overflow-visible sm:pb-0">
             {MODS.map(id => { const q = squad.find(s => s.id === id); return (

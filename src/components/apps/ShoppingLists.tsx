@@ -1,7 +1,7 @@
 "use client";
 // SHOPPING LIST + WISH LIST (redesign). Clean rows, labeled form, 5-second Undo, ACTIVITY log, SHARE (migration 017).
 // Before 017 is applied it still works with the original columns (name / qty / price, hard delete) and hides sharing.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sb } from "@/lib/supabase"; import { list as listRows, insert, update, remove, restore, onChange, isDemo, type Row } from "@/lib/store";
 import { toast, Skeleton, ErrorNote } from "@/components/ui/kit"; import { sfx, haptic } from "@/lib/synth";
 import * as F from "@/lib/family";
@@ -20,22 +20,29 @@ export default function ShoppingLists({ log }: { log?: (s: string, t?: "info" | 
   const [li, setLi] = useState<L>("shopping"); const [rows, setRows] = useState<Row[] | null>(null); const [err, setErr] = useState<{ message: string; kind?: string } | null>(null);
   const [me, setMe] = useState(""); const [v2, setV2] = useState(false); const [owner, setOwner] = useState("");   // "" = my list
   const [shares, setShares] = useState<F.ListShare[]>([]); const [panel, setPanel] = useState<"" | "activity" | "share">(""); const [acts, setActs] = useState<Act[]>([]);
+  const [fam, setFam] = useState<{ owner: string; owner_name: string }[]>([]); const [famOn, setFamOn] = useState<boolean | null>(null); const famDefaulted = useRef(false);   // 022: family lists
   const [f, setF] = useState({ name: "", quantity: "", store: "", price: "" });
   const load = useCallback(async () => {
     try {
       if (!isDemo()) { const { data } = await sb().auth.getSession(); setMe(data.session?.user.id ?? "");
         const probe = await sb().from("shop_items").select("deleted_at").limit(1); setV2(!probe.error);
-        setShares(await F.listShares().catch(() => [])); }
+        setShares(await F.listShares().catch(() => []));
+        const fo = await sb().rpc("family_list_owners"); const fl = fo.error ? [] : (fo.data ?? []) as { owner: string; owner_name: string; role?: string }[]; setFam(fl);
+        // a child login opens the family (parent's) list by default, so everyone sees the same items
+        if (!famDefaulted.current) { famDefaulted.current = true; const par = fl.find(o => o.role === "parent"); if (par && F.getAccess()?.status.role === "child") setOwner(par.owner); }
+        const uid = data.session?.user.id; if (uid) { const fm = await sb().from("family_members").select("share_lists").eq("user_id", uid).eq("status", "active").maybeSingle();
+          setFamOn(fm.error || !fm.data ? null : (fm.data as { share_lists?: boolean }).share_lists !== false); } }
       setRows(await listRows("shop_items")); setErr(null);
     } catch (e) { setErr(e as { message: string }); setRows([]); }
   }, []);
   useEffect(() => { load(); const off = onChange(load); addEventListener("crystal-refresh", load); return () => { off(); removeEventListener("crystal-refresh", load); }; }, [load]);
   // live updates (Supabase Realtime, RLS-filtered); harmless if Realtime isn't enabled
   useEffect(() => { if (isDemo() || !v2) return; const ch = sb().channel("shop-live").on("postgres_changes", { event: "*", schema: "public", table: "shop_items" }, () => load()).subscribe();
-    return () => { sb().removeChannel(ch); }; }, [v2, load]);
+    const poll = setInterval(() => { if (document.visibilityState === "visible") load(); }, 8000);   // fallback if Realtime misses an event
+    return () => { sb().removeChannel(ch); clearInterval(poll); }; }, [v2, load]);
   const sharedWithMe = shares.filter(s => s.member === me && s.status === "active");
   const ownerId = owner || me; const mine = !owner;
-  const perm = mine ? "edit" : sharedWithMe.find(s => s.owner === owner && s.list === li)?.perm ?? "view";
+  const perm = mine || fam.some(o => o.owner === owner) ? "edit" : sharedWithMe.find(s => s.owner === owner && s.list === li)?.perm ?? "view";
   const canEdit = perm === "edit";
   const items = useMemo(() => (rows ?? []).filter(r => r.list === li && !r.deleted_at && (isDemo() || !me || r.user_id === ownerId)).sort((a, b) => Number(a.done) - Number(b.done) || String(b.created_at).localeCompare(String(a.created_at))), [rows, li, me, ownerId]);
   const total = items.filter(r => !r.done).reduce((t, r) => t + (Number(r.price) || 0), 0);
@@ -54,7 +61,7 @@ export default function ShoppingLists({ log }: { log?: (s: string, t?: "info" | 
     try { if (v2) await update("shop_items", r.id, { deleted_at: new Date().toISOString() }); else await remove("shop_items", r.id); } catch (e) { toast(`Couldn't delete: ${(e as Error).message}`, "warn"); return load(); }
     toast(`Deleted ${r.name}`, "info", { ms: 5000, action: { label: "UNDO", run: async () => { try { if (v2) await update("shop_items", r.id, { deleted_at: null }); else await restore("shop_items", r); toast("Restored"); } catch (e) { toast(`Undo failed: ${(e as Error).message}`, "warn"); } } } });
   };
-  const owners = [...new Map(sharedWithMe.filter(s => s.list === li).map(s => [s.owner, s.owner_name || "Shared"])).entries()];
+  const owners = [...new Map([...fam.map(o => [o.owner, o.owner_name || "Family"] as [string, string]), ...sharedWithMe.filter(s => s.list === li).map(s => [s.owner, s.owner_name || "Shared"] as [string, string])]).entries()];
 
   return (<div className="space-y-3">
     <div role="tablist" data-sticky-tabs className="pill-tabs">{(["shopping", "wish"] as L[]).map((k, i) => <button key={k} role="tab" style={{ "--i": i } as React.CSSProperties} aria-selected={li === k} onClick={() => { setLi(k); setOwner(""); setPanel(""); }} className="pill-tab">{TITLE[k].toUpperCase()}</button>)}
@@ -70,6 +77,9 @@ export default function ShoppingLists({ log }: { log?: (s: string, t?: "info" | 
         <button className="btn btn-ghost" onClick={() => setPanel(panel === "share" ? "" : "share")}>SHARE</button></span>}
     </div>
 
+    {panel === "share" && mine && famOn !== null && <label className="glass flex items-center gap-3 rounded-xl p-3 text-sm text-snow"><input type="checkbox" checked={famOn}
+      onChange={async e => { const on = e.target.checked; const r = await sb().rpc("family_set_list_sharing", { p_on: on }); if (r.error) toast(r.error.message, "warn"); else { setFamOn(on); toast(on ? "Your family can see and edit your lists" : "Your lists are private from your family"); } }} />
+      Share my Shopping List and Wish List with my family (they can add and delete items; every change is in Activity)</label>}
     {panel === "share" && mine && <SharePanel li={li} shares={shares.filter(s => s.owner === me && s.list === li)} onChange={load} />}
     {panel === "activity" && <div className="glass rounded-xl p-3" aria-label="Activity"><div className="mb-2 text-xs font-bold uppercase tracking-[.06em] text-cyan">Activity · {TITLE[li]}</div>
       <ul className="space-y-1 text-sm">{acts.map(a => <li key={a.id} className="text-snow">{a.actor_name} {a.action} <b>{a.item_name}</b> <span className="text-ash">· {t12(a.at)}</span></li>)}{!acts.length && <li className="text-ash">No activity yet.</li>}</ul></div>}
