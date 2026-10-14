@@ -1,9 +1,8 @@
 "use client";
-import { gradeText } from "@/lib/letter";
 import { useEffect, useMemo, useState } from "react";
 import { gradeView, type GRow } from "@/lib/gradeview";
 import GradingPeriods from "./GradingPeriods";
-import LetterBadge from "@/components/ui/LetterBadge";
+import GradeCell from "@/components/ui/GradeCell";
 import ReportCards from "./ReportCards";
 import MsgHub from "./MsgHub";
 import Learn from "./Learn";
@@ -15,7 +14,6 @@ import { sfx } from "@/lib/synth";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d: string | null) => d ? new Date(d.length === 10 ? d + "T12:00" : d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—";
-const tone = (p: number | null) => gradeText(p);
 const ago = (iso: string | null) => { if (!iso) return "never"; const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000); return m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 type Tab = "grades" | "work" | "comms" | "calendar" | "sync" | "reportcards" | "msg" | "schedule" | "attendance" | "more" | "learn" | "rules";
 
@@ -98,10 +96,10 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
           <div className="min-w-0 flex-1"><div className="truncate text-snow" title={c.course}>{c.course}</div>
             <div className="truncate text-xs text-slate" title={`${c.teacher ?? ""} · ${sub}`}>{c.teacher} · <span data-sub>{sub}</span></div></div>
           <Spark pts={c.trend} />
-          {main != null && <LetterBadge pct={main} />}<span className="shrink-0 text-right">{main != null ? <><span data-main className={`block font-mono text-sm ${tone(main)}`}>{fmt(main)}</span><span className="block text-[10px] text-slate">{mainLbl}</span></> : <span data-main className="text-xs text-ash">{qv === "final" || fp == null ? "Not posted" : "Not posted yet"}</span>}</span>
+          <GradeCell pct={main} text={main != null ? fmt(main) : null} caption={main != null ? mainLbl : null} empty={qv === "final" || fp == null ? "Not posted" : "Not posted yet"} />
           <GradedAssignments courseKey={c.key} demo={data.demo} />
         </li>); })}{!gv.current.length && <li className="text-xs text-ash">No classes in the latest sync.</li>}</ul>
-      {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><LetterBadge pct={f.percent} size="sm" /><span className={`font-mono ${tone(f.percent)}`}>{f.percent ?? f.mark}</span></li>)}</ul></div>}
+      {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><GradeCell pct={f.percent} text={f.percent != null ? String(f.percent) : f.mark ?? null} caption={`${f.term} final`} empty="Not posted" /></li>)}</ul></div>}
       {gv.asOf && <p className="text-xs text-slate">Current term: {gv.term} · as of {fmt(gv.asOf)}</p>}
     </div>}
     {tab === "work" && <div className="space-y-2">
