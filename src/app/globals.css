@@ -370,3 +370,15 @@ html:is([data-motion=off],[data-motion=reduced]) .grade-low-badge::after{content
 @keyframes hf-cue{0%,100%{box-shadow:0 0 0 0 rgb(62 242 224/.0)}50%{box-shadow:0 0 0 4px rgb(62 242 224/.35)}}
 .hf-cue{animation:hf-cue 1.6s ease-in-out infinite}
 html:is([data-motion=off],[data-motion=reduced]) .hf-cue{animation:none;outline:2px solid #3ef2e0;outline-offset:1px}
+
+/* Module inner tabs: complementary pill group. Hue per tab = module neon rotated by --i * 34deg; tinted dark glass; active filled + glow. */
+.pill-tabs { display: flex; flex-wrap: wrap; gap: .4rem; padding: .35rem 0 .5rem; overflow: visible !important; max-width: 100%; }
+.pill-tab { --base: var(--neon, #3ef2e0); --h: hsl(from var(--base) calc(h + var(--i, 0) * 34) max(s, 70%) 66%);
+  display: inline-flex; align-items: center; min-height: 36px; padding: .3rem .85rem; border-radius: 999px; white-space: nowrap;
+  font-size: .9rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; line-height: 1.1;
+  color: var(--h); background: color-mix(in srgb, var(--h) 12%, rgb(10 12 22 / .82)); border: 1px solid color-mix(in srgb, var(--h) 45%, transparent);
+  transition: background .15s, box-shadow .15s; }
+.pill-tab:hover { background: color-mix(in srgb, var(--h) 22%, rgb(10 12 22 / .82)); }
+.pill-tab:focus-visible { outline: 2px solid var(--h); outline-offset: 2px; }
+.pill-tab[aria-selected="true"] { background: var(--h); color: #0a0c16; border-color: var(--h); box-shadow: 0 0 14px -2px var(--h), 0 0 0 1px rgb(255 255 255 / .25) inset; }
+@media (max-width: 640px) { .pill-tab { font-size: .82rem; padding: .25rem .65rem; } }

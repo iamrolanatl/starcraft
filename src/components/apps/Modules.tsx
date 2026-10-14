@@ -35,7 +35,7 @@ export function useRows(t: Table, log: Log) {
 }
 
 const Tabs = ({ tabs, cur, set }: { tabs: string[]; cur: string; set: (s: string) => void }) => (
-  <div role="tablist" data-sticky-tabs className="mb-3 flex flex-wrap gap-1">{tabs.map(t => <button key={t} role="tab" aria-selected={cur === t} onClick={() => { sfx("click"); set(t); }} className={`rounded-md px-2.5 py-1 text-xs ${cur === t ? "bg-cyan/20 text-cyan neon-border" : "text-ash hover:text-cyan"}`}>{t}</button>)}</div>
+  <div role="tablist" data-sticky-tabs className="pill-tabs mb-3">{tabs.map((t, i) => <button key={t} role="tab" style={{ "--i": i } as React.CSSProperties} aria-selected={cur === t} onClick={() => { sfx("click"); set(t); }} className="pill-tab">{t}</button>)}</div>
 );
 const LocalNote = ({ on }: { on: boolean }) => on ? <p className="mt-2 text-[10px] text-amber-200/80">Demo data on this device only. Sign in to save for real.</p> : null;
 type RowsHook = { loaded: boolean; err: { message: string; kind?: string } | null };
@@ -52,7 +52,7 @@ export function Health({ log }: { log: Log }) {
   const todaySteps = h.rows.filter(r => r.kind === "steps" && r.logged_on === today()).reduce((s, r) => s + Number(r.value || 0), 0);
   const goal = 8000;
   return (<div>
-    <Tabs tabs={["Steps", "Glucose", "Meds"]} cur={tab} set={setTab} />
+    <Tabs tabs={["Steps", "Glucose", "Medications"]} cur={tab} set={setTab} />
     {tab === "Steps" ? (!h.loaded || h.err ? <State r={h} empty="" n={1} /> : <StepsPanel rows={h.rows} onLog={v => h.add({ kind: "steps", value: v, unit: "steps", logged_on: today() }, `Logged ${v} steps`)} />) : tab !== "Meds" ? (<>
       {!h.loaded || h.err ? <State r={h} empty="" n={1} /> : <div className="flex items-center gap-2">
         {tab === "Steps" ? <Gauge value={todaySteps} max={goal} label="Steps today" unit={`goal ${goal / 1000}k`} bands={[[goal * .5, "#ff9a5c"], [goal - 1, "#ffd166"], [1e9, "#7dffc8"]]} />
@@ -184,12 +184,12 @@ export function Finance({ log }: { log: Log }) {
 
 /* ───────── Shopping ───────── */
 export function Shopping({ log }: { log: Log }) {
-  const [tab, setTab] = useState("Shopping list"); const li = tab === "Wish list" ? "wish" : "shopping";
+  const [tab, setTab] = useState("Shopping List"); const li = tab === "Wish List" ? "wish" : "shopping";
   const s = useRows("shop_items", log); const [f, setF] = useState({ name: "", qty: "1", price: "", url: "" });
   const rows = s.rows.filter(r => r.list === li).sort((a, b) => Number(a.done) - Number(b.done));
   const est = rows.filter(r => !r.done).reduce((t, r) => t + Number(r.price || 0) * Number(r.qty || 1), 0);
   return (<div>
-    <Tabs tabs={["Shopping list", "Wish list"]} cur={tab} set={setTab} />
+    <Tabs tabs={["Shopping List", "Wish List"]} cur={tab} set={setTab} />
     <form className="mb-2 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!f.name.trim()) return; s.add({ list: li, name: f.name.trim(), qty: Number(f.qty) || 1, price: f.price ? Number(f.price) : null, url: f.url || null }, `Added to ${tab.toLowerCase()}: ${f.name}`); setF({ name: "", qty: "1", price: "", url: "" }); }}>
       <input className="input min-w-[8rem] flex-1 text-sm" placeholder={li === "wish" ? "Wish item" : "Item"} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} aria-label="Item name" />
       {li === "shopping" ? <input className="input w-16 text-sm" type="number" min={1} value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} aria-label="Quantity" /> : <input className="input w-32 text-sm" placeholder="Link" value={f.url} onChange={e => setF({ ...f, url: e.target.value })} aria-label="Link" />}
@@ -200,7 +200,7 @@ export function Shopping({ log }: { log: Log }) {
       <input type="checkbox" data-done checked={!!r.done} onChange={() => s.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Got ${r.name}`} />
       <span className={`flex-1 ${r.done ? "text-slate line-through" : "text-snow"}`}>{r.url && /^https?:\/\//.test(String(r.url)) ? <a href={String(r.url)} target="_blank" rel="noopener noreferrer" className="hover:text-cyan">{String(r.name)} ↗</a> : String(r.name)}{Number(r.qty) > 1 ? <span className="text-xs text-ash"> ×{String(r.qty)}</span> : null}</span>
       <span className="text-xs text-ash">{money(r.price)}</span>
-      {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to Shopping List">→🛒</button>}
+      {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to Shopping List" aria-label="Move to Shopping List">→🛒</button>}
       <Del onClick={() => s.del(r.id)} label={String(r.name)} /></li>))}
       {rows.some(r => r.done) && <li className="pt-1"><button className="btn btn-ghost !py-1 text-xs" onClick={() => s.delMany(rows.filter(r => r.done).map(r => r.id), `Cleared ${rows.filter(r => r.done).length} completed`)}>🧹 Clear Completed</button></li>}
 </ul><State r={s} n={rows.length} empty={li === "wish" ? "Wish list is empty" : "Shopping list is empty"} hint={li === "wish" ? "Try “add headphones to wish list”" : "Try “add milk to shopping list”"} />

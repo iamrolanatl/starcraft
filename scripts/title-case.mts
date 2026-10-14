@@ -22,6 +22,7 @@ type Hit = { file: string; start: number; end: number; old: string; neu: string;
 const hits: Hit[] = [];
 function check(sf: ts.SourceFile, file: string, node: ts.Node, text: string, start: number, end: number) {
   const t = text.trim(); if (!t || (t.match(/\p{L}/gu) ?? []).length < 2 || !/\p{L}/u.test(t) || t.length > 60 || /[.?!]$/.test(t) && t.split(/\s+/).length > 6) return; // sentences are not labels
+  if (t === t.toUpperCase() && /\p{Lu}{2}/u.test(t)) return; // UPPERCASE tab/pill labels are accepted
   const neu = titleCase(text); if (neu !== text) hits.push({ file, start, end, old: text, neu, line: sf.getLineAndCharacterOfPosition(start).line + 1 });
 }
 function walk(sf: ts.SourceFile, file: string) {

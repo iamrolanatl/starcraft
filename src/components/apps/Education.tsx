@@ -57,7 +57,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
   const upcoming = data.assignments.filter(a => !a.missing && a.due_date && a.due_date >= today()).slice(0, 12);
   const cal = data.calendar.filter(c => c.date >= today()).slice(0, 14);
   const at = data.student.attendance_totals || {};
-  const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["rules", "Grading Rules"], ["learn", "Learn"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "Msg"], ["more", "Other"], ["sync", "Sync log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
+  const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["rules", "Grading Rules"], ["learn", "Learn"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "School Inboxes"], ["more", "More School Data"], ["sync", "Sync Log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
 
   return (<div className="space-y-3 text-sm">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ash">
@@ -72,8 +72,8 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Due soon</div><div className="font-mono text-lg text-cyan">{upcoming.length}</div></div>
       <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Absent / tardy</div><div className="font-mono text-lg text-snow">{(at.excused ?? 0) + (at.unexcused ?? 0)} / {at.tardies ?? 0}</div></div>
     </div>
-    <div role="tablist" data-sticky-tabs className="flex gap-1 overflow-x-auto border-b border-cyan/15 [scrollbar-width:none]">
-      {TABS.map(([id, label, n]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`-mb-px border-b-2 shrink-0 whitespace-nowrap px-2 py-1 text-xs ${tab === id ? "border-cyan text-cyan" : "border-transparent text-ash hover:text-snow"}`}>{label}{n ? <span className="ml-1 rounded-full bg-alert/30 px-1.5 text-[10px] text-snow">{n}</span> : null}</button>)}
+    <div role="tablist" aria-label="Education sections" data-sticky-tabs className="pill-tabs">
+      {TABS.map(([id, label, n], i) => <button key={id} role="tab" style={{ "--i": i } as React.CSSProperties} aria-selected={tab === id} onClick={() => setTab(id)} className="pill-tab">{label}{n ? <span className="ml-1.5 rounded-full bg-alert/40 px-1.5 text-[11px] text-snow">{n}</span> : null}</button>)}
     </div>
     {tab === "grades" && <div className="space-y-2">
       <GradingPeriods rp={data.student.reporting_period as Parameters<typeof GradingPeriods>[0]["rp"]} />

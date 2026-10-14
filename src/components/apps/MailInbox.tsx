@@ -76,7 +76,7 @@ export default function MailInbox() {
       <input className="input min-w-0 flex-1 text-sm" type="search" placeholder="Search school email" value={q} onChange={e => setQ(e.target.value)} aria-label="Search email" />
       <label className="flex items-center gap-1 text-xs text-ash"><input type="checkbox" className="accent-[#3ef2e0]" checked={unreadOnly} onChange={e => setUnreadOnly(e.target.checked)} />Unread{unread ? ` (${unread})` : ""}</label>
     </div>
-    <div role="tablist" aria-label="School category" className="mb-2 flex flex-wrap gap-1">{TAGS.map(t => <button key={t} role="tab" aria-selected={tag === t} onClick={() => setTag(t)} className={`rounded-full px-2.5 py-0.5 text-xs ${tag === t ? "bg-cyan/20 text-cyan neon-border" : "text-ash hover:text-cyan"}`}>{t === "all" ? "All" : t}</button>)}</div>
+    <div role="tablist" aria-label="School category" className="pill-tabs mb-2">{TAGS.map((t, i) => <button key={t} role="tab" style={{ "--i": i } as React.CSSProperties} aria-selected={tag === t} onClick={() => setTag(t)} className="pill-tab">{t === "all" ? "All" : t}</button>)}</div>
     <ErrorNote err={err} />
     <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
       <ul className={`max-h-[60vh] space-y-1 overflow-y-auto pr-1 ${open ? "hidden md:block" : ""}`} aria-label="School inbox">
