@@ -65,7 +65,7 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
 }
 .neon-frame { position: relative; }
 .neon-frame::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
-  background: conic-gradient(from var(--ang), transparent 0 60%, #3ef2e0 72%, #7dffc8 78%, #c77dff 84%, transparent 92%);
+  background: conic-gradient(from var(--ang), transparent 0 60%, var(--neon, #3ef2e0) 72%, color-mix(in srgb, var(--neon, #3ef2e0) 60%, #fff) 78%, var(--neon, #3ef2e0) 84%, transparent 92%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin-ang 5s linear infinite; opacity: .9; }
 .red-alert .neon-frame::after { background: conic-gradient(from var(--ang), transparent 0 55%, #ff3b5c 70%, #ff9a5c 80%, transparent 92%); animation-duration: 1.6s; }
 .corner-ticks { background:
@@ -233,3 +233,23 @@ html[data-glass="solid"] .glass.corner-ticks { background-color: #0a1122; }
 }
 [data-sticky-tabs]:first-child { margin-top: -0.75rem; }
 section[aria-label$="applet"] > header { position: relative; z-index: 6; flex-shrink: 0; }
+
+/* v4: per-applet neon (--neon) drives the corner ticks and every scrollbar inside the applet, including nested lists/calendars. */
+section[aria-label$="applet"] { --neon: #3ef2e0; }
+section[aria-label^="Health "] { --neon: #ff7aa8; }
+section[aria-label^="Communications "] { --neon: #7db7ff; }
+section[aria-label^="Education "], section[aria-label^="School Hub "] { --neon: #c77dff; }
+section[aria-label^="Finance "] { --neon: #7dffc8; }
+section[aria-label^="Shopping "] { --neon: #ffd166; }
+section[aria-label^="OCR Scanner "], section[aria-label^="Rank & Medals "] { --neon: #ff9a5c; }
+.red-alert section[aria-label$="applet"] { --neon: #ff3b5c; }
+section[aria-label$="applet"].corner-ticks { background-image:
+  linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)),
+  linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)), linear-gradient(var(--neon),var(--neon)); }
+section[aria-label$="applet"], section[aria-label$="applet"] * { scrollbar-width: thin; scrollbar-color: var(--neon) rgb(5 8 18 / .55); }
+section[aria-label$="applet"] ::-webkit-scrollbar, section[aria-label$="applet"]::-webkit-scrollbar { width: 6px; height: 6px; }
+section[aria-label$="applet"] ::-webkit-scrollbar-track { background: rgb(5 8 18 / .55); border-radius: 6px; }
+section[aria-label$="applet"] ::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 6px; box-shadow: 0 0 6px var(--neon), inset 0 0 2px rgb(255 255 255 / .5); }
+section[aria-label$="applet"] ::-webkit-scrollbar-thumb:hover { filter: brightness(1.2); }
+section[aria-label$="applet"] ::-webkit-scrollbar-corner { background: transparent; }
+section[aria-label$="applet"] [role="tablist"] { scrollbar-width: none; }
