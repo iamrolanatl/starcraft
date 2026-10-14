@@ -1,15 +1,16 @@
 "use client";
-import { sb } from "./supabase";
+import { sb } from "./supabase"; import { byChild, selectedChild } from "./family";
 export interface GA { course_key: string; period_name: string; gradebook_id: string; name: string | null; category: string | null; assigned_date: string | null; due_date: string | null; score_display: string | null; points_display: string | null; earned: number | null; possible: number | null; percent: number | null; notes: string | null; graded: boolean; missing: boolean }
 export interface Calc { course_key: string; period_name: string; category: string; weight: number | null; points: number | null; points_possible: number | null; calculated_mark: string | null; updated_at: string }
 export interface GradedData { rows: GA[]; calc: Calc[]; missing?: boolean }
-let cache: Promise<GradedData> | null = null;
+let cache: Promise<GradedData> | null = null; let cacheKey = "";
 export function loadGraded(demo: boolean): Promise<GradedData> {
   if (demo) return Promise.resolve({ rows: [], calc: [] });
+  if (cacheKey !== selectedChild()) { cache = null; cacheKey = selectedChild(); }
   return cache ??= (async () => {
     const [a, c] = await Promise.all([
-      sb().from("edu_graded_assignments").select("course_key,period_name,gradebook_id,name,category,assigned_date,due_date,score_display,points_display,earned,possible,percent,notes,graded,missing").order("due_date", { ascending: false, nullsFirst: false }).limit(5000),
-      sb().from("edu_grade_calc").select("course_key,period_name,category,weight,points,points_possible,calculated_mark,updated_at"),
+      byChild(sb().from("edu_graded_assignments").select("course_key,period_name,gradebook_id,name,category,assigned_date,due_date,score_display,points_display,earned,possible,percent,notes,graded,missing")).order("due_date", { ascending: false, nullsFirst: false }).limit(5000),
+      byChild(sb().from("edu_grade_calc").select("course_key,period_name,category,weight,points,points_possible,calculated_mark,updated_at")),
     ]);
     if (a.error && /PGRST205|schema cache|does not exist/i.test(a.error.message + a.error.code)) { cache = null; return { rows: [], calc: [], missing: true }; }
     if (a.error) { cache = null; throw a.error; }

@@ -1,9 +1,9 @@
 "use client";
-import { sb } from "./supabase";
+import { sb } from "./supabase"; import { byChild } from "./family";
 export interface ReportCard { id: string; source: string; school_year: string | null; period: string | null; issue_date: string | null; file_name: string | null; bytes: number | null; created_at: string }
 export async function listReportCards(demo: boolean): Promise<ReportCard[] | "missing"> {
   if (demo) return [];
-  const { data, error } = await sb().from("report_cards").select("id,source,school_year,period,issue_date,file_name,bytes,created_at").order("issue_date", { ascending: false, nullsFirst: false });
+  const { data, error } = await byChild(sb().from("report_cards").select("id,source,school_year,period,issue_date,file_name,bytes,created_at")).order("issue_date", { ascending: false, nullsFirst: false });
   if (error) { if (/PGRST205|does not exist|schema cache/i.test(error.message + (error.code || ""))) return "missing"; throw error; }
   return (data ?? []) as ReportCard[];
 }

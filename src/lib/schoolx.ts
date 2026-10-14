@@ -1,9 +1,9 @@
 "use client";
-import { sb } from "./supabase";
+import { sb } from "./supabase"; import { byChild } from "./family";
 export interface Sched { term: string; period: number; course: string; course_key: string | null; room: string | null; teacher: string | null; teacher_email: string | null; last_seen_at: string }
 export interface AbsP { date: string; period: number; kind?: string | null; status?: string | null; code: string | null; reason: string | null; note: string | null; course: string | null; teacher: string | null }
 async function q<T>(t: string, cols: string, order: string, asc: boolean): Promise<T[] | "missing"> {
-  const { data, error } = await sb().from(t).select(cols).order(order, { ascending: asc }).limit(2000);
+  const { data, error } = await byChild(sb().from(t).select(cols)).order(order, { ascending: asc }).limit(2000);
   if (error) { if (/PGRST205|schema cache|does not exist/i.test(error.message + error.code)) return "missing"; throw error; }
   return (data ?? []) as T[];
 }

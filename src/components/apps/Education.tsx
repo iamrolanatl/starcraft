@@ -1,4 +1,5 @@
 "use client";
+import ChildSwitcher from "@/components/ChildSwitcher"; import { selectedChild, restricted } from "@/lib/family";
 import { useEffect, useMemo, useState } from "react";
 import { gradeView, type GRow } from "@/lib/gradeview";
 import GradingPeriods from "./GradingPeriods";
@@ -25,7 +26,7 @@ function Spark({ pts }: { pts: number[] }) {
   return <svg width={w} height={h} aria-hidden className="overflow-visible"><polyline points={d} fill="none" stroke={up ? "#7dffc8" : "#ff3b5c"} strokeWidth="1.6" style={{ filter: "drop-shadow(0 0 3px currentColor)" }} /></svg>;
 }
 
-export default function Education({ demo, log }: { demo: boolean; log: (s: string, t?: "info" | "ok" | "warn") => void }) {
+function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "info" | "ok" | "warn") => void }) {
   const [data, setData] = useState<EduData | null | undefined>(undefined); const [err, setErr] = useState(""); const [tab, setTab] = useState<Tab>("grades");
   const [sync, setSync] = useState<SyncStatus | null>(null); const [busy, setBusy] = useState(""); const [tick, setTick] = useState(0);
   useEffect(() => { loadSyncStatus(demo).then(st => { setSync(st); const day = Date.now() - 864e5; st.alerts.filter(a => new Date(a.created_at).getTime() > day).forEach(a => log(`⚠ School sync: ${a.message}`, "warn")); }).catch(() => {}); }, [demo, log, tick]);
@@ -64,7 +65,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       <span className="font-semibold text-snow">{data.student.name}</span><span>Gr {Number(data.student.grade) || data.student.grade}</span><span className="truncate">{data.student.school}</span>
       <span className="text-cyan">{data.student.reporting_period?.name}</span>
       <span className="ml-auto" title={data.student.last_fetched_at ?? ""}>⟳ {ago(data.student.last_fetched_at)}</span>
-      <button onClick={doSync} disabled={!!busy} className="btn btn-ghost !px-2 !py-0.5 text-[11px]" aria-label="Sync School Data Now">{busy || "⟳ Sync"}</button>
+      {!restricted() && <button onClick={doSync} disabled={!!busy} className="btn btn-ghost !px-2 !py-0.5 text-[11px]" aria-label="Sync School Data Now">{busy || "⟳ Sync"}</button>}
       {data.demo && <span className="rounded bg-amber-300/15 px-1.5 text-amber-200">demo data</span>}
     </div>
     <div className="grid grid-cols-3 gap-2 text-center">
@@ -126,4 +127,10 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
         {!sync?.runs.length && <li className="text-xs text-ash">No runs logged yet.</li>}</ul></div>
     </div>}
   </div>);
+}
+
+/** Child switcher (017) + remount per child so every tab reloads that child's rows. */
+export default function Education(p: { demo: boolean; log: (s: string, t?: "info" | "ok" | "warn") => void }) {
+  const [c, setC] = useState(selectedChild()); useEffect(() => { const on = () => setC(selectedChild()); addEventListener("crystal-child", on); return () => removeEventListener("crystal-child", on); }, []);
+  return <><ChildSwitcher /><EducationInner key={c || "all"} {...p} /></>;
 }

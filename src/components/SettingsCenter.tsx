@@ -5,8 +5,10 @@ import { DEFAULTS, getSettings, saveSettings, resetSettings, BG_PRESETS, type Se
 import { getProfile, loadProfile, saveProfile } from "@/lib/profile";
 import { greeting, type Profile } from "@/lib/names";
 import { getPrefs, savePrefs, type Clarity } from "@/lib/prefs";
+import dynamic from "next/dynamic";
+const Family = dynamic(() => import("@/components/Family"), { ssr: false });
 import { sb } from "@/lib/supabase"; import { isDemo } from "@/lib/store"; import { toast } from "@/components/ui/kit";
-const TABS = ["Profile", "Appearance", "Layout", "Crystal AI", "Alerts", "School", "Email", "Health", "Calendar", "Connections", "Privacy & Data"] as const;
+const TABS = ["Profile", "Family", "Appearance", "Layout", "Crystal AI", "Alerts", "School", "Email", "Health", "Calendar", "Connections", "Privacy & Data"] as const;
 type Tab = typeof TABS[number];
 const SKINS: { id: Settings["theme"]; name: string; desc: string; bg: string; fg: string; acc: string }[] = [
   { id: "cockpit", name: "Crystal Cockpit", desc: "Space-command nebula with DEFCON glow (default)", bg: "linear-gradient(135deg,#0b1430,#060b1a)", fg: "#E8F4FF", acc: "#3ef2e0" },
@@ -56,6 +58,7 @@ export default function SettingsCenter({ open, onClose, initialTab = "Profile" }
           {TABS.map(t => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`tap rounded-lg px-3 py-2 text-left text-sm ${tab === t ? "bg-cyan/15 text-snow" : "text-ash hover:text-snow"}`}>{t}</button>)}
         </nav>
         <div className="applet-body min-h-0 flex-1 overflow-y-auto px-4 pb-6" role="tabpanel" aria-label={tab}>
+          {tab === "Family" && <Family />}
           {tab === "Profile" && <>
             <div className="flex items-center gap-3 py-3">{p.avatar_url ? <img src={p.avatar_url} alt="" className="h-14 w-14 rounded-full border border-cyan/40" referrerPolicy="no-referrer" /> : <div className="grid h-14 w-14 place-items-center rounded-full bg-navy-2 text-xl">👤</div>}
               <div><div className="text-base font-semibold text-snow">{p.display_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || "Commander"}</div><div className="text-sm text-ash">Preview: “{greeting(p)}”</div></div></div>

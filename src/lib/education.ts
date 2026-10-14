@@ -1,5 +1,5 @@
 "use client";
-import { sb } from "@/lib/supabase";
+import { sb } from "@/lib/supabase"; import { byChild } from "@/lib/family";
 
 export interface Student { id: string; name: string; grade: string | null; school: string | null; attendance_totals: Record<string, number>; reporting_period: { name?: string; start?: string; end?: string }; last_fetched_at: string | null; last_synced_at: string | null }
 export interface GradeRow { captured_at: string; term: string; course_key: string; course: string; period: string | null; teacher: string | null; teacher_email: string | null; percent: number | null; mark: string | null; is_final: boolean }
@@ -12,7 +12,7 @@ export interface EduData { student: Student; grades: GradeRow[]; assignments: As
 export async function loadEducation(demo: boolean): Promise<EduData | null> {
   if (demo) return DEMO;
   const c = sb();
-  const { data: st, error } = await c.from("edu_students").select("*").order("name").limit(1);
+  const { data: st, error } = await byChild(c.from("edu_students").select("*")).order("name").limit(1);
   if (error) throw new Error(error.code === "PGRST205" || error.code === "42P01" ? "Education tables not installed yet (migration 002)." : error.message);
   if (!st?.length) return null;
   const s = st[0] as Student; const q = (t: string) => c.from(t).select("*").eq("student_id", s.id);

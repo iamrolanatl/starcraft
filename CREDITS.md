@@ -13,3 +13,4 @@ screenshots or ripped assets, and no game names appear in the UI.
 
 ## Background video (Crystal Cockpit)
 See `public/media/bg` (owned by the SpaceBackground worker) for its sources and licenses.
+- qrcode-generator 1.4.4 (MIT) vendored at src/lib/vendor/qrcode.js for invite QR codes.

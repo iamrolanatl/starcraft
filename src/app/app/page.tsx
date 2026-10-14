@@ -51,6 +51,8 @@ import { getSettings, saveSettings, applySettings, BG_PRESETS, type Settings } f
 const SettingsCenter = dynamic(() => import("@/components/SettingsCenter"), { ssr: false });
 import { Boundary, useGlobalErrorHooks, OfflineBanner } from "@/components/ui/Guard";
 import { ExtTasks } from "@/components/apps/ExtSync";
+import { loadAccess, restricted } from "@/lib/family";
+const Approvals = dynamic(() => import("@/components/Family").then(m => m.Approvals), { ssr: false });
 import { captureGoogleToken } from "@/lib/ext";
 import { call, Routes, type AppId, type CommandRequest, type CommandResponse } from "@/contracts/api";
 
@@ -75,6 +77,8 @@ const NORMAL_SIZE: Record<string, [number, number]> = { default: [0.72, 0.86], c
 function tileGeo(i: number, W: number): Geo { const cols = W >= 1500 ? 3 : 2; const w = Math.floor((W - 24 - (cols - 1) * 12) / cols); return { x: 12 + (i % cols) * (w + 12), y: 8 + Math.floor(i / cols) * 352, w, h: 340 }; }
 
 export default function Cockpit() {
+  const [fam, setFam] = useState<"child" | "viewer" | null>(null);   // family sharing (017): restricted, read-only school view
+  const MODS: AppId[] = fam === "child" ? ["education", "school", "shopping", "medals"] : fam === "viewer" ? ["education", "school"] : MODULES;
   const [user, setUser] = useState<string | null>(null); const [ready, setReady] = useState(false); const [demo, setDemo] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]); const [taskErr, setTaskErr] = useState<{ message: string; kind?: string } | null>(null); const [tasksLoaded, setTasksLoaded] = useState(false);
   const [profile, setProfile] = useState<Profile>({}); const [center, setCenter] = useState<null | "Profile" | "Appearance">(null); const [qs, setQs] = useState<Settings | null>(null);
@@ -99,6 +103,7 @@ export default function Cockpit() {
 
   /* auth + boot */
   useEffect(() => {
+    if (lsRaw("crystal-join-code", "")) { location.replace("/join/"); return; }   // signed in from an invite link: finish joining
     const isDemo = new URLSearchParams(location.search).has("demo"); const c = sb();
     const done = (email: string | null, d = false) => { setUser(email); setDemo(d); setReady(true); };
     c.auth.getSession().then(({ data }) => {
@@ -113,6 +118,7 @@ export default function Cockpit() {
   }, []);
   useEffect(() => { if (!ready) return; /* boot: ALL applets closed (minimized to the dock) */ setWins(HOME.map((id, i) => ({ id, title: META[id].title, minimized: true, z: i + 1, geo: savedGeo(id) ?? tileGeo(i, innerWidth) })));
     reload().then(() => log("Systems online. Welcome aboard, pilot.", "ok")); loadMods(); loadEdu(demo);
+    if (!demo) loadAccess().then(a => setFam(restricted(a)));
     const un = onStoreChange(loadMods); const iv = setInterval(() => { loadEdu(demo); loadMods(); }, 300000);
     if (pref("tour") !== "done") setTour(true); else if (pref("brief-date") !== ymd()) setBrief(true);
     return () => { un(); clearInterval(iv); };
@@ -193,7 +199,7 @@ export default function Cockpit() {
   const openApp = (id: AppId) => { if (HOME.includes(id) || reduced() || wins.some(w => w.id === id && !w.minimized)) return doOpen(id); origin.current = { ...lastPointer }; setWarp(true); sfx("whoosh"); haptic([10, 20, 30]); setTimeout(() => { doOpen(id); setWarp(false); }, 520); };
   /** Dock / module order for Alt+1–9 and cycling. */
   const dockPref = (qs?.dock ?? []) as AppId[];
-  const ORDER: AppId[] = dockPref.length ? dockPref : [...MODULES, "crystal"];
+  const ORDER: AppId[] = ((dockPref.length ? dockPref : [...MODULES, "crystal"]) as AppId[]).filter(id => !fam || MODS.includes(id));
   const closeAll = () => { setWins(w => w.map(x => ({ ...x, minimized: true, max: false }))); sfx("whoosh"); haptic(8); log("All applets minimized: clean cockpit."); };
   const cycle = (d: number) => { const cur = wins.find(w => !w.minimized && w.max)?.id ?? focus; const i = ORDER.indexOf(cur); const n = ORDER[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + ORDER.length) % ORDER.length]; openApp(n); };
   const toggleFull = () => { if (!desk) return; const n = winPrefRef.current === "normal" ? "full" : "normal"; setWinPref(n); savePrefs({ win: n }); sfx("whoosh");
@@ -423,7 +429,7 @@ export default function Cockpit() {
             <MicBtn on={listening} onClick={toggleMic} /><button onClick={() => setHandsFreeOn(!handsFree)} aria-pressed={handsFree} title={handsFree ? "Hands-Free On: Tap To Stop" : "Hands-Free Voice: Tap To Start"} className={`btn btn-ghost px-2 text-xs ${handsFree ? "border-cyan text-cyan" : ""} ${!handsFree && hf.text === "Tap to Start Hands-Free" ? "hf-cue border-cyan text-cyan" : ""}`}>{handsFree ? "● Hands-Free" : !handsFree && hf.text === "Tap to Start Hands-Free" ? (slim ? "▶ Hands-Free" : "Tap to Start Hands-Free") : "Hands-Free"}</button>
             <button className="btn btn-primary !py-1.5 text-sm" disabled={cmdBusy}>{cmdBusy ? "…" : "Go"}</button>
           </form>
-          {slim && <nav aria-label="Modules" data-testid="slim-modules" className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">{MODULES.map(id => { const q = squad.find(x => x.id === id); return <button key={id} onClick={() => openApp(id)} title={q?.detail ? `${META[id].title}: ${q.detail}` : META[id].title} className={`relative flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2 text-xs font-semibold text-snow ${q?.status === "warn" ? "border-alert/60" : "border-cyan/25"} bg-[rgb(10_12_22/.6)] hover:border-cyan/60`}><span className="text-sm text-cyan">{META[id].icon}</span>{META[id].title}</button>; })}</nav>}
+          {slim && <nav aria-label="Modules" data-testid="slim-modules" className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">{MODS.map(id => { const q = squad.find(x => x.id === id); return <button key={id} onClick={() => openApp(id)} title={q?.detail ? `${META[id].title}: ${q.detail}` : META[id].title} className={`relative flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2 text-xs font-semibold text-snow ${q?.status === "warn" ? "border-alert/60" : "border-cyan/25"} bg-[rgb(10_12_22/.6)] hover:border-cyan/60`}><span className="text-sm text-cyan">{META[id].icon}</span>{META[id].title}</button>; })}</nav>}
           <button onClick={toggleSlim} aria-expanded={!slim} aria-label={slim ? "Expand Toolbar" : "Collapse Toolbar"} title={slim ? "Expand Toolbar" : "Collapse Toolbar"} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex">{slim ? "▾" : "▴"}</button>
           <button onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open Command Palette"><kbd>⌘K</kbd></button>
           <span data-testid="user-chip" title={demo ? "Demo mode" : [fullName(profile), user].filter(Boolean).join(" · ")} className="ml-auto hidden max-w-[14rem] truncate text-xs text-ash md:inline">{demo ? "Demo mode" : shortName(profile, user)} · <span className="text-cyan">{RANKS[rankI]}</span></span>
@@ -443,9 +449,11 @@ export default function Cockpit() {
           <div className="min-w-0"><div className="hud-label">Pilot&apos;s assistant · <span style={{ color: DEFCON_COLOR[level as 1] }}>DEFCON {level}</span></div><p className="text-snow">{greetText(profile)} {open.length ? `${open.length} open mission${open.length > 1 ? "s" : ""}.` : "All clear."}</p>
             {dc.reasons.length > 0 && <p className="truncate text-xs text-slate">Threats: {dc.reasons.slice(0, 3).join(" · ")}</p>}</div>
         </div>
+        {!demo && !fam && <div className="mb-3"><Approvals /></div>}
+        {fam && <div className="mb-3 rounded-lg border border-cyan/30 bg-cyan/10 px-3 py-2 text-sm text-snow">{fam === "child" ? "Family view: school information is read-only. Your own to-dos and check-ins are yours to change." : "Shared school view (read-only)."}</div>}
         <section data-safe-top data-testid="modules-toolbar" className={`relative z-[35] mb-3 ${slim ? "hidden" : ""}`} aria-label="Modules">
           <div className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-8 sm:overflow-visible sm:pb-0">
-            {MODULES.map(id => { const q = squad.find(s => s.id === id); return (
+            {MODS.map(id => { const q = squad.find(s => s.id === id); return (
               <button key={id} onClick={() => openApp(id)} onMouseEnter={() => sfx("hover")} className={`tap glass relative min-w-[88px] shrink-0 rounded-xl p-2 text-left hover:border-cyan/60 ${q?.status === "warn" ? "!border-alert/60" : ""}`}>
                 <div className="text-lg text-cyan">{META[id].icon}</div><div className="truncate text-xs font-semibold text-snow">{META[id].title}</div>
                 {q && <div className="truncate text-[9px] text-slate">{q.detail}</div>}

@@ -1,4 +1,5 @@
 "use client";
+import ChildSwitcher from "@/components/ChildSwitcher"; import { selectedChild } from "@/lib/family";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { list, insert, update, remove, restore, onChange, isLocal, uploadHandout, handoutUrl, type Row, type Table } from "@/lib/store";
 import { sfx } from "@/lib/synth";
@@ -183,34 +184,14 @@ export function Finance({ log }: { log: Log }) {
 }
 
 /* ───────── Shopping ───────── */
-export function Shopping({ log }: { log: Log }) {
-  const [tab, setTab] = useState("Shopping List"); const li = tab === "Wish List" ? "wish" : "shopping";
-  const s = useRows("shop_items", log); const [f, setF] = useState({ name: "", qty: "1", price: "", url: "" });
-  const rows = s.rows.filter(r => r.list === li).sort((a, b) => Number(a.done) - Number(b.done));
-  const est = rows.filter(r => !r.done).reduce((t, r) => t + Number(r.price || 0) * Number(r.qty || 1), 0);
-  return (<div>
-    <Tabs tabs={["Shopping List", "Wish List"]} cur={tab} set={setTab} />
-    <form className="mb-2 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!f.name.trim()) return; s.add({ list: li, name: f.name.trim(), qty: Number(f.qty) || 1, price: f.price ? Number(f.price) : null, url: f.url || null }, `Added to ${tab.toLowerCase()}: ${f.name}`); setF({ name: "", qty: "1", price: "", url: "" }); }}>
-      <input className="input min-w-[8rem] flex-1 text-sm" placeholder={li === "wish" ? "Wish item" : "Item"} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} aria-label="Item name" />
-      {li === "shopping" ? <input className="input w-16 text-sm" type="number" min={1} value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} aria-label="Quantity" /> : <input className="input w-32 text-sm" placeholder="Link" value={f.url} onChange={e => setF({ ...f, url: e.target.value })} aria-label="Link" />}
-      <input className="input w-20 text-sm" type="number" step="0.01" placeholder="$" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} aria-label="Price" />
-      <button className="btn btn-primary text-sm">Add</button>
-    </form>
-    <ul className="space-y-1">{rows.map(r => (<li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
-      <input type="checkbox" data-done checked={!!r.done} onChange={() => s.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Got ${r.name}`} />
-      <span className={`flex-1 ${r.done ? "text-slate line-through" : "text-snow"}`}>{r.url && /^https?:\/\//.test(String(r.url)) ? <a href={String(r.url)} target="_blank" rel="noopener noreferrer" className="hover:text-cyan">{String(r.name)} ↗</a> : String(r.name)}{Number(r.qty) > 1 ? <span className="text-xs text-ash"> ×{String(r.qty)}</span> : null}</span>
-      <span className="text-xs text-ash">{money(r.price)}</span>
-      {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to Shopping List" aria-label="Move to Shopping List">→🛒</button>}
-      <Del onClick={() => s.del(r.id)} label={String(r.name)} /></li>))}
-      {rows.some(r => r.done) && <li className="pt-1"><button className="btn btn-ghost !py-1 text-xs" onClick={() => s.delMany(rows.filter(r => r.done).map(r => r.id), `Cleared ${rows.filter(r => r.done).length} completed`)}>🧹 Clear Completed</button></li>}
-</ul><State r={s} n={rows.length} empty={li === "wish" ? "Wish list is empty" : "Shopping list is empty"} hint={li === "wish" ? "Try “add headphones to wish list”" : "Try “add milk to shopping list”"} />
-    {est > 0 && <p className="mt-2 text-xs text-ash">Estimated: <span className="text-snow">{money(est)}</span></p>}
-    <LocalNote on={s.local} />
-  </div>);
-}
+export { default as Shopping } from "./ShoppingLists";
 
 /* ───────── School hub (portals, bells, calendar, check-ins) ───────── */
-export function SchoolHub({ log }: { log: Log }) {
+export function SchoolHub(p: { log: Log }) {
+  const [c, setC] = useState(selectedChild()); useEffect(() => { const on = () => setC(selectedChild()); addEventListener("crystal-child", on); return () => removeEventListener("crystal-child", on); }, []);
+  return <><ChildSwitcher /><SchoolHubInner key={c || "all"} {...p} /></>;
+}
+function SchoolHubInner({ log }: { log: Log }) {
   const [tab, setTab] = useState("Bells");
   const [grade, setGrade] = useState<Grade>(() => (["6", "7", "8"].includes(lsRaw("crystal-grade")) ? lsRaw("crystal-grade") as Grade : "6"));
   const [now, setNow] = useState(new Date()); useEffect(() => { const i = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(i); }, []);
