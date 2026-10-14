@@ -33,7 +33,7 @@ const COURSES: [string, string, string, number, number[]][] = [
 ];
 const DEMO: EduData = {
   demo: true,
-  student: { id: "demo", name: "Cadet (demo)", grade: "07", school: "Starbase Middle School", attendance_totals: { excused: 0, unexcused: 1, tardies: 1 }, reporting_period: { name: "Quarter 2", start: T(-2), end: T(60) }, last_fetched_at: ago(0.2), last_synced_at: ago(0.2) },
+  student: { id: "demo", name: "Cadet (demo)", grade: "07", school: "Starbase Middle School", attendance_totals: { excused: 0, unexcused: 1, tardies: 1 }, reporting_period: { name: "Quarter 2", start: "2026-10-12", end: "2026-12-18" } /* real ParentVUE Q2 dates; never invented */, last_fetched_at: ago(0.2), last_synced_at: ago(0.2) },
   grades: COURSES.flatMap(([k, n, t, cur, hist], i) => [
     ...hist.map((p, j) => ({ captured_at: ago(60 - j * 15), term: "Quarter 1", course_key: k, course: n, period: String(i + 1), teacher: t, teacher_email: null, percent: p, mark: String(p), is_final: j === hist.length - 1 })),
     { captured_at: ago(0.2), term: "Quarter 2", course_key: k, course: n, period: String(i + 1), teacher: t, teacher_email: null, percent: cur, mark: String(cur), is_final: false },

@@ -346,7 +346,7 @@ html[data-skin="kartrush"] .btn-primary { background: #e4000f; color: #fff; box-
 
 
 /* Calendar event chips: up to 2 lines, full title in the tooltip (data-tip). */
-.cal-chip { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.25; }
+.cal-chip { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-overflow: ellipsis; white-space: normal; overflow-wrap: normal !important; word-break: keep-all !important; hyphens: none; line-height: 1.25; }
 /* Nothing ghosts through an open applet: hide the launcher grid while an applet is maximized or tiled over it. */
 body:has(section[data-maximized="true"]) main section[aria-label="Modules"], body:has([data-tiled="true"]) main section[aria-label="Modules"] { visibility: hidden; }
 

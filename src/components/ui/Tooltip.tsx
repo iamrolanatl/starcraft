@@ -21,7 +21,7 @@ export default function TipLayer() {
   const [t, setT] = useState<T>(null);
   useEffect(() => {
     let timer = 0, cur: Element | null = null;
-    const show = (hit: { el: Element; text: string }) => { const r = hit.el.getBoundingClientRect(); const below = r.top < 56; setT({ text: hit.text, x: Math.min(Math.max(r.left + r.width / 2, 90), innerWidth - 90), y: below ? r.bottom + 8 : r.top - 8, below }); };
+    const show = (hit: { el: Element; text: string }) => { const r = hit.el.getBoundingClientRect(); const below = r.bottom + 72 < innerHeight || r.top < 56; /* prefer below so tabs above are never covered; auto-flip up near the bottom edge */ setT({ text: hit.text, x: Math.min(Math.max(r.left + r.width / 2, 90), innerWidth - 90), y: below ? r.bottom + 8 : r.top - 8, below }); };
     const hide = () => { clearTimeout(timer); cur = null; setT(null); };
     const over = (e: Event) => { const hit = tipFor(e.target as Element); if (!hit) { if (cur) hide(); return; } if (hit.el === cur) return; hide(); cur = hit.el; timer = window.setTimeout(() => show(hit), 350); };
     const focus = (e: Event) => { const el = e.target as Element; if (!(el as HTMLElement).matches?.(":focus-visible")) return; const hit = tipFor(el); if (hit) { cur = hit.el; show(hit); } };

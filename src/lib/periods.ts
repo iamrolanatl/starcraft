@@ -26,7 +26,8 @@ export function periods(rp: { name?: string; start?: string; end?: string; perio
   const src = live ? "ParentVUE (live sync)" : `${(pv as { source: string }).source}, ${new Date((pv as { pulled: string }).pulled).toLocaleDateString()}`;
   const by = (n: string) => list.find(p => p.name.toLowerCase() === n.toLowerCase());
   const mk = (id: string, name: string): Period => { const r = by(name); return { id, name, start: r?.start ?? null, end: r?.end ?? null, source: r ? src : "date not available" }; };
-  const quarters = [1, 2, 3, 4].map(i => mk(`Q${i}`, `Quarter ${i}`));
+  // Newest live ParentVUE sync wins: if the live reporting_period is a quarter, its dates override the stored list.
+  const quarters = [1, 2, 3, 4].map(i => { const q = mk(`Q${i}`, `Quarter ${i}`); return rp?.name?.toLowerCase() === q.name.toLowerCase() && rp.start && rp.end ? { ...q, start: rp.start, end: rp.end, source: "ParentVUE (live sync)" } : q; });
   const terms = list.filter(p => /progress period/i.test(p.name)).map(p => ({ id: short(p.name), name: p.name, start: p.start, end: p.end, source: src }));
   if (rp?.name && rp.start && rp.end && !terms.some(t => t.name === rp.name)) terms.push({ id: short(rp.name), name: rp.name, start: rp.start, end: rp.end, source: "ParentVUE (live sync)" });
   const sem = (id: string, a: Period, b: Period): Period => ({ id, name: id === "S1" ? "Semester 1" : "Semester 2", start: a.start, end: b.end, source: a.start && b.end ? `derived from ${a.id}–${b.id} (${src})` : "date not available" });
