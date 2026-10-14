@@ -1,0 +1,2 @@
+555a8d898ee8b01757382abeb230155c7187ba4efd338b03d009a729bd6b95b3  CrystalSync-0.1.0-x86_64.AppImage
+8fc3b7e86bdc3f0f3d89a89fec4a93152db02dae8dbe19e57c467289a1585a82  crystal-sync_0.1.0_amd64.deb
