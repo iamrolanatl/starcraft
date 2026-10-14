@@ -54,7 +54,7 @@ export default function Health({ api }: { api: Api }) {
       <div className="ml-auto text-right font-mono text-xs text-ash">checked {et(d.at)}<br />{targets.length} monitors</div></div>
 
     <div className="grid gap-3 xl:grid-cols-2">{groups.map(([g, hue, ts]) => <Card key={g} title={`${g} · synthetic checks (every 5 min)`} hue={hue}>
-      <table className="w-full font-mono text-xs"><thead><tr className="text-left text-ash"><th>target</th><th>status</th><th>p50</th><th>p95</th><th>24h</th><th>7d</th><th>30d</th><th>latency 24h</th><th>last</th></tr></thead>
+      <table className="w-full whitespace-nowrap font-mono text-xs"><thead><tr className="text-left text-ash"><th>target</th><th>status</th><th>p50</th><th>p95</th><th>24h</th><th>7d</th><th>30d</th><th>latency 24h</th><th>last</th></tr></thead>
         <tbody>{ts.map(t => <tr key={t.target} className="border-t border-white/5"><td className="py-1"><span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: t.ok ? COL.green : COL.red, boxShadow: `0 0 6px ${t.ok ? COL.green : COL.red}` }} />{t.target}</td>
           <td className={t.ok ? "" : "text-[#ff8fa3]"} title={t.detail || ""}>{t.status ?? "ERR"}</td><td>{t.p50 != null ? Math.round(t.p50) : "—"}</td><td className={t.p95 > 2000 ? "text-[#ffd166]" : ""}>{t.p95 != null ? Math.round(t.p95) : "—"}</td>
           {[t.up_24h, t.up_7d, t.up_30d].map((u, i) => <td key={i} style={{ color: upCol(u) }}>{u != null ? `${u}%` : "—"}</td>)}<td><Spark s={t.series} /></td><td className="text-ash">{ago(t.last_at)}</td></tr>)}
