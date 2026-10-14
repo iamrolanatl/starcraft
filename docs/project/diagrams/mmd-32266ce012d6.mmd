@@ -1,0 +1,7 @@
+flowchart LR
+  ANON[anon key<br/>public] -->|only| PUB[public RPCs: sync_pair_exchange, sync_* with device key, health_ingest, support_submit]
+  JWT[user JWT] -->|RLS| OWN[own rows + family/viewer scoped rows]
+  JWT -->|SECURITY DEFINER| FAM[family_*, list_*, viewer_*, sync_pair_create, sync_request_now]
+  ADM[admin JWT] -->|admin_guard| ADMIN[admin_* RPCs]
+  DEV[device key] -->|sync_device| UP[poll, claim, start, log, upload, finish, rotate]
+  SR[service role, box only] --> ALL[all tables: ingest, mail, ext sync, escalation answers]

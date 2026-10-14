@@ -1,0 +1,20 @@
+flowchart TD
+  S[Alert or LATE / FAILED light] --> K{Which path?}
+  K -->|Laptop pipeline| L1{LAST_FAILURE.txt on laptop?}
+  L1 -->|yes| L2[Read reason: login failure, ParentVUE unreachable, upload failure]
+  L2 --> L3{Login failure?}
+  L3 -->|yes| L4[Rolan re-enters ParentVUE password locally; do NOT retry repeatedly]
+  L3 -->|no| L5[Check home internet / Cobb outage; press Sync once later]
+  L1 -->|no| B1{poller heartbeat fresh?}
+  B1 -->|no| B2[Run sync/ensure_cron.sh; check crontab]
+  B1 -->|yes| B3{Job status?}
+  B3 -->|processing stuck| B4[Wait for sweep at 40 min or check poller.log]
+  B3 -->|failed: quarantined| Q1[Inspect quarantine folder; see SOP-04]
+  B3 -->|failed: box| B5[Read poller.log / school_sync.log; exit 2 owner not signed in, 3 migrations missing]
+  K -->|Crystal Sync| C1{Device seen recently?}
+  C1 -->|no| C2[Computer asleep/off; crystal-sync status; reinstall jobs: crystal-sync install]
+  C1 -->|yes| C3{Last run error?}
+  C3 -->|bad_device_key / device_revoked| C4[Re-pair: new code in Downloads]
+  C3 -->|not the leader| C5[Normal standby; check primary]
+  C3 -->|quarantined| Q1
+  C3 -->|rate limited| C6[Wait; max 12 uploads/hour]

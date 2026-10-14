@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  participant TS as Task Scheduler (laptop)
+  participant LP as pull-to-supabase.ps1
+  participant PV as ParentVUE
+  participant SB as Supabase (RPC + Storage)
+  participant PO as Box poller (cron, 1 min)
+  participant SS as school_sync.py
+  TS->>LP: 05:40 trigger
+  LP->>SB: agent_begin_scheduled (job running, upload ticket)
+  LP->>PV: one login + SOAP methods (fetch.ps1)
+  PV-->>LP: XML payloads
+  LP->>SB: agent_log lines
+  LP->>SB: upload zip to private bucket raw (ticket)
+  LP->>SB: agent_finish_pull (status processing)
+  PO->>SB: find processing jobs
+  PO->>SB: download zip (service role)
+  PO->>PO: scrub CTLS secrets, archive 30 days, parse in staging
+  PO->>SS: run gates + merge
+  alt gates pass
+    SS->>SB: upsert edu_* (field-level merge), edu_sync_runs ok
+    PO->>SB: job done
+  else gates fail
+    SS->>SB: edu_sync_runs quarantined
+    PO->>SB: job failed + edu_alerts quarantined
+  end
+  Note over PO: 6:00 check: no done job since 5:30 → missed_pull alert

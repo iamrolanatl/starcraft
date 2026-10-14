@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  actor P as Parent
+  participant UI as Education / School Hub
+  participant DB as Postgres (020)
+  participant A as Primary device
+  participant B as Standby device
+  P->>UI: SYNC NOW (child)
+  UI->>DB: sync_request_now(child) (reuse queued ≤30 min)
+  loop every 30 s
+    A->>DB: sync_poll (via /api/sync/poll)
+  end
+  DB-->>A: command for primary
+  A->>DB: run start / log / upload / finish
+  UI->>DB: read sync_runs + sync_logs (RLS) → live console
+  Note over B: if primary silent > 2 min, standby receives the command

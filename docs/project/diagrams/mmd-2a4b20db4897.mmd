@@ -1,0 +1,28 @@
+flowchart LR
+  subgraph TB1["Trust boundary: home network"]
+    PVS[ParentVUE SOAP] --> AGT[Laptop pull or Crystal Sync]
+    KC[(OS keychain / DPAPI)] --> AGT
+  end
+  subgraph TB2["Trust boundary: Cloudflare edge"]
+    API["/api/sync/* (device key)"]
+    HAPI["/api/health/steps (hst_ token)"]
+    CHAT["/api/chat (user JWT)"]
+  end
+  subgraph TB3["Trust boundary: Supabase"]
+    RPC["SECURITY DEFINER RPCs"] --> TBL[("edu_*, sync_*, health_*, ext_*, mail_*")]
+    RLS{{RLS policies}} --> TBL
+    STO[("Storage raw / mail / handouts")]
+  end
+  subgraph TB4["Trust boundary: box"]
+    PL[poller + school_sync] --> TBL
+    XS[ext_sync] --> TBL
+    MS[mail scripts] --> TBL
+  end
+  AGT -->|Crystal Sync: rows JSON ≤4 MB| API --> RPC
+  AGT -->|Laptop: zip via upload ticket| STO --> PL
+  IPH[iPhone Shortcut] --> HAPI --> RPC
+  GCAL[Google Calendar/Tasks] --> XS
+  ICS[O365 ICS] --> XS
+  GMAIL[Gmail via routine] --> MS
+  UI[Crystal SPA] -->|JWT| RLS
+  UI --> CHAT -->|caller JWT| RLS

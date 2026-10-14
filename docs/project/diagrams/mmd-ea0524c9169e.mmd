@@ -1,0 +1,12 @@
+flowchart LR
+  PV[ParentVUE / CTLS] -->|5:40 AM and PM, home network| AG[Pull agent or Crystal Sync]
+  AG --> DB[(Crystal database, RLS)]
+  GC[Google Calendar / Tasks] -->|every 15 min| DB
+  GM[Gmail school mail] -->|every 5 min| DB
+  O3[O365 ICS] --> DB
+  HK[Apple Health] --> DB
+  DB --> APP[Crystal app: modules, alerts, grounded AI, voice]
+  APP --> R((Rolan))
+  APP --> E((Eli))
+  APP --> V((Trusted adults))
+  APP -->|drafts, Rolan presses Send| OUT[Outbox to teachers]
