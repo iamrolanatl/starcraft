@@ -45,7 +45,7 @@ export default function Health({ api }: { api: Api }) {
   const dbItems = [{ name: "Supabase database (500 MB free)", used: db.size_bytes, limit: db.limit_bytes, unit: "bytes" }, { name: "Supabase storage (1 GB free)", used: db.storage_bytes || 0, limit: 1024 ** 3, unit: "bytes" },
     { name: "Monthly active users (50k free)", used: db.mau_30d || 0, limit: 50000, unit: "MAU" }, { name: "DB connections", used: db.connections || 0, limit: db.max_connections || 60, unit: "conns" }].map(x => ({ ...x, pct: Math.round((1000 * Number(x.used || 0)) / Number(x.limit || 1)) / 10 }));
   const groups: [string, string, J[]][] = [["Application", "#3ef2e0", targets.filter(t => ["route", "api", "core"].includes(t.kind))], ["Dependencies", "#a78bfa", targets.filter(t => t.kind === "dep")]];
-  const fresh = [["School sync (ParentVUE)", pl.school?.[0]?.finished_at || pl.school?.[0]?.started_at || pl.school?.[0]?.created_at, 36], ["Gmail sync", pl.gmail_last, 6], ["Calendar / ext sync", pl.calendar_last, 36]] as [string, string, number][];
+  const fresh = [["School sync (ParentVUE)", pl.school?.[0]?.ran_at || pl.school?.[0]?.fetched_at || pl.school?.[0]?.finished_at || pl.school?.[0]?.started_at || pl.school?.[0]?.created_at, 36], ["Gmail sync", pl.gmail_last, 6], ["Calendar / ext sync", pl.calendar_last, 36]] as [string, string, number][];
   return <div className="grid gap-3">
     <div className="glass flex flex-wrap items-center gap-4 rounded-xl p-4" style={{ borderColor: col, boxShadow: `0 0 30px ${col}33` }} role="status">
       <span className={`h-5 w-5 rounded-full ${st.state !== "green" ? "animate-pulse" : ""}`} style={{ background: col, boxShadow: `0 0 18px ${col}` }} />

@@ -38,7 +38,7 @@ function Rows({ rows, onPick, cols }: { rows: J[]; onPick?: (r: J) => void; cols
 type Confirm = { title: string; word: string; danger?: boolean; run: (typed: string) => Promise<void>; detail?: string };
 export default function Admin() {
   const [state, setState] = useState<"loading" | "signin" | "ok" | "pending">("loading"); const [me, setMe] = useState("");
-  const [tab, setTab] = useState<Tab>("OVERVIEW"); const [ov, setOv] = useState<J | null>(null); const [log, setLog] = useState<string[]>(["CRYSTAL COMMAND CENTER v1 — type `help` or press ⌘K"]);
+  const [conMin, setConMin] = useState(false); const [tab, setTab] = useState<Tab>("OVERVIEW"); const [ov, setOv] = useState<J | null>(null); const [log, setLog] = useState<string[]>(["CRYSTAL COMMAND CENTER v1 — type `help` or press ⌘K"]);
   const [users, setUsers] = useState<J[]>([]); const [q, setQ] = useState(""); const [user, setUser] = useState<J | null>(null); const [uid, setUid] = useState<string | null>(null);
   const [tables, setTables] = useState<J[]>([]); const [tsel, setTsel] = useState<string | null>(null); const [tinfo, setTinfo] = useState<J | null>(null); const [browse, setBrowse] = useState<J | null>(null);
   const [fcol, setFcol] = useState(""); const [fval, setFval] = useState(""); const [page, setPage] = useState(0); const [edit, setEdit] = useState<J | null>(null);
@@ -116,7 +116,7 @@ export default function Admin() {
 
   const o = ov || {}; const lastEdu = o.edu_sync?.[0]; const lastExt = o.ext_sync?.[0]; const ob = o.outbox || {};
   const stale = (s?: string) => !s || Date.now() - new Date(s).getTime() > 36 * 3600e3;
-  return <main className="min-h-dvh bg-[radial-gradient(ellipse_at_top,#0b1430,#060b1a_60%)] text-snow">
+  return <main className={`min-h-dvh bg-[radial-gradient(ellipse_at_top,#0b1430,#060b1a_60%)] text-snow ${conMin ? "pb-14" : "pb-40"}`}>
     <div className="pointer-events-none fixed inset-0 opacity-[.06]" style={{ backgroundImage: "linear-gradient(#3ef2e0 1px,transparent 1px),linear-gradient(90deg,#3ef2e0 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
     <header className="glass sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-none border-x-0 border-t-0 px-4 py-2">
       <a href="/app/" className="font-mono text-lg font-bold tracking-[.2em] neon">CRYSTAL</a><span className="font-mono text-xs tracking-[.2em] text-[#ff8fa3]">{"// COMMAND CENTER"}</span>
@@ -214,7 +214,8 @@ export default function Admin() {
     </div>
 
     <footer className="glass fixed inset-x-0 bottom-0 z-20 rounded-none border-x-0 border-b-0 font-mono text-xs">
-      <div className="h-24 overflow-auto px-3 py-1 text-[#7dffc8]" aria-live="polite">{log.map((l, i) => <div key={i} className={/ERR/.test(l) ? "text-[#ff8fa3]" : l.includes("> ") ? "text-snow" : ""}>{l}</div>)}</div>
+      <button type="button" onClick={() => setConMin(!conMin)} aria-expanded={!conMin} aria-label={conMin ? "Expand console" : "Minimize console"} className="absolute right-2 top-1 rounded border border-white/15 px-2 text-[11px] text-ash hover:text-snow">{conMin ? "▴ CONSOLE" : "▾ HIDE"}</button>
+      <div className={`${conMin ? "hidden" : "h-24"} overflow-auto px-3 py-1 text-[#7dffc8]`} aria-live="polite">{log.map((l, i) => <div key={i} className={/ERR/.test(l) ? "text-[#ff8fa3]" : l.includes("> ") ? "text-snow" : ""}>{l}</div>)}</div>
       <form onSubmit={e => { e.preventDefault(); const v = cmdRef.current?.value || ""; if (cmdRef.current) cmdRef.current.value = ""; if (v.trim()) run(v); }} className="flex items-center gap-2 border-t border-white/10 px-3 py-2"><span className="neon">crystal@admin:~$</span><input ref={cmdRef} aria-label="Command" className="flex-1 bg-transparent text-snow outline-none" placeholder="help · users eli · table children · sync · audit" autoComplete="off" spellCheck={false} /></form>
     </footer>
 
