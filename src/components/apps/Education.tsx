@@ -13,6 +13,8 @@ import { Schedule, AttendanceTab, Unavailable } from "./SchoolExtras";
 import { loadEducation, loadSyncStatus, requestSync, jobStatus, type EduData, type GradeRow, type SyncStatus } from "@/lib/education";
 import { sfx } from "@/lib/synth";
 import { SyncLights } from "@/components/CrystalSync";
+import { loadAbsences, type AbsP } from "@/lib/schoolx";
+import type { Assignment } from "@/lib/education";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d: string | null) => d ? new Date(d.length === 10 ? d + "T12:00" : d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—";
@@ -25,6 +27,28 @@ function Spark({ pts }: { pts: number[] }) {
   const d = pts.map((p, i) => `${(i / (pts.length - 1)) * w},${h - ((p - lo) / (hi - lo || 1)) * h}`).join(" ");
   const up = pts[pts.length - 1] >= pts[0];
   return <svg width={w} height={h} aria-hidden className="overflow-visible"><polyline points={d} fill="none" stroke={up ? "#7dffc8" : "#ff3b5c"} strokeWidth="1.6" style={{ filter: "drop-shadow(0 0 3px currentColor)" }} /></svg>;
+}
+
+type AP = Assignment & { points_possible?: number | null; url?: string | null };
+const daysLeft = (d: string) => { const n = Math.round((new Date(d.slice(0, 10) + "T12:00").getTime() - new Date(today() + "T12:00").getTime()) / 864e5); return n <= 0 ? "due today" : n === 1 ? "1 day left" : `${n} days left`; };
+const fmtDT = (d: string | null) => !d ? "no due date" : d.length > 10 && !/T00:00/.test(d) ? new Date(d).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : fmt(d.slice(0, 10));
+function SummaryPeek({ kind, missing, upcoming, demo, onClose }: { kind: "missing" | "due" | "att"; missing: AP[]; upcoming: AP[]; demo: boolean; onClose: () => void }) {
+  const [abs, setAbs] = useState<AbsP[] | "missing" | null>(null);
+  useEffect(() => { if (kind === "att") loadAbsences(demo).then(setAbs).catch(() => setAbs([])); }, [kind, demo]);
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === "Escape" && onClose(); addEventListener("keydown", k); return () => removeEventListener("keydown", k); }, [onClose]);
+  const title = kind === "missing" ? "Missing assignments" : kind === "due" ? "Due soon (not turned in yet)" : "Absences and late arrivals";
+  const row = "rounded-lg bg-navy-2/50 px-2 py-1.5";
+  const due = upcoming.slice(0, 4);
+  return <section id="edu-peek" aria-label={title} className="rounded-xl border border-cyan/25 bg-black/40 p-2 backdrop-blur">
+    <div className="mb-1.5 flex items-center"><h3 className="hud-label text-ice">{title}</h3><button onClick={onClose} className="btn btn-ghost ml-auto !px-2 !py-0 text-[11px]" aria-label="Close list">✕ Close</button></div>
+    {kind === "missing" && (!missing.length ? <p className="text-xs text-mint">Nothing missing. Great job staying on top of it! 🎉</p> :
+      <ul className="space-y-1">{missing.map(a => <li key={a.source + a.ext_id} className={row}><div className="flex gap-2"><span className="flex-1 text-snow">{a.url ? <a className="underline" href={a.url} target="_blank" rel="noreferrer">{a.name}</a> : a.name}</span><span className="font-mono text-xs text-alert">{a.score_display ?? "Missing"}{a.points_possible ? ` of ${a.points_possible} points` : ""}</span></div><div className="text-[11px] text-ash">{a.course} · due {fmtDT(a.due_date)}</div></li>)}</ul>)}
+    {kind === "due" && (!due.length ? <p className="text-xs text-mint">Nothing due right now. Enjoy the breather! 🌴</p> :
+      <ul className="space-y-1">{due.map(a => <li key={a.source + a.ext_id} className={`${row} flex items-center gap-2`}><div className="min-w-0 flex-1"><div className="text-snow">{a.url ? <a className="underline" href={a.url} target="_blank" rel="noreferrer">{a.name}</a> : a.name}</div><div className="text-[11px] text-ash">{a.course} · due {fmtDT(a.due_date)}</div></div><span className="shrink-0 text-xs text-cyan">{a.due_date ? daysLeft(a.due_date) : ""}</span></li>)}</ul>)}
+    {kind === "att" && (abs === null ? <p className="text-xs text-ash">Loading…</p> : abs === "missing" || !abs.length ? <p className="text-xs text-mint">No absences or late arrivals recorded. Perfect attendance! ⭐</p> :
+      <ul className="space-y-1">{[...abs].sort((x, y) => x.date === y.date ? x.period - y.period : y.date.localeCompare(x.date)).map(r => { const t = r.kind === "tardy" ? "Late arrival (tardy)" : r.status === "activity" ? "School activity" : "Absent"; const ex = r.status === "activity" ? "approved" : r.status === "unexcused" ? "unexcused" : r.status === "excused" ? "excused" : "not explained yet";
+        return <li key={r.date + r.period + r.kind} className={row}><div className="flex flex-wrap gap-x-2 text-xs"><span className="font-semibold text-snow">{fmt(r.date)}</span><span className="text-ash">Period {r.period}{r.course ? ` · ${r.course}` : ""}</span><span className={`ml-auto rounded px-1.5 text-[11px] ${ex === "unexcused" ? "bg-alert/25 text-snow" : ex === "approved" ? "bg-cyan/15 text-cyan" : "bg-mint/20 text-mint"}`}>{t} · {ex}</span></div>{r.note && <div className="text-[11px] italic text-ice">School note: “{r.note}”</div>}</li>; })}</ul>)}
+  </section>;
 }
 
 function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "info" | "ok" | "warn") => void }) {
@@ -51,6 +75,7 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
 
   const gv = useMemo(() => gradeView((data?.grades ?? []) as GRow[]), [data]);
   const [qv, setQv] = useState<"final" | "live">("final");
+  const [peek, setPeek] = useState<"missing" | "due" | "att" | null>(null);
 
   if (err) return <p className="text-sm text-alert">{err}</p>;
   if (data === undefined) return <p className="text-sm text-ash">Linking to school uplink…</p>;
@@ -71,10 +96,12 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
       {data.demo && <span className="rounded bg-amber-300/15 px-1.5 text-amber-200">demo data</span>}
     </div>
     <div className="grid grid-cols-3 gap-2 text-center">
-      <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Missing</div><div className={`font-mono text-lg ${missing.length ? "text-alert" : "text-mint"}`}>{missing.length}</div></div>
-      <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Due soon</div><div className="font-mono text-lg text-cyan">{upcoming.length}</div></div>
-      <div className="rounded-lg bg-navy-2/60 py-1.5"><div className="hud-label">Absent / tardy</div><div className="font-mono text-lg text-snow">{(at.excused ?? 0) + (at.unexcused ?? 0)} / {at.tardies ?? 0}</div></div>
+      {([["missing", "Missing", <span key="m" className={missing.length ? "text-alert" : "text-mint"}>{missing.length}</span>, "#ff3b5c"], ["due", "Due soon", <span key="d" className="text-cyan">{upcoming.length}</span>, "#22d3ee"], ["att", "Absent / tardy", <span key="a" className="text-snow">{(at.excused ?? 0) + (at.unexcused ?? 0)} / {at.tardies ?? 0}</span>, "#fcd34d"]] as const).map(([id, label, val, c]) =>
+        <button key={id} type="button" aria-expanded={peek === id} aria-controls="edu-peek" onClick={() => setPeek(peek === id ? null : id)} style={{ "--glow": c } as React.CSSProperties}
+          className={`rounded-lg border py-1.5 transition-shadow hover:shadow-[0_0_12px_var(--glow)] focus-visible:shadow-[0_0_12px_var(--glow)] focus-visible:outline-none ${peek === id ? "border-[color:var(--glow)] bg-navy-2/80 shadow-[0_0_12px_var(--glow)]" : "border-transparent bg-navy-2/60"}`}>
+          <div className="hud-label">{label} <span aria-hidden>{peek === id ? "▴" : "▾"}</span></div><div className="font-mono text-lg">{val}</div></button>)}
     </div>
+    {peek && <SummaryPeek kind={peek} missing={missing} upcoming={upcoming} demo={demo} onClose={() => setPeek(null)} />}
     <div role="tablist" aria-label="Education sections" data-sticky-tabs className="pill-tabs">
       {TABS.map(([id, label, n], i) => <button key={id} role="tab" style={{ "--i": i } as React.CSSProperties} aria-selected={tab === id} onClick={() => setTab(id)} className="pill-tab">{label}{n ? <span className="ml-1.5 rounded-full bg-alert/40 px-1.5 text-[11px] text-snow">{n}</span> : null}</button>)}
     </div>
