@@ -12,7 +12,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit -p . && npx tsc --noEmit -p functions
       - run: npx eslint src
-      - run: npx tsx scripts/test-nlp.ts
+      - run: npx tsx scripts/test-nlp.ts && npx tsx scripts/test-grounding.mts
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

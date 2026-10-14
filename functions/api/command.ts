@@ -2,6 +2,7 @@ import type { AppId, CommandRequest, CommandResponse, CommandIntent } from "../.
 import { parseCommand, parseDate } from "../../src/lib/nlp";
 import { complete, type Env } from "../_lib/router";
 import { body, json } from "../_lib/http";
+import { isSchoolQ } from "../_lib/answer";
 
 const ITEM: Record<string, string[]> = { shop_items: ["list", "name", "qty"], bills: ["name", "amount", "due_date"], health_logs: ["kind", "value"], comms_notes: ["channel", "title"] };
 const ITEM_APP: Record<string, AppId> = { shop_items: "shopping", bills: "finance", health_logs: "health", comms_notes: "comms" };
@@ -12,6 +13,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const localNoon = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12);
   const fast = parseCommand(b.text, localNoon);
   if (fast) return json({ intent: fast, provider: "fallback" } satisfies CommandResponse);
+  // Questions (esp. about school data) go to the grounded /api/chat path; never let the classifier answer them.
+  if (isSchoolQ(b.text) || /\?\s*$/.test(b.text) || /^(what|who|when|where|why|how|which|is|are|does|do|did|can)\b/i.test(b.text)) return json({ intent: { kind: "chat", reply: "" }, provider: "fallback" } satisfies CommandResponse);
   const sys = `Today is ${now.toISOString().slice(0,10)} (${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][now.getUTCDay()]}). Classify the user's command. Questions or requests for advice are "chat". Only use create_task when the user clearly wants something remembered or done. Reply ONLY with JSON, one of:
 {"kind":"create_task","title":"...","dueDate":"YYYY-MM-DD"|null,"priority":1|2|3}
 {"kind":"open_app","app":"home|tasks|weather|calendar|health|comms|education|school|finance|shopping|ocr"}

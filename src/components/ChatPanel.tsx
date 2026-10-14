@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { call, Routes, type ChatMessage, type ChatRequest, type ChatResponse } from "@/contracts/api";
 import { sfx } from "@/lib/synth";
+import { askPilot } from "@/lib/ask";
 import type { Mood } from "./CrystalBot";
 
 export default function ChatPanel({ mode, greeting, onMood, className = "" }: { mode: ChatRequest["mode"]; greeting: string; onMood?: (m: Mood) => void; className?: string }) {
@@ -13,8 +14,8 @@ export default function ChatPanel({ mode, greeting, onMood, className = "" }: { 
     e.preventDefault(); const q = text.trim(); if (!q || busy) return;
     const next = [...msgs, { role: "user" as const, content: q }]; setMsgs(next); setText(""); setBusy(true); onMood?.("thinking"); sfx("click");
     try {
-      const r = await call<ChatRequest, ChatResponse>(Routes.chat, { mode, messages: next.slice(1) });
-      setMsgs([...next, { role: "assistant", content: r.reply }]); setMeta(r.provider === "workers-ai" ? `Workers AI · ${r.model.split("/").pop()}` : r.provider); onMood?.("happy"); sfx("chirp");
+      const r = mode === "pilot" ? await askPilot(next.slice(1)) : await call<ChatRequest, ChatResponse>(Routes.chat, { mode, messages: next.slice(1) });
+      setMsgs([...next, { role: "assistant", content: r.reply }]); setMeta(r.model === "grounded-db" ? "your synced data (no AI)" : r.provider === "workers-ai" ? `Workers AI · ${r.model.split("/").pop()}` : r.provider); onMood?.("happy"); sfx("chirp");
     } catch { setMsgs([...next, { role: "assistant", content: "Signal lost. Try again?" }]); onMood?.("alert"); sfx("error"); }
     finally { setBusy(false); setTimeout(() => onMood?.("idle"), 1800); }
   }

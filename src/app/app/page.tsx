@@ -19,6 +19,7 @@ import { loadEducation, loadSyncStatus, type EduData, type SyncStatus } from "@/
 import { schoolDay } from "@/lib/school";
 import { sb } from "@/lib/supabase";
 import { sfx, ambient, haptic, isMuted } from "@/lib/synth";
+import { askPilot } from "@/lib/ask";
 import { call, Routes, type AppId, type CommandRequest, type CommandResponse } from "@/contracts/api";
 
 const META: Record<AppId, { title: string; icon: string }> = {
@@ -171,7 +172,7 @@ export default function Cockpit() {
       if (it.kind === "create_task") { await addTask({ title: it.title, due_date: it.dueDate, priority: it.priority }); await reload(); toast(`Task filed: ${it.title}${it.dueDate ? ` · due ${it.dueDate}` : ""}`); log(`Task created: ${it.title}`, "ok"); sfx("success"); haptic(12); sparks(); react("happy"); speakBubble("Mission logged! ✅"); }
       else if (it.kind === "create_item") { await insertRow(it.table, it.row); toast(it.summary); log(it.summary, "ok"); sfx("success"); haptic(12); sparks(); react("happy"); speakBubble("Got it! ✨"); openApp(it.app); }
       else if (it.kind === "open_app") { openApp(it.app); react("wave"); }
-      else { speakBubble(it.reply.slice(0, 160), 7000); log(`Crystal: ${it.reply.slice(0, 120)}`); react("happy", 2500); }
+      else { const g = await askPilot([{ role: "user", content: text }]); speakBubble(g.reply.slice(0, 220), 9000); toast(g.reply.slice(0, 220), "info"); log(`Crystal${g.grounded ? " [data]" : ""}: ${g.reply.slice(0, 160)}`); react("happy", 2500); }
       setCmd("");
     } catch (err) { toast((err as Error).message, "warn"); log(`Command failed: ${(err as Error).message}`, "warn"); sfx("error"); haptic([30, 30, 30]); react("alert"); }
     finally { setCmdBusy(false); }
