@@ -4,3 +4,9 @@ compatibility_date = "2025-09-01"
 
 [ai]
 binding = "AI"
+
+# Global rate limiter (Durable Object in workers/ratelimiter, deployed separately)
+[[durable_objects.bindings]]
+name = "RL"
+class_name = "RateLimiter"
+script_name = "crystal-ratelimiter"
