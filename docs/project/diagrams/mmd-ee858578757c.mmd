@@ -1,0 +1,22 @@
+flowchart LR
+  subgraph NOW["NOW (S8–S9): go live and harden"]
+    N1[PB-001/002 apply + verify 018–020]
+    N2[PB-003 GitHub auth + push]
+    N3[PB-009 secrets out of scripts]
+    N4[PB-004 alert ≤ 15 min]
+    N5[PB-005/006 mobile + UI audit]
+  end
+  subgraph NEXT["NEXT (S10–S11): distribute and integrate"]
+    X1[PB-007 mac/win builds]
+    X2[PB-008 signing]
+    X3[PB-014 laptop → Crystal Sync]
+    X4[PB-011 Google OAuth]
+    X5[PB-010 Drive without service key]
+  end
+  subgraph LATER["LATER (S12+): second family and maturity"]
+    L1[PB-015/016 second family, high school]
+    L2[PB-024/025 retention + backups]
+    L3[PB-026 export/delete]
+    L4[PB-029 push alerts]
+  end
+  NOW --> NEXT --> LATER

@@ -1,0 +1,8 @@
+flowchart LR
+  MIG[supabase/migrations/*.sql] --> GEN[gen_datadict.py] --> DD[md/_datadict.md]
+  SRC[md/NN_*.md] --> PRE[build.py preprocess: includes, mermaid, TBD tags]
+  DD --> PRE
+  PRE --> MMDC[mmdc + Chrome] --> PNG[diagrams/mmd-hash.png]
+  PRE --> MDX[Python-Markdown] --> HTMLD[HTML + style.css]
+  PNG --> HTMLD
+  HTMLD --> WP[WeasyPrint] --> OUT[pdf/NN_*.pdf + combined PDF]

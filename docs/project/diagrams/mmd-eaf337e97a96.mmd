@@ -1,0 +1,20 @@
+erDiagram
+  AUTH_USERS ||--|| PROFILES : has
+  AUTH_USERS ||--o{ TASKS : owns
+  AUTH_USERS ||--o| FAMILIES : "owns (owner)"
+  FAMILIES ||--o{ FAMILY_MEMBERS : has
+  FAMILIES ||--o{ CHILDREN : has
+  CHILDREN ||--o| EDU_STUDENTS : "edu_student_id"
+  CHILDREN ||--o{ CHILD_VIEWERS : "shared with"
+  EDU_STUDENTS ||--o{ EDU_GRADES : snapshots
+  EDU_STUDENTS ||--o{ EDU_ASSIGNMENTS : has
+  EDU_STUDENTS ||--o{ EDU_ATTENDANCE : has
+  EDU_STUDENTS ||--o{ REPORT_CARDS : has
+  FAMILIES ||--o{ SYNC_DEVICES : pairs
+  SYNC_DEVICES ||--o{ SYNC_RUNS : performs
+  SYNC_RUNS ||--o{ SYNC_LOGS : writes
+  FAMILIES ||--o{ SYNC_LEASES : "slot leader"
+  AUTH_USERS ||--o{ MAIL_MESSAGES : mirrors
+  AUTH_USERS ||--o{ MAIL_OUTBOX : queues
+  AUTH_USERS ||--o{ SHOP_ITEMS : lists
+  SHOP_ITEMS }o--o{ LIST_SHARES : "shared via"

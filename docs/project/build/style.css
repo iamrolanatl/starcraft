@@ -1,0 +1,63 @@
+/* Crystal documentation set: print stylesheet (WeasyPrint). Dark navy + neon teal accents, white paper. */
+@page { size: Letter; margin: 22mm 18mm 20mm 18mm;
+  @top-left { content: string(doccode) "  ·  " string(doctitle); width: 80%; font: 8pt "IBM Plex Sans", sans-serif; color: #5a6684; border-bottom: .5pt solid #d5dcec; }
+  @top-right { content: "CRYSTAL"; width: 20%; font: 600 8pt "IBM Plex Sans", sans-serif; letter-spacing: .25em; color: #0f9e93; border-bottom: .5pt solid #d5dcec; }
+  @bottom-left { content: "Crystal Project Documentation · v1.0 · October 14, 2026 · Family Confidential"; width: 75%; font: 7.5pt "IBM Plex Sans", sans-serif; color: #5a6684; border-top: .6pt solid #3ef2e0; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); width: 25%; font: 7.5pt "IBM Plex Sans", sans-serif; color: #5a6684; border-top: .6pt solid #3ef2e0; }
+}
+@page cover { margin: 0; @top-left { content: none } @top-right { content: none } @bottom-left { content: none } @bottom-right { content: none } }
+@page wide { size: Letter landscape; }
+html { font-family: "IBM Plex Sans", "Noto Sans", sans-serif; font-size: 9.6pt; line-height: 1.42; color: #18203a; }
+body { margin: 0; }
+.cover { page: cover; break-after: page; height: 279.4mm; width: 215.9mm; position: relative; background: #ffffff; overflow: hidden; }
+.cover .band { background: #0b1430; color: #e6f7ff; height: 150mm; padding: 26mm 20mm 0 20mm; box-sizing: border-box; position: relative; }
+.cover .band:after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2.2mm; background: #3ef2e0; }
+.cover .brand { font-weight: 600; letter-spacing: .5em; color: #3ef2e0; font-size: 11pt; }
+.cover .brand small { letter-spacing: .1em; color: #8fa3c8; font-weight: 400; font-size: 8.5pt; display: block; margin-top: 2mm; }
+.cover .gem { position: absolute; right: 22mm; top: 24mm; width: 34mm; height: 34mm; transform: rotate(45deg); border: 1.4mm solid #3ef2e0; box-shadow: 0 0 0 2mm rgba(62,242,224,.18); }
+.cover .gem:after { content: ""; position: absolute; inset: 7mm; background: #3ef2e0; opacity: .35; }
+.cover .code { margin-top: 30mm; font-family: "IBM Plex Mono", monospace; color: #8fa3c8; font-size: 10pt; }
+.cover h1.ct { font-size: 30pt; line-height: 1.1; margin: 3mm 0 4mm 0; color: #ffffff; font-weight: 600; border: 0; }
+.cover .sub { font-size: 12pt; color: #b9c9e6; max-width: 150mm; }
+.cover table.meta { margin: 16mm 20mm 0 20mm; width: 175.9mm; border-collapse: collapse; font-size: 10pt; }
+.cover table.meta td { border: 0; border-bottom: .5pt solid #d5dcec; padding: 2.4mm 0; }
+.cover table.meta td:first-child { width: 45mm; color: #5a6684; text-transform: uppercase; font-size: 8pt; letter-spacing: .12em; }
+.cover .foot { position: absolute; bottom: 14mm; left: 20mm; right: 20mm; font-size: 8pt; color: #5a6684; border-top: .6pt solid #3ef2e0; padding-top: 3mm; }
+.doc { string-set: doctitle attr(data-title), doccode attr(data-code); }
+h1, h2, h3, h4 { color: #0b1430; font-weight: 600; break-after: avoid; }
+h1.dt { string-set: doctitle content(); font-size: 18pt; margin: 0 0 4mm 0; padding-bottom: 2mm; border-bottom: 1.2pt solid #3ef2e0; }
+h2 { font-size: 13.5pt; margin: 7mm 0 2.5mm 0; padding-left: 3mm; border-left: 1.4mm solid #3ef2e0; }
+.body > h2:first-child { margin-top: 0; }
+h3 { font-size: 11pt; margin: 5mm 0 2mm 0; color: #13305f; }
+h4 { font-size: 9.8pt; margin: 4mm 0 1.5mm 0; color: #13305f; }
+p { margin: 0 0 2.4mm 0; orphans: 2; widows: 2; }
+ul, ol { margin: 0 0 2.6mm 0; padding-left: 6mm; } li { margin: .6mm 0; }
+a { color: #0a7f77; text-decoration: none; }
+code { font-family: "IBM Plex Mono", monospace; font-size: 8.4pt; background: #eef3fb; padding: 0 .6mm; border-radius: .6mm; color: #13305f; }
+pre { background: #0b1430; color: #d9f7ff; padding: 3mm 4mm; border-radius: 1.5mm; font-size: 7.8pt; line-height: 1.4; white-space: pre-wrap; word-break: break-word; border-left: 1.2mm solid #3ef2e0; }
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 1mm 0 4mm 0; font-size: 8.3pt; line-height: 1.32; }
+thead { display: table-header-group; }
+th { background: #0b1430; color: #e6f7ff; text-align: left; padding: 1.6mm 2mm; font-weight: 600; border: .4pt solid #0b1430; }
+td { padding: 1.4mm 2mm; border: .4pt solid #cfd7e8; vertical-align: top; word-break: break-word; }
+tr { break-inside: avoid; }
+tbody tr:nth-child(even) td { background: #f5f8fd; }
+blockquote { margin: 2mm 0 3mm 0; padding: 2.5mm 4mm; background: #effcfb; border-left: 1.2mm solid #3ef2e0; color: #23314f; }
+blockquote p:last-child { margin: 0; }
+figure { margin: 3mm 0 5mm 0; text-align: center; break-inside: avoid; }
+figure img { max-width: 100%; max-height: 190mm; border: .5pt solid #d5dcec; border-radius: 1.5mm; padding: 2mm; background: #fff; }
+figcaption { font-size: 8pt; color: #5a6684; margin-top: 1.5mm; }
+.tbd { background: #fff3c4; color: #6b4d00; font-weight: 600; padding: 0 .8mm; border-radius: .6mm; }
+.control { break-after: page; }
+.control h2 { margin-top: 2mm; }
+.toc { break-after: page; }
+.toc ul { list-style: none; padding-left: 0; margin: 0; }
+.toc li { margin: 1mm 0; }
+.toc li.l3 { padding-left: 6mm; font-size: 8.8pt; color: #3a4666; }
+.toc li.l1 { font-weight: 600; margin-top: 2.4mm; font-size: 10pt; }
+.toc a { color: inherit; }
+.toc a::after { content: leader('.') target-counter(attr(href), page); color: #5a6684; }
+.docstart { break-before: page; }
+.pill { display: inline-block; padding: 0 1.6mm; border-radius: 2mm; font-size: 7.6pt; font-weight: 600; }
+.ok { background: #d8f8ec; color: #0b6b47; } .partial { background: #fff1c9; color: #7a5600; } .no { background: #ffe0e5; color: #9b1530; }
+hr { border: 0; border-top: .6pt solid #3ef2e0; margin: 4mm 0; }
