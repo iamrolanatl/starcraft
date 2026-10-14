@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from urllib.parse import quote
 """Crystal escalation worker (box daemon). Answers hard chat questions escalated by functions/api/chat.ts.
 
 Loop (every 5 s, single instance via lock file):
@@ -87,12 +88,12 @@ def answer(eid):
 def sweep():
     old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=15)).isoformat()
     stuck = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=3)).isoformat()
-    r = requests.get(f"{SB}/rest/v1/chat_escalations?select=id&status=eq.queued&created_at=lt.{old}&order=created_at&limit=10", headers=SH(), timeout=15)
+    r = requests.get(f"{SB}/rest/v1/chat_escalations?select=id&status=eq.queued&created_at=lt.{quote(old)}&order=created_at&limit=10", headers=SH(), timeout=15)
     if r.status_code == 404 or (r.status_code >= 400 and "chat_escalations" in r.text):
         raise LookupError("table chat_escalations missing (run 006_chat_escalations.sql)")
     r.raise_for_status(); ids = [x["id"] for x in r.json()]
-    for x in sb_patch(f"status=eq.working&claimed_at=lt.{stuck}&attempts=lt.3", {"status": "queued", "updated_at": now()}): log(f"requeued stuck {x['id']}")
-    sb_patch(f"status=eq.working&claimed_at=lt.{stuck}&attempts=gte.3", {"status": "failed", "error": "worker timed out", "updated_at": now()}, ret=False)
+    for x in sb_patch(f"status=eq.working&claimed_at=lt.{quote(stuck)}&attempts=lt.3", {"status": "queued", "updated_at": now()}): log(f"requeued stuck {x['id']}")
+    sb_patch(f"status=eq.working&claimed_at=lt.{quote(stuck)}&attempts=gte.3", {"status": "failed", "error": "worker timed out", "updated_at": now()}, ret=False)
     return ids
 
 def tick():
