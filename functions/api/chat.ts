@@ -3,6 +3,8 @@ import { complete, type Env } from "../_lib/router";
 import { body, json } from "../_lib/http";
 import { loadFacts, type Facts } from "../_lib/facts";
 import { answerSchool, dataBlock } from "../_lib/answer";
+import { answerDistrict } from "../_lib/district-answer";
+import { districtCalendar } from "./district-calendar";
 import { answerLife, lifeBlock, sanitizeLife, fetchQuotes, fetchWeather, tickerIn } from "../_lib/life";
 
 const SALES = `You are Crystal, the cheerful robot assistant on the landing page of "Crystal", a personal productivity and task management app with a StarCraft-style space cockpit theme. Features: top priorities, to-do list with natural language ("remind me Friday to pay the water bill"), weather, calendar, an AI co-pilot robot, a cockpit HUD with pilot view, radar, ability grid and Red Alert, on-device OCR scanning. Modules: Health (steps, glucose, meds), Communications (mail/email/drive follow-ups), Education (grades, check-ins with handout upload, school calendar, bell schedules), Finance (bills, credit score tracking, stock quotes), Shopping (shopping and wish lists). Bank/credit-bureau/Gmail auto-sync is not yet connected. It's a free proof of concept; sign up with Google or an email code. Be fun, brief (under 80 words), and honest; never invent pricing or features.`;
@@ -25,9 +27,10 @@ export const onRequestPost: PagesFunction<Env & { SUPABASE_ANON_KEY?: string }> 
     facts = { ...sanitizeDemo(b.demoFacts), demo: true, signedIn: false };
     const [qs, wx] = await Promise.all([fetchQuotes([...facts.life.stocks.map(s => String(s.symbol)), ...syms]), coords ? fetchWeather(coords.lat, coords.lon) : null]); facts.life.quotes = qs; facts.life.weather = wx;
   } else facts = await loadFacts(token, anon, { syms, coords });
-  const direct = answerLife(q, facts.life, facts.demo, facts.assignments) ?? answerSchool(q, facts);
+  const cal = await districtCalendar(); const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const direct = answerDistrict(q, cal, todayStr) ?? answerLife(q, facts.life, facts.demo, facts.assignments) ?? answerSchool(q, facts);
   if (direct) return json({ reply: direct, model: "grounded-db", provider: "fallback", grounded: true });
-  const res = await complete(env, `${PILOT}\n\n${dataBlock(facts)}\n\n${lifeBlock(facts.life, facts.demo)}`, b.messages);
+  const res = await complete(env, `${PILOT}\n\n${dataBlock(facts)}\n\n${lifeBlock(facts.life, facts.demo)}\n\nCCSD DISTRICT CALENDAR 2026-27 (official, cobbk12.org): ${cal.events.filter(e => e.cat !== "board").map(e => `${e.title} ${e.start}${e.end !== e.start ? `..${e.end}` : ""}`).join(" | ")}`, b.messages);
   return json({ ...res, grounded: false });
 };
 function sanitizeDemo(f: Facts): Facts { // demo payload comes from the client; cap sizes

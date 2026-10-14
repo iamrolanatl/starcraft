@@ -1,0 +1,176 @@
+{
+ "asOf": "2026-10-14T07:36:31+00:00",
+ "source": "https://www.cobbk12.org/_ci/calendar/subscription/twucyKpJcXKb9W7xUSbMGo0Df7UUy8un5r",
+ "pdf": "https://media.cobbk12.org/media/WWWCobb/medialib/2026-27-year-at-a-glance.59da33112275.pdf",
+ "year": "2026-27",
+ "events": [
+  {
+   "start": "2026-07-03",
+   "end": "2026-07-03",
+   "title": "Independence Day (observed)",
+   "cat": "holiday",
+   "source": "pdf"
+  },
+  {
+   "start": "2026-08-03",
+   "end": "2026-08-03",
+   "title": "First Day of School",
+   "cat": "first_last",
+   "source": "pdf"
+  },
+  {
+   "start": "2026-09-07",
+   "end": "2026-09-07",
+   "title": "Labor Day",
+   "cat": "holiday",
+   "source": "pdf"
+  },
+  {
+   "start": "2026-09-17",
+   "end": "2026-09-17",
+   "title": "CCSD Board Meeting",
+   "cat": "board",
+   "source": "ics"
+  },
+  {
+   "start": "2026-09-21",
+   "end": "2026-09-25",
+   "title": "Fall Break",
+   "cat": "holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2026-10-12",
+   "end": "2026-10-12",
+   "title": "Digital Learning Day",
+   "cat": "digital",
+   "source": "ics"
+  },
+  {
+   "start": "2026-10-13",
+   "end": "2026-10-16",
+   "title": "Elementary/Middle School Conference Week",
+   "cat": "early_release",
+   "source": "ics"
+  },
+  {
+   "start": "2026-10-15",
+   "end": "2026-10-15",
+   "title": "CCSD Board Meeting",
+   "cat": "board",
+   "source": "ics"
+  },
+  {
+   "start": "2026-11-03",
+   "end": "2026-11-03",
+   "title": "Election Day",
+   "cat": "student_holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2026-11-12",
+   "end": "2026-11-12",
+   "title": "CCSD Board Meeting",
+   "cat": "board",
+   "source": "ics"
+  },
+  {
+   "start": "2026-11-23",
+   "end": "2026-11-27",
+   "title": "Thanksgiving Holidays",
+   "cat": "holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2026-12-01",
+   "end": "2026-12-01",
+   "title": "Digital Learning Day",
+   "cat": "digital",
+   "source": "ics"
+  },
+  {
+   "start": "2026-12-17",
+   "end": "2026-12-17",
+   "title": "CCSD Board Meeting",
+   "cat": "board",
+   "source": "ics"
+  },
+  {
+   "start": "2026-12-17",
+   "end": "2026-12-18",
+   "title": "Early Release All Levels",
+   "cat": "early_release",
+   "source": "ics"
+  },
+  {
+   "start": "2026-12-21",
+   "end": "2027-01-01",
+   "title": "Winter Holidays",
+   "cat": "holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2027-01-04",
+   "end": "2027-01-04",
+   "title": "Winter Holiday",
+   "cat": "student_holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2027-01-18",
+   "end": "2027-01-18",
+   "title": "MLK, Jr. Day",
+   "cat": "holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2027-01-21",
+   "end": "2027-01-21",
+   "title": "CCSD Board Meeting",
+   "cat": "board",
+   "source": "ics"
+  },
+  {
+   "start": "2027-02-15",
+   "end": "2027-02-19",
+   "title": "Winter Break",
+   "cat": "holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2027-03-01",
+   "end": "2027-03-01",
+   "title": "Digital Learning Day",
+   "cat": "digital",
+   "source": "ics"
+  },
+  {
+   "start": "2027-04-05",
+   "end": "2027-04-09",
+   "title": "Spring Break",
+   "cat": "holiday",
+   "source": "ics"
+  },
+  {
+   "start": "2027-05-17",
+   "end": "2027-05-19",
+   "title": "Early Release All Levels",
+   "cat": "early_release",
+   "source": "ics"
+  },
+  {
+   "start": "2027-05-19",
+   "end": "2027-05-19",
+   "title": "Last Day of School",
+   "cat": "first_last",
+   "source": "ics"
+  },
+  {
+   "start": "2027-05-31",
+   "end": "2027-05-31",
+   "title": "Memorial Day",
+   "cat": "holiday",
+   "source": "ics"
+  }
+ ]
+}

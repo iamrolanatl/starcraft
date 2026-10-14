@@ -128,18 +128,31 @@ export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogou
   open: { id: AppId; title: string; minimized: boolean }[]; onRestore: (id: AppId) => void;
 }) {
   const [muted, setM] = useState(false); useEffect(() => setM(isMuted()), []);
+  // Phones: HUD collapses to a compact bar; abilities open in a bottom sheet; radar/feeds expand on demand.
+  const [phone, setPhone] = useState(false); const [expanded, setExpanded] = useState(false); const [abSheet, setAbSheet] = useState(false);
+  useEffect(() => { const mq = matchMedia("(max-width: 640px)"); const u = () => setPhone(mq.matches); u(); mq.addEventListener("change", u); return () => mq.removeEventListener("change", u); }, []);
+  const compact = phone && !expanded;
   return (
     <nav data-safe-bottom aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-glow" />
       {open.some(o => o.minimized) && (
-        <div className="mb-1 flex gap-1 overflow-x-auto">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} className="rounded border border-cyan/30 px-2 py-0.5 text-[10px] text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>
+        <div className="mb-1 flex gap-1 overflow-x-auto" aria-label="Dock: minimized applets">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} className="shrink-0 whitespace-nowrap rounded border border-cyan/30 px-2 py-0.5 text-xs text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>
       )}
-      <div className="mx-auto flex h-[112px] max-w-[1600px] items-stretch gap-2 sm:h-[132px]">
+      {phone && <div className="mb-1 flex items-center gap-1">
+        <button onClick={() => setAbSheet(true)} className="btn btn-ghost flex-1 text-sm" aria-haspopup="dialog">⚡ Abilities</button>
+        <button onClick={onHome} className="btn btn-ghost text-sm" aria-label="Return home">⌂</button>
+        <button onClick={onAlert} aria-pressed={alert} aria-label="Red alert" className={`btn text-sm font-bold ${alert ? "bg-alert text-white" : "border border-alert/60 text-alert"}`}>!</button>
+        <button onClick={() => setExpanded(x => !x)} aria-expanded={expanded} className="btn btn-ghost flex-1 text-sm">{expanded ? "▾ Hide radar/feeds" : "▴ Radar & feeds"}</button>
+      </div>}
+      {abSheet && <div className="fixed inset-0 z-[60] flex items-end bg-navy/60" onClick={() => setAbSheet(false)}><div role="dialog" aria-label="Abilities" className="glass sheet w-full rounded-t-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
+        <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-[#E8F4FF]">Abilities</h2><button className="btn btn-ghost" onClick={() => setAbSheet(false)} aria-label="Close abilities">✕</button></div>
+        <div onClick={() => setTimeout(() => setAbSheet(false), 150)}><AbilityGrid abilities={abilities} /></div></div></div>}
+      <div className={`mx-auto max-w-[1600px] items-stretch gap-2 sm:h-[132px] ${compact ? "hidden" : "flex h-[112px]"}`}>
         <div className="flex min-w-0 flex-1 snap-x items-stretch gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="HUD panels (swipe on mobile)">
           <div className="snap-start"><DefconMeter level={defcon.level} reasons={defcon.reasons} manual={defcon.reasons[0] === "Manual red alert"} /></div>
           <div className="snap-start"><PilotView name={pilot} mood={mood} onClick={onPilot} alert={alert} /></div>
           <div className="flex snap-start flex-col items-center gap-1"><div className="h-[84px] sm:h-[104px]"><Radar blips={blips} alert={alert} items={radar} pulse={pulse} /></div><span className="hud-label !text-[8px]">360 · {blips} tgt</span></div>
-          <div className="w-[132px] shrink-0 snap-start sm:w-[200px]"><AbilityGrid abilities={abilities} /></div>
+          {!phone && <div className="w-[132px] shrink-0 snap-start sm:w-[200px]"><AbilityGrid abilities={abilities} /></div>}
           <div className="flex snap-start flex-col items-center gap-1"><div className="h-[84px] sm:h-[104px]"><TacticalRadar contacts={contacts} alert={alert} /></div><span className="hud-label !text-[8px]">Tactical · {contacts.length}</span></div>
           <div className="snap-start"><StatusBars {...bars} /></div>
           <div className="snap-start"><SquadStatus squad={squad} onOpen={onRestore} /></div>

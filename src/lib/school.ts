@@ -91,25 +91,22 @@ Flex block|11:48-12:18
 };
 
 export interface SchoolEvent { start: string; end: string; title: string; kind: "holiday" | "early" | "info" }
-export const DMS_EVENTS: SchoolEvent[] = [
-  { start: "2026-10-12", end: "2026-10-12", title: "Digital learning day", kind: "info" },
-  { start: "2026-10-13", end: "2026-10-16", title: "Conference week: early release (1:30 PM)", kind: "early" },
-  { start: "2026-11-03", end: "2026-11-03", title: "Election Day: student holiday", kind: "holiday" },
-  { start: "2026-11-23", end: "2026-11-27", title: "Thanksgiving break", kind: "holiday" },
-  { start: "2026-12-17", end: "2026-12-18", title: "Early release (1:30 PM)", kind: "early" },
-  { start: "2026-12-21", end: "2027-01-01", title: "Winter break", kind: "holiday" },
-  { start: "2027-01-04", end: "2027-01-04", title: "Student holiday", kind: "holiday" },
-  { start: "2027-05-19", end: "2027-05-19", title: "Last day of school", kind: "info" },
-];
+import { eventsOn, isNoSchool, type DistrictCal } from "./district";
+import snap from "../../public/data/ccsd-2026-27.json";
+/** Official CCSD 2026-27 events (snapshot of the district ICS feed; refreshed live by /api/district-calendar). */
+export const DISTRICT = snap as DistrictCal;
+const KIND = { first_last: "info", holiday: "holiday", student_holiday: "holiday", early_release: "early", digital: "info", testing: "info", report_card: "info", board: "info", other: "info" } as const;
+export const DMS_EVENTS: SchoolEvent[] = DISTRICT.events.filter(e => e.cat !== "board").map(e => ({ start: e.start, end: e.end, title: e.title, kind: KIND[e.cat] }));
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export function schoolDay(d: Date): { kind: "master" | "flex" | "early" | "none"; label: string } {
   const k = ymd(d), dow = d.getDay();
   if (dow === 0 || dow === 6) return { kind: "none", label: "Weekend" };
-  const ev = DMS_EVENTS.find(e => k >= e.start && k <= e.end);
-  if (ev?.kind === "holiday") return { kind: "none", label: ev.title };
-  if (ev?.kind === "early") return { kind: "early", label: "Early release" };
-  if (k > "2027-05-19") return { kind: "none", label: "Summer" };
+  if (k < "2026-08-03" || k > "2027-05-19") return { kind: "none", label: "Summer" };
+  const ev = eventsOn(k, DISTRICT.events);
+  if (isNoSchool(k, DISTRICT.events)) return { kind: "none", label: ev.find(e => e.cat === "holiday" || e.cat === "student_holiday")?.title ?? "No school" };
+  if (ev.some(e => e.cat === "digital")) return { kind: "none", label: "Digital learning day (at home)" };
+  if (ev.some(e => e.cat === "early_release")) return { kind: "early", label: "Early release" };
   return dow >= 4 ? { kind: "flex", label: "Flex block day" } : { kind: "master", label: "Master schedule" };
 }
 

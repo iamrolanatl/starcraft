@@ -59,6 +59,17 @@ check("empty meds → none", A("what meds do I take", { ...LIFE, meds: [] }), ["
 check("demo labelled", A("what bills do I have", LIFE, true), ["DEMO DATA"]);
 check("school q not hijacked", A("what is Eli's math grade") === null ? "null" : "hijacked", ["null"]);
 check("PE not a ticker", String(tickerIn("how is PE going")), ["null"]);
+// ---- district calendar ----
+import { answerDistrict } from "../functions/_lib/district-answer.ts";
+import calSnap from "../public/data/ccsd-2026-27.json" with { type: "json" };
+const CAL = calSnap as unknown as import("../src/lib/district.ts").DistrictCal;
+check("thanksgiving break", answerDistrict("when is thanksgiving break", CAL, "2026-10-14"), ["Nov 23, 2026", "Nov 27, 2026", "cobbk12.org"]);
+check("winter break + return", answerDistrict("when is winter break", CAL, "2026-10-14"), ["Dec 21, 2026", "Jan 1, 2027", "Jan 5, 2027"]);
+check("Q3 starts Jan 5 (school day)", answerDistrict("is there school on Jan 5", CAL, "2026-10-14"), ["regular school day"]);
+check("election day no school", answerDistrict("is there school on Nov 3", CAL, "2026-10-14"), ["no school", "Election Day"]);
+check("next days off", answerDistrict("what are the next days off from school", CAL, "2026-10-14"), ["Election Day", "Thanksgiving"]);
+check("last day", answerDistrict("when is the last day of school", CAL, "2026-10-14"), ["May 19, 2027"]);
+check("non-calendar q passes through", String(answerDistrict("what is my math grade", CAL, "2026-10-14")), ["null"]);
 const BASE = process.env.BASE;
 if (BASE) {
   const ask = async (q: string) => { const r = await fetch(`${BASE}/api/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "pilot", messages: [{ role: "user", content: q }], demoFacts: SEED }) }); return ((await r.json()) as { reply: string }).reply; };

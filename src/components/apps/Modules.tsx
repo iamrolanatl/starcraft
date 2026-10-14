@@ -5,6 +5,8 @@ import { sfx } from "@/lib/synth";
 import { Skeleton, Empty, ErrorNote, Gauge, Sparkline, toast, undoableDelete, TrashBtn } from "@/components/ui/kit";
 import { haptic } from "@/lib/synth";
 import { lsRaw, lsSet, fetchJSON } from "@/lib/safe";
+import dynamic from "next/dynamic";
+const SchoolCalendar = dynamic(() => import("./SchoolCalendar"), { ssr: false });
 import { DMS, schoolDay, DMS_EVENTS, PORTALS, type Grade } from "@/lib/school";
 
 type Log = (s: string, tone?: "info" | "ok" | "warn") => void;
@@ -210,7 +212,6 @@ export function SchoolHub({ log }: { log: Log }) {
   const mins = now.getHours() * 60 + now.getMinutes();
   const toM = (s: string) => { const [h, m] = s.split(":").map(Number); return (h < 7 ? h + 12 : h) * 60 + m; };
   const c = useRows("edu_checkins", log); const [cf, setCf] = useState({ title: "", note: "" }); const [file, setFile] = useState<File | null>(null); const [busy, setBusy] = useState(false);
-  const upcoming = DMS_EVENTS.filter(e => e.end >= today()).slice(0, 12);
   return (<div>
     <Tabs tabs={["Bells", "Calendar", "Check-ins", "Portals"]} cur={tab} set={setTab} />
     {tab === "Bells" && (<>
@@ -222,8 +223,7 @@ export function SchoolHub({ log }: { log: Log }) {
         : <p className="text-sm text-ash">No school today.</p>}
       <p className="mt-2 text-[10px] text-slate">Mon–Wed master · Thu–Fri flex block · early-release days auto-detected. Source: <a className="underline" href="https://cobbk12.org/dickerson/class-schedules" target="_blank" rel="noopener noreferrer">cobbk12.org/dickerson</a></p>
     </>)}
-    {tab === "Calendar" && (<ul className="space-y-1 text-sm">{upcoming.map(e => <li key={e.start + e.title} data-swipe className="group flex gap-2 rounded px-2 py-1 hover:bg-cyan/5"><span className="w-28 shrink-0 text-xs text-ash">{fmtD(e.start)}{e.end !== e.start ? ` – ${fmtD(e.end)}` : ""}</span><span className={e.kind === "holiday" ? "text-mint" : e.kind === "early" ? "text-amber-200" : "text-snow"}>{e.title}</span></li>)}
-      <li className="pt-1 text-[10px] text-slate">Cobb County School District 2026–27 calendar.</li></ul>)}
+    {tab === "Calendar" && <SchoolCalendar />}
     {tab === "Check-ins" && (<>
       <form className="mb-2 space-y-2" onSubmit={async e => {
         e.preventDefault(); if (!cf.title.trim()) return; setBusy(true);

@@ -260,6 +260,7 @@ export default function Cockpit() {
     if (!w) { toast("Hands-free needs a browser with live speech recognition (Chrome/Edge/Safari). Use push-to-talk instead.", "warn"); setHandsFree(false); return; }
     showCap("Hands-free on. Say “Hey Crystal…”", 3000); return () => w.stop(); }, [handsFree]);
   useEffect(() => { if (!ready) return; loadPrefs().then(p => setClarity(p.glass ?? "balanced")); }, [ready, user, demo]);
+  const [coarse, setCoarse] = useState(false); useEffect(() => { setCoarse(matchMedia("(pointer: coarse)").matches); }, []);
   const safeRect = useSafeArea(wins.some(w => !w.minimized && w.max));
   if (!ready) return (<><SpaceBackground /><div className="flex h-dvh flex-col items-center justify-center gap-3"><CrystalBot size={90} mood="thinking" label="Crystal loading" /><p className="neon animate-glow font-mono">Establishing uplink…</p></div></>);
 
@@ -323,7 +324,7 @@ export default function Cockpit() {
   return (
     <div className={alert ? "red-alert" : ""}>
       <SpaceBackground dim={night ? 0.85 : 0.5} />
-      <Particles n={night ? 0 : 26} />
+      <Particles n={night || coarse ? (night ? 0 : 8) : 26} />
       <div className="alert-overlay pointer-events-none fixed inset-0 z-20" />
       <div className="pointer-events-none fixed inset-0 z-[1]" style={{ boxShadow: `inset 0 0 160px ${DEFCON_COLOR[level as 1]}22` }} />
       <div ref={sparkRoot} className="pointer-events-none fixed inset-0 z-[90]" />
