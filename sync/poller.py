@@ -116,6 +116,11 @@ def process(job):
     # archive the (scrubbed) zip for 30-day replay, then ingest into a STAGING copy so a bad pull can't touch live files
     arch = STATE / "raw-archive"; arch.mkdir(parents=True, exist_ok=True)
     zname = f"{now().astimezone(ET):%Y%m%dT%H%M%S}_job{jid}.zip"; (arch / zname).write_bytes(body)
+    try:   # report cards: independent of the gradebook gate, never fails the job
+        from report_cards import store as rc_store
+        rc = rc_store(body, URL, KEY, owner()) if owner() else None
+        if rc and rc["added"]: jlog(jid, f"> report cards: {len(rc['added'])} new", "ok")
+    except Exception as e: say(f"report cards skipped: {type(e).__name__}: {str(e)[:200]}")
     stage = stage_copy(); z = stage / "incoming" / "raw.zip"; z.write_bytes(body)
     jlog(jid, "> parsing + building model (staging)", "step")
     ing = subprocess.run(["bash", str(stage / "ingest_zip.sh"), str(z)], cwd=stage, capture_output=True, text=True)
