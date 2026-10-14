@@ -435,10 +435,10 @@ export default function Cockpit() {
           <div className="min-w-0"><div className="hud-label">Pilot&apos;s assistant · <span style={{ color: DEFCON_COLOR[level as 1] }}>DEFCON {level}</span></div><p className="text-snow">{greetText(profile)} {open.length ? `${open.length} open mission${open.length > 1 ? "s" : ""}.` : "All clear."}</p>
             {dc.reasons.length > 0 && <p className="truncate text-xs text-slate">Threats: {dc.reasons.slice(0, 3).join(" · ")}</p>}</div>
         </div>
-        <section className="mb-3" aria-label="Modules">
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+        <section data-safe-top data-testid="modules-toolbar" className="relative z-[35] mb-3" aria-label="Modules">
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-8 sm:overflow-visible sm:pb-0">
             {MODULES.map(id => { const q = squad.find(s => s.id === id); return (
-              <button key={id} onClick={() => openApp(id)} onMouseEnter={() => sfx("hover")} className={`tap glass relative rounded-xl p-2 text-left hover:border-cyan/60 ${q?.status === "warn" ? "!border-alert/60" : ""}`}>
+              <button key={id} onClick={() => openApp(id)} onMouseEnter={() => sfx("hover")} className={`tap glass relative min-w-[88px] shrink-0 rounded-xl p-2 text-left hover:border-cyan/60 ${q?.status === "warn" ? "!border-alert/60" : ""}`}>
                 <div className="text-lg text-cyan">{META[id].icon}</div><div className="truncate text-xs font-semibold text-snow">{META[id].title}</div>
                 {q && <div className="truncate text-[9px] text-slate">{q.detail}</div>}
                 {q?.status === "warn" && <span className="absolute right-1.5 top-1.5 h-2 w-2 animate-glow rounded-full bg-alert" aria-label="needs attention" />}

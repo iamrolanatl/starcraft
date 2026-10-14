@@ -348,7 +348,7 @@ html[data-skin="kartrush"] .btn-primary { background: #e4000f; color: #fff; box-
 /* Calendar event chips: up to 2 lines, full title in the tooltip (data-tip). */
 .cal-chip { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-overflow: ellipsis; white-space: normal; overflow-wrap: normal !important; word-break: keep-all !important; hyphens: none; line-height: 1.25; }
 /* Nothing ghosts through an open applet: hide the launcher grid while an applet is maximized or tiled over it. */
-body:has(section[data-maximized="true"]) main section[aria-label="Modules"], body:has([data-tiled="true"]) main section[aria-label="Modules"] { visibility: hidden; }
+/* (removed) The Modules toolbar is ALWAYS visible; applets fit between it and the dock via data-safe-top. */
 
 /* Grade colors: A green, B yellow, C red, <74 red + ~1Hz flash */
 .g-a{color:#4ade80}.g-b{color:#facc15}.g-c{color:#f87171}
