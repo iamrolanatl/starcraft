@@ -9,6 +9,14 @@ export interface Facts {
   lastSync: { ran_at: string; fetched_at: string | null } | null; lastRun: { ran_at: string; status: string; error: string | null } | null;
   alerts: { created_at: string; message: string }[]; tasks: { title: string; due_date: string | null; done: boolean }[];
   life: Life;
+  school?: SchoolX;
+}
+export interface SchoolX {
+  schedule: { term: string; period: number; course: string; room: string | null; teacher: string | null; teacher_email: string | null }[] | null;
+  absences: { date: string; period: number; reason: string | null; code: string | null; note: string | null; course: string | null }[] | null;
+  graded: { course: string | null; period_name: string; name: string | null; category: string | null; due_date: string | null; percent: number | null; score_display: string | null; missing: boolean; graded: boolean; notes: string | null }[] | null;
+  weights: { course_key: string; period_name: string; category: string; weight: number | null; points: number | null; points_possible: number | null }[] | null;
+  reportCards: { school_year: string | null; period: string | null; issue_date: string | null }[] | null;
 }
 export interface FactOpts { syms?: string[]; coords?: { lat: number; lon: number } | null }
 const SB = "https://ogrrjkxkccbywbiikcak.supabase.co";
@@ -34,5 +42,13 @@ export async function loadFacts(token: string | undefined, anon: string | undefi
     q<{ ran_at: string; fetched_at: string | null }>("edu_sync_runs?select=ran_at,fetched_at&status=eq.ok&order=ran_at.desc&limit=1"),
     q<{ created_at: string; message: string }>("edu_alerts?select=created_at,message&order=created_at.desc&limit=5"),
   ]);
-  return { demo: false, signedIn: true, student: { name: st[0].name, grade: st[0].grade, school: st[0].school }, grades, assignments, lastSync: okRuns[0] ?? null, lastRun: runs[0] ?? null, alerts, tasks, life };
+  const [schedule, absences, graded, weights, reportCards] = await Promise.all([
+    qn<SchoolX["schedule"] & object>("edu_schedule?select=term,period,course,room,teacher,teacher_email,last_seen_at&order=last_seen_at.desc,period.asc&limit=40"),
+    qn<SchoolX["absences"] & object>("edu_attendance_periods?select=date,period,reason,code,note,course&order=date.desc&limit=200"),
+    qn<SchoolX["graded"] & object>("edu_graded_assignments?select=course,period_name,name,category,due_date,percent,score_display,missing,graded,notes&order=due_date.desc&limit=400"),
+    qn<SchoolX["weights"] & object>("edu_grade_calc?select=course_key,period_name,category,weight,points,points_possible&limit=200"),
+    qn<SchoolX["reportCards"] & object>("report_cards?select=school_year,period,issue_date&order=issue_date.desc&limit=20"),
+  ]);
+  const school = { schedule, absences, graded, weights, reportCards } as SchoolX;
+  return { school, demo: false, signedIn: true, student: { name: st[0].name, grade: st[0].grade, school: st[0].school }, grades, assignments, lastSync: okRuns[0] ?? null, lastRun: runs[0] ?? null, alerts, tasks, life };
 }

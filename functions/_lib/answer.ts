@@ -64,5 +64,24 @@ export function dataBlock(f: Facts): string {
     `missing: ${f.assignments.filter(a => a.missing).map(a => `${a.course}: ${a.name} (due ${a.due_date?.slice(0, 10)})`).join(" | ") || "none"}`,
     `upcoming: ${f.assignments.filter(a => !a.missing && a.due_date && a.due_date.slice(0, 10) >= new Date().toISOString().slice(0, 10)).slice(0, 8).map(a => `${a.course}: ${a.name} (due ${a.due_date?.slice(0, 10)})`).join(" | ") || "none"}`,
     `sync alerts: ${f.alerts.map(a => a.message).join(" | ") || "none"}`,
+    ...schoolLines(f),
     `open tasks: ${f.tasks.filter(t => !t.done).slice(0, 15).map(t => `${t.title}${t.due_date ? ` due ${t.due_date}` : ""}`).join(" | ") || "none"}`].join("\n");
+}
+
+/** Extra school data (migrations 013/014). null = table not installed; never invented. */
+export function schoolLines(f: Facts): string[] {
+  const x = f.school; if (!x) return [];
+  const na = (v: unknown) => v === null ? "not available yet (table not set up)" : "none";
+  const sched = x.schedule?.length ? (() => { const t = x.schedule![0].term; return x.schedule!.filter(r => r.term === t).sort((a, b) => a.period - b.period).map(r => `P${r.period} ${r.course}, room ${r.room ?? "?"}, ${r.teacher ?? "?"}${r.teacher_email ? ` <${r.teacher_email}>` : ""}`).join(" | "); })() : na(x.schedule);
+  const days = x.absences?.length ? [...new Set(x.absences.map(a => a.date))].map(d => { const rs = x.absences!.filter(a => a.date === d); return `${d}: ${rs[0].reason || rs[0].code}${rs[0].note ? ` (${rs[0].note})` : ""}, periods ${rs.map(r => r.period).join(",")}`; }).join(" | ") : na(x.absences);
+  const g = (x.graded ?? []).filter(a => a.graded);
+  const per = new Map<string, typeof g>(); for (const a of g) { const k = `${a.course} ${a.period_name}`; per.set(k, [...(per.get(k) ?? []), a]); }
+  const graded = x.graded === null ? na(null) : [...per.entries()].map(([k, rs]) => `${k}: ${rs.slice(0, 12).map(a => `${a.name} [${a.category ?? "?"}] ${a.missing ? "MISSING" : a.percent != null ? a.percent + "%" : a.score_display}${a.due_date ? ` due ${a.due_date}` : ""}${a.notes ? ` note: ${a.notes}` : ""}`).join("; ")}${rs.length > 12 ? ` (+${rs.length - 12} more)` : ""}`).join(" || ") || "none";
+  const wk = new Map<string, string[]>(); for (const w of x.weights ?? []) { if (w.category.toUpperCase() === "TOTAL") continue; const k = `${w.course_key} ${w.period_name}`; wk.set(k, [...(wk.get(k) ?? []), `${w.category.trim()} ${w.weight}%${w.points_possible ? ` (${(Number(w.points) / Number(w.points_possible) * 100).toFixed(1)}%)` : ""}`]); }
+  const weights = x.weights === null ? na(null) : [...wk.entries()].map(([k, v]) => `${k}: ${v.join(", ")}`).join(" | ") || "none";
+  const rc = x.reportCards === null ? na(null) : x.reportCards.map(r => `${r.school_year} ${r.period} (period ended ${r.issue_date})`).join(" | ") || "none published yet";
+  return [`schedule (bell times: Dickerson MS site; Mon-Wed master, Thu-Fri flex): ${sched}`, `absences by day (ParentVUE): ${days}`,
+    `graded assignments (newest first, per class/period): ${graded}`, `category weights (ParentVUE grade calc; category % in parens): ${weights}`,
+    `report cards in Crystal: ${rc}`,
+    "NOT available from Cobb (say so if asked): test scores (MAP/Milestones/CogAT), discipline, school documents, fees/lunch balance, counselor/homeroom/locker/emergency contacts, principal info via ParentVUE. Dickerson MS phone 770-578-2710, principal Bradley Blackman (school website)."];
 }

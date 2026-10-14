@@ -158,7 +158,7 @@ export default function Cockpit() {
 
   /* incoming transmissions (urgent items), with ack/snooze */
   const txs: Transmission[] = useMemo(() => [
-    ...syncAlerts.map(a => ({ id: `sync-${a.id}`, from: "School sync", title: "Sync failure", body: a.message, app: "education" as AppId })),
+    ...syncAlerts.map(a => ({ id: `sync-${a.id}`, from: "School sync", title: ({ absence: "New absence", missing_assignment: "Missing assignment", low_score: "Low score", grade_dip: "Grade below 90" } as Record<string, string>)[(a as { kind?: string }).kind ?? ""] ?? "Sync failure", body: a.message, app: "education" as AppId })),
     ...unreadTeacher.slice(0, 3).map(m => ({ id: `msg-${m.ext_id}`, from: m.sender || "Teacher", title: m.subject || "Teacher message", body: (m.body || "").slice(0, 280), app: "education" as AppId })),
     ...unpaid.filter(r => r.due_date === t0).map(r => ({ id: `bill-${r.id}-${t0}`, from: "Finance", title: `Bill due today: ${r.name}`, body: `${r.name}${r.amount ? ` for $${Number(r.amount).toFixed(2)}` : ""} is due today. Pay it or set autopay.`, app: "finance" as AppId })),
   ], [syncAlerts, unreadTeacher, unpaid, t0]);  

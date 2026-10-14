@@ -63,6 +63,7 @@ def extract(zbytes):
         for c in cs: calc[(c["course_key"], c["period_name"], c["category"])] = c
     return list(rows.values()), list(calc.values())
 
+LOW = 70
 KEEP = ["score_display", "points_display", "earned", "possible", "percent", "notes"]
 def _same(a, b):
     if isinstance(b, (int, float)) and a is not None:
@@ -78,7 +79,7 @@ def _post(url, H, table, conflict, rows):
 
 def store(zbytes, url, key, uid):
     H = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-    new, calc = extract(zbytes); res = {"parsed": len(new), "upserted": 0, "weights": 0, "skipped_periods": []}
+    new, calc = extract(zbytes); res = {"parsed": len(new), "upserted": 0, "weights": 0, "skipped_periods": [], "new_missing": [], "new_low": []}
     if not new and not calc: return res
     get = lambda t: requests.get(f"{url}/rest/v1/{t}", params={"select": "*", "user_id": f"eq.{uid}"}, headers=H, timeout=60)
     o1 = get("edu_graded_assignments"); o1.raise_for_status(); om = {(o["course_key"], o["period_name"], o["gradebook_id"]): o for o in o1.json()}
@@ -95,6 +96,9 @@ def store(zbytes, url, key, uid):
                 if r[k] in (None, "") and o.get(k) not in (None, ""): r[k] = o[k]
         if o and all(_same(r[k], o.get(k)) for k in r): continue
         rows.append({**r, "user_id": uid, "updated_at": now})
+        if om:   # alerts only once a baseline exists (no flood on the first backfill)
+            if r["missing"] and not (o or {}).get("missing"): res["new_missing"].append(r)
+            elif r["graded"] and r["percent"] is not None and r["percent"] < LOW and not (o or {}).get("graded"): res["new_low"].append(r)
     _post(url, H, "edu_graded_assignments", "user_id,course_key,period_name,gradebook_id", rows); res["upserted"] = len(rows)
     o2 = get("edu_grade_calc"); o2.raise_for_status(); cm = {(o["course_key"], o["period_name"], o["category"]): o for o in o2.json()}
     crow = []

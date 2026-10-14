@@ -124,9 +124,16 @@ def process(job):
     try:   # graded assignments history + category weights (all quarters): permanent upsert, never fails the job
         from graded_assignments import store as ga_store
         ga = ga_store(body, URL, KEY, owner()) if owner() else None
+        job["_ga"] = ga
         if ga and (ga["upserted"] or ga["weights"]): jlog(jid, f"> graded assignments: {ga['upserted']} new/updated, {ga['weights']} weight rows", "ok")
         if ga and ga["skipped_periods"]: jlog(jid, f"> graded assignments: suspicious pull kept out for {', '.join(ga['skipped_periods'])}", "warn")
     except Exception as e: say(f"graded assignments skipped: {type(e).__name__}: {str(e)[:200]}")
+    try:   # schedule, per-period attendance, cockpit alerts (absence, missing, low score, dip below 90)
+        from school_extras import store as ex_store
+        ex = ex_store(body, URL, KEY, owner(), alert=lambda k, key, msg: alert(k, key, msg, jid), state_dir=STATE, graded=job.get("_ga")) if owner() else None
+        if ex and ex.get("alerts"): jlog(jid, f"> school alerts: {ex['alerts']} new", "warn")
+        if ex and ex.get("error"): say(f"school extras: {ex['error']}")
+    except Exception as e: say(f"school extras skipped: {type(e).__name__}: {str(e)[:200]}")
     stage = stage_copy(); z = stage / "incoming" / "raw.zip"; z.write_bytes(body)
     jlog(jid, "> parsing + building model (staging)", "step")
     ing = subprocess.run(["bash", str(stage / "ingest_zip.sh"), str(z)], cwd=stage, capture_output=True, text=True)
