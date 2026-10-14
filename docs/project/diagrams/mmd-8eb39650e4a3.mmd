@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  participant U as SPA
+  participant C as /api/chat
+  participant DB as Supabase (caller JWT)
+  participant AI as Workers AI
+  participant Q as Queue
+  participant W as Box escalation worker
+  U->>C: messages, mode pilot, JWT
+  C->>DB: loadFacts (RLS-scoped school, tasks, life data)
+  C->>C: answerDistrict / answerLife / answerSchool
+  alt deterministic answer
+    C-->>U: reply (grounded-db)
+  else needs model
+    C->>AI: system prompt with DATA blocks
+    AI-->>C: reply
+    opt hard question (signed-in)
+      C->>DB: insert chat_escalations (queued)
+      C->>Q: enqueue id
+      Q->>W: deliver
+      W->>DB: answer (service role)
+    end
+    C-->>U: reply or escalation pending
+  end

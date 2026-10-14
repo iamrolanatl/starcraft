@@ -1,0 +1,10 @@
+stateDiagram-v2
+  [*] --> pending: child joins with code
+  pending --> active: parent approves (6-digit match)
+  pending --> denied: parent denies
+  active --> revoked: parent revokes / member leaves
+  active --> paused: viewer paused (viewers only)
+  paused --> active: resume
+  paused --> revoked
+  denied --> [*]
+  revoked --> [*]

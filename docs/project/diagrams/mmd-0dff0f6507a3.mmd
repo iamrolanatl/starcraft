@@ -1,0 +1,47 @@
+flowchart TB
+  subgraph Browser["User device (browser / PWA)"]
+    SPA["Next.js 15 static SPA<br/>React 19, Tailwind 4<br/>HUD, applets, voice, OCR (Tesseract.js)"]
+  end
+  subgraph CF["Cloudflare"]
+    PAGES["Pages static assets<br/>out/"]
+    FN["Pages Functions /api/*<br/>_middleware: rate limits, headers, error pages"]
+    DO["Durable Object<br/>crystal-ratelimiter"]
+    WAI["Workers AI<br/>Llama 3.1 8B / 3.2 3B, Whisper"]
+    Q["Queue<br/>crystal-escalations"]
+  end
+  subgraph SBX["Supabase project ogrrjkxkccbywbiikcak"]
+    AUTH["Auth<br/>email OTP, Google OIDC (pending)"]
+    PG[("Postgres + PostgREST<br/>RLS, SECURITY DEFINER RPCs")]
+    ST["Storage<br/>raw, handouts, mail (private)"]
+  end
+  subgraph BOX["Build/automation box (Linux, cron)"]
+    POLL["poller.py (every min, @reboot)"]
+    SS["school_sync.py (every 30 min)"]
+    EXT["ext_sync.py (every 15 min)"]
+    ESC["escalation_worker.py (every min)<br/>Llama 3.3 70B"]
+    MAIL["mail_ingest / mail_draft / mail_outbox<br/>(via run_mail.sh)"]
+    ELI["eli-dashboard<br/>parse.py, build_app.py"]
+  end
+  subgraph HOME["Family computers (home network)"]
+    LAP["Windows laptop<br/>fetch.ps1, pull-to-supabase.ps1, sync-watcher.ps1"]
+    CS["Crystal Sync agent 0.1.0<br/>Python, keychain, daemon"]
+  end
+  RT["Grok Bot routines<br/>Gmail and Calendar connectors"]
+  SPA --> PAGES
+  SPA -->|JWT| FN
+  SPA -->|JWT, RLS| PG
+  SPA --> AUTH
+  FN --> DO
+  FN --> WAI
+  FN --> Q
+  FN -->|anon key + RPC or caller JWT| PG
+  Q --> ESC
+  ESC --> PG
+  LAP -->|upload ticket + zip| ST
+  LAP -->|agent RPCs| PG
+  POLL --> ST
+  POLL --> ELI --> SS --> PG
+  CS -->|Device key| FN
+  EXT --> PG
+  RT --> MAIL --> PG
+  MAIL --> ST

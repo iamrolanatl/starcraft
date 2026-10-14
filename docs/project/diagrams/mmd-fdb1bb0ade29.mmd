@@ -1,0 +1,8 @@
+flowchart LR
+  REQ[Request] --> L1[Edge: rate limits, body caps, security headers]
+  L1 --> L2[Function checks: token format, UUIDs, admin email gate]
+  L2 --> L3[Supabase Auth: JWT verification]
+  L3 --> L4[RLS policies / SECURITY DEFINER validation: auth.uid, family, scope, device key, admin_guard]
+  L4 --> L5[Column grants and check constraints]
+  L5 --> L6[Triggers: immutable grades, no deletes on history, outbox guard]
+  L6 --> L7[Audit: admin_audit, family_events, sync_runs/logs]

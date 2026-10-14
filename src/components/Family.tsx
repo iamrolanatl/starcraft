@@ -56,13 +56,13 @@ function ChildForm({ c, onSave, onCancel }: { c: Partial<F.Child>; onSave: (c: P
     <div className="flex items-end gap-2"><button className="btn btn-primary">SAVE CHILD</button><button type="button" className="btn btn-ghost" onClick={onCancel}>CANCEL</button></div></form>;
 }
 
-function ViewerForm({ kids, onSent }: { kids: F.Child[]; onSent: () => void }) {
+function ViewerForm({ kids, onSent }: { kids: F.Child[]; onSent: (code: string, email: string) => void }) {
   const [child, setChild] = useState(kids[0]?.id ?? ""); const [email, setEmail] = useState(""); const [rel, setRel] = useState("Grandmother");
   const [scopes, setScopes] = useState<F.Scope[]>(F.PRESETS["Full School View"]); const [exp, setExp] = useState(""); const [busy, setBusy] = useState(false);
   const pick = (r: string) => { setRel(r); setScopes(F.PRESETS[F.presetFor(r)]); };
   const preset = Object.entries(F.PRESETS).find(([, v]) => v.length === scopes.length && v.every(s => scopes.includes(s)))?.[0] ?? "Custom";
   return <form className="glass grid grid-cols-1 gap-3 rounded-xl p-3 sm:grid-cols-2" onSubmit={async e => { e.preventDefault(); setBusy(true);
-      try { await F.inviteViewer(child, email, rel, scopes, exp || null); toast(`Invite queued to ${email}. It sends from your email shortly.`); setEmail(""); onSent(); } catch (er) { toast((er as Error).message, "warn"); } finally { setBusy(false); } }}>
+      try { const r = await F.inviteViewer(child, email, rel, scopes, exp || null); toast(`Invite email queued to ${email}`); setEmail(""); onSent(r.code, email); } catch (er) { toast((er as Error).message, "warn"); } finally { setBusy(false); } }}>
     <Lbl t="Child"><select className="input" value={child} onChange={e => setChild(e.target.value)}>{kids.map(k => <option key={k.id} value={k.id}>{nm(k)}</option>)}</select></Lbl>
     <Lbl t="Their Email"><input className="input" type="email" required placeholder="e.g. grandma@example.com" value={email} onChange={e => setEmail(e.target.value)} /></Lbl>
     <Lbl t="Relationship"><select className="input" value={rel} onChange={e => pick(e.target.value)}>{F.RELATIONSHIPS.map(r => <option key={r}>{r}</option>)}</select></Lbl>
@@ -75,11 +75,27 @@ function ViewerForm({ kids, onSent }: { kids: F.Child[]; onSent: () => void }) {
     <p className="text-xs text-ash sm:col-span-2">Pressing SEND INVITE emails them a one-time code from your Gmail. They are read-only, never see Finance, Mail, Health, other children or excuse letters, and can&apos;t start a sync. You approve them after matching a 6-digit number.</p></form>;
 }
 
+const JERR: Record<string, string> = { bad_code: "That code didn't match.", used: "That code was already used.", expired: "That code expired. Ask for a new one.", revoked: "That invite was cancelled.",
+  locked: "Too many tries. Wait an hour.", parent_account: "Parent accounts can't join as a child.", already_member: "This account is already in a family.", own_list: "That's your own list.",
+  own_child: "That's your own child.", child_account: "Child accounts can't be trusted adults.", wrong_account: "This invite was sent to a different email. Sign in with the invited email." };
+export function EnterCode({ onDone }: { onDone?: () => void }) {
+  const [c, setC] = useState(""); const [busy, setBusy] = useState(false); const [res, setRes] = useState<{ conf: string; who: string } | null>(null);
+  if (res) return <div className="glass rounded-xl border border-emerald-400/40 p-3"><div className="text-xs font-bold uppercase tracking-[.06em] text-emerald-300">Code Accepted · Waiting for Approval</div>
+    <div className="mt-1 text-sm text-ash">Read this number to {res.who}. They press Approve when it matches their screen.</div>
+    <div className="my-1 font-mono text-3xl font-bold tracking-[.3em] text-snow">{res.conf.slice(0, 3)} {res.conf.slice(3)}</div></div>;
+  return <form className="glass flex flex-wrap items-end gap-2 rounded-xl p-3" onSubmit={async e => { e.preventDefault(); setBusy(true);
+      try { const r = await F.joinWithCode(c); if (r.ok) { setRes({ conf: r.confirm_code || "", who: r.owner_name || "the person who invited you" }); onDone?.(); }
+        else toast((JERR[r.error ?? ""] ?? "That code didn't work.") + (r.error === "wrong_account" && r.invited ? ` (sent to ${r.invited})` : "") + (r.tries_left !== undefined && r.error !== "locked" ? ` ${r.tries_left} tries left.` : ""), "warn"); }
+      catch (er) { toast((er as Error).message, "warn"); } finally { setBusy(false); } }}>
+    <Lbl t="Invite Code (from your email or text)"><input className="input font-mono uppercase tracking-[.15em]" required placeholder="e.g. K7Q4-M9TX" maxLength={12} value={c} onChange={e => setC(e.target.value)} autoComplete="one-time-code" /></Lbl>
+    <button className="btn btn-primary" disabled={busy || c.replace(/[^A-Za-z0-9]/g, "").length < 8}>{busy ? "CHECKING…" : "JOIN"}</button></form>;
+}
+
 export default function Family() {
   const [ready, setReady] = useState<boolean | null>(null); const [kids, setKids] = useState<F.Child[]>([]); const [mem, setMem] = useState<F.Member[]>([]);
   const [inv, setInv] = useState<F.Invite[]>([]); const [vw, setVw] = useState<F.Viewer[]>([]); const [vinv, setVinv] = useState<Awaited<ReturnType<typeof F.listViewerInvites>>>([]);
   const [ob, setOb] = useState<Record<string, string>>({}); const [ev, setEv] = useState<F.FamEvent[]>([]); const [edit, setEdit] = useState<Partial<F.Child> | null>(null);
-  const [code, setCode] = useState<{ code: string; title: string } | null>(null); const [acc, setAcc] = useState<F.Access | null>(null); const [ve, setVe] = useState<string | null>(null);
+  const [code, setCode] = useState<{ code: string; title: string } | null>(null); const [acc, setAcc] = useState<F.Access | null>(null); const [ve, setVe] = useState<string | null>(null); const [vcode, setVcode] = useState<{ code: string; email: string } | null>(null);
   const load = useCallback(async () => {
     try {
       const a = await F.loadAccess(); setAcc(a); if (!a) { setReady(false); return; }
@@ -101,11 +117,14 @@ export default function Family() {
   if (!ready) return <div className="glass mt-3 rounded-xl p-4 text-ash"><b className="text-snow">Family sharing is almost ready.</b> It needs one database update (migration 017) in the Supabase SQL Editor. Until then, everything else in Crystal works as before.</div>;
   if (acc?.status.role === "child") return <div className="mt-3 space-y-3"><div className="glass rounded-xl p-4 text-snow">You&apos;re in <b>{acc.status.owner_name}</b>&apos;s family as a child ({acc.status.status === "pending" ? "waiting for approval" : acc.status.status}).</div>
     {acc.status.status === "pending" && acc.status.confirm_code && <div className="glass rounded-xl p-4"><div className="text-sm text-ash">Show this number to your parent:</div><div className="font-mono text-4xl font-bold tracking-[.3em] text-snow">{acc.status.confirm_code}</div></div>}
-    <button className="btn btn-ghost" onClick={run(F.leaveFamily, "You left the family")}>LEAVE FAMILY</button></div>;
+    {acc.status.status === "pending" ? <button className="btn btn-ghost" onClick={run(F.leaveFamily, "Request withdrawn")}>WITHDRAW REQUEST</button>
+      : <p className="text-sm text-ash">Only your parent can change family membership.</p>}</div>;
   const kid = (id?: string | null) => kids.find(k => k.id === id);
   const openInv = inv.filter(i => !i.used_at && !i.revoked_at && new Date(i.expires_at) > new Date());
   return <div className="pb-4">
     <Approvals onDone={load} />
+    <H>Enter Invite Code</H>
+    <EnterCode onDone={load} />
     <H>Children</H>
     <ul className="space-y-2">{kids.map(c => { const login = mem.find(m => m.child_id === c.id && m.status !== "revoked" && m.status !== "denied");
       return <li key={c.id} className="glass flex flex-wrap items-center gap-3 rounded-xl p-3"><Avatar c={c} size={40} />
@@ -121,7 +140,11 @@ export default function Family() {
       <span className="flex-1">{kid(i.child_id)?.first_name ?? "Child"} · code ending {i.hint} · expires {when(i.expires_at)}</span><button className="btn btn-ghost" onClick={run(() => F.revokeFamilyInvite(i.id), "Invite revoked")}>REVOKE INVITE</button></li>)}</ul></>}
 
     <H>Share Child&apos;s Education</H>
-    {kids.length ? <ViewerForm kids={kids} onSent={load} /> : <p className="text-sm text-ash">Add a child first.</p>}
+    {vcode && <div className="mb-2"><CodeCard code={vcode.code} title={`Invite for ${vcode.email}`} onClose={() => setVcode(null)} />
+      <ol className="glass mt-2 list-decimal space-y-1 rounded-xl p-3 pl-8 text-sm text-snow"><li>We email {vcode.email} this link and code from your Gmail (status below). You can also copy it and text it.</li>
+        <li>They open the link, sign in (or create a free account), and the code fills in.</li><li>Their screen shows a 6-digit number. An <b>Approval Needed</b> card appears here and on your home screen with the same number.</li>
+        <li>If the numbers match, press <b>APPROVE</b>. They can then see only the sections you picked, read-only.</li></ol></div>}
+    {kids.length ? <ViewerForm kids={kids} onSent={(c, e) => { setVcode({ code: c, email: e }); load(); }} /> : <p className="text-sm text-ash">Add a child first.</p>}
     <H>Shared With</H>
     {!vw.length && !vinv.some(i => !i.used_at && !i.revoked_at) && <p className="text-sm text-ash">No one yet.</p>}
     <ul className="space-y-2">{vw.filter(v => v.status !== "revoked" && v.status !== "denied").map(v => <li key={v.id} className="glass rounded-xl p-3">
@@ -134,7 +157,7 @@ export default function Family() {
         {v.status === "paused" && <button className="btn btn-ghost" onClick={run(() => F.manageViewer(v.id, "resume"), "Access resumed")}>RESUME</button>}
         <button className="btn btn-ghost text-alert" onClick={() => confirm("Revoke access now?") && run(() => F.manageViewer(v.id, "revoke"), "Access revoked")()}>REVOKE</button></div>}</li>)}
       {vinv.filter(i => !i.used_at && !i.revoked_at).map(i => { const st = i.outbox_id ? ob[i.outbox_id] : undefined; return <li key={i.id} className="flex flex-wrap items-center gap-2 text-sm text-ash">
-        <span className="flex-1">{i.email} · {i.relationship} · invite {st === "sent" ? "sent" : st === "failed" ? "failed to send" : st === "cancelled" ? "cancelled" : "queued"} · expires {when(i.expires_at)}</span>
+        <span className="flex-1">{i.email} · {i.relationship} · <b className={st === "sent" ? "text-emerald-300" : st === "failed" ? "text-alert" : "text-amber-200"}>{st === "sent" ? `Email sent to ${i.email}` : st === "failed" ? "Email failed to send (copy the link instead)" : st === "cancelled" ? "Email cancelled" : "Email queued, sends within 5 minutes"}</b> · Waiting for them to enter the code · expires {when(i.expires_at)}</span>
         <button className="btn btn-ghost" onClick={run(() => F.revokeViewerInvite(i.id), st === "queued" ? "Invite cancelled" : "Invite revoked")}>{st === "queued" ? "CANCEL" : "REVOKE INVITE"}</button></li>; })}</ul>
 
     <H>Family Activity</H>

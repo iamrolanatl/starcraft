@@ -1,0 +1,15 @@
+%%{init: {"flowchart": {"wrappingWidth": 260, "nodeSpacing": 18, "rankSpacing": 30}}}%%
+flowchart TB
+  W["1 Crystal Family Command Center"]
+  W --> L5["<b>1.6 AI services</b>"]
+  L5 --- K5["1.6.1 Model router<br/>1.6.2 Grounded answers<br/>1.6.3 NL command parser<br/>1.6.4 Whisper transcription<br/>1.6.5 Escalation queue and worker (006)<br/>1.6.6 Mail drafting and style learning<br/>1.6.7 Routines (briefing, review)"]
+  W --> L6["<b>1.7 Sharing, support, admin</b>"]
+  L6 --- K6["1.7.1 Family and children (017)<br/>1.7.2 Trusted adults (017)<br/>1.7.3 List sharing and activity (017)<br/>1.7.4 Support queue (018)<br/>1.7.5 Admin command center (019)"]
+  W --> L7["<b>1.8 Crystal Sync</b>"]
+  L7 --- K7["1.8.1 Device schema and RPCs (020)<br/>1.8.2 Device API /api/sync/*<br/>1.8.3 Web UI (Downloads, lights, console, admin tab)<br/>1.8.4 Agent application<br/>1.8.5 Leader lease<br/>1.8.6 Linux packaging<br/>1.8.7 macOS/Windows packaging<br/>1.8.8 Code signing<br/>1.8.9 Second-family onboarding"]
+  W --> L8["<b>1.9 Quality assurance</b>"]
+  L8 --- K8["1.9.1 Unit tests<br/>1.9.2 RLS/database tests<br/>1.9.3 Pipeline tests<br/>1.9.4 Browser e2e and chaos<br/>1.9.5 Accessibility<br/>1.9.6 Performance"]
+  W --> L9["<b>1.10 Operations</b>"]
+  L9 --- K9["1.10.1 Cron and heartbeats<br/>1.10.2 Alerts<br/>1.10.3 Deployment procedures<br/>1.10.4 Migration application<br/>1.10.5 Backup and restore<br/>1.10.6 Runbooks"]
+  classDef l3 text-align:left
+  class K5,K6,K7,K8,K9 l3

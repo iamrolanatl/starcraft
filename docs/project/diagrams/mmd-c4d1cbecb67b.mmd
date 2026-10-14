@@ -1,0 +1,6 @@
+flowchart LR
+  D[Detect: alert, log, report] --> T[Triage: assign SEV]
+  T --> C[Contain]
+  C --> E[Eradicate]
+  E --> R[Recover]
+  R --> P[Post-incident review: 13 Issue Log, backlog]

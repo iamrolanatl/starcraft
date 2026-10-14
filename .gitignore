@@ -58,3 +58,5 @@ public/version.json
 /public/downloads/*.pkg
 /public/downloads/*.exe
 __pycache__/
+laptop/ollama/ollama-secret.txt
+laptop/ollama/*.log

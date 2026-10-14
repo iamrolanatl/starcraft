@@ -1,0 +1,16 @@
+flowchart TB
+  subgraph People
+    V((Visitor)) ; O((Owner / Parent)) ; C((Child)) ; T((Trusted adult))
+  end
+  CR[[Crystal web app + API]]
+  V --> CR ; O --> CR ; C --> CR ; T --> CR
+  CR <--> SB[(Supabase: Auth, Postgres, Storage)]
+  CR --> AI[Workers AI: Llama 8B, Whisper]
+  AG[Crystal Sync / laptop pull] --> CR
+  AG --> PVX[Cobb ParentVUE / CTLS]
+  BOX[Box cron services] <--> SB
+  BOX --> GG[Google Calendar / Tasks / Drive]
+  RT[Grok Bot routines] --> GML[Gmail]
+  RT <--> BOX
+  O365[Eli O365 ICS] --> BOX
+  IPH[iPhone Shortcut] --> CR

@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> queued: SYNC NOW (sync_request_now)
+  [*] --> running: scheduled start (sync_run_start)
+  queued --> running: device starts
+  queued --> expired: not started within 30 min
+  running --> ok: finish ok
+  running --> failed: finish failed
+  running --> quarantined: gates failed
+  ok --> [*]
+  failed --> [*]
+  quarantined --> [*]
+  expired --> [*]
