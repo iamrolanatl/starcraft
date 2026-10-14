@@ -1,0 +1,13 @@
+import { normalizeName, profileFromIdentity, greetName, greeting } from "../src/lib/names";
+let f = 0; const eq = (n: string, a: unknown, b: unknown) => { const ok = JSON.stringify(a) === JSON.stringify(b); if (!ok) f++; console.log(`${ok ? "PASS" : "FAIL"} ${n}: ${JSON.stringify(a)}`); };
+eq("lowercase", normalizeName("rolan"), "Rolan"); eq("uppercase", normalizeName("ROLAN CHOWDHURY"), "Rolan Chowdhury");
+eq("hyphen", normalizeName("mary-jane"), "Mary-Jane"); eq("apostrophe", normalizeName("o'neil"), "O'Neil"); eq("curly apostrophe", normalizeName("d’angelo"), "D’Angelo");
+eq("mixed kept", normalizeName("McDonald"), "McDonald"); eq("mixed kept 2", normalizeName("DeShawn"), "DeShawn"); eq("spaces", normalizeName("  ana   maria "), "Ana Maria");
+eq("google meta", profileFromIdentity({ given_name: "rolan", family_name: "CHOWDHURY", full_name: "rolan CHOWDHURY", avatar_url: "https://x/p.png" }), { first_name: "Rolan", last_name: "Chowdhury", display_name: "Rolan Chowdhury", avatar_url: "https://x/p.png" });
+eq("full_name only", profileFromIdentity({ name: "eli o'neil", picture: "p" }), { first_name: "Eli", last_name: "O'Neil", display_name: "Eli O'Neil", avatar_url: "p" });
+eq("email-ish name ignored", profileFromIdentity({ name: "rolan@gmail.com" }).first_name, null);
+eq("nickname wins", greetName({ nickname: "ro", first_name: "Rolan" }), "Ro"); eq("given name", greetName({ first_name: "rolan" }), "Rolan"); eq("fallback", greetName({}), "Commander");
+eq("morning ET", greeting({ first_name: "Rolan" }, new Date("2026-10-14T12:00:00Z")), "Good morning, Rolan!");
+eq("afternoon ET", greeting({ first_name: "Rolan" }, new Date("2026-10-14T19:00:00Z")), "Good afternoon, Rolan!");
+eq("evening ET (UTC next day)", greeting({}, new Date("2026-10-15T01:30:00Z")), "Good evening, Commander!");
+process.exit(f ? 1 : 0);

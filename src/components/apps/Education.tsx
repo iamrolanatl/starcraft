@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { gradeView, type GRow } from "@/lib/gradeview";
 import GradingPeriods from "./GradingPeriods";
+import LetterBadge from "@/components/ui/LetterBadge";
 import ReportCards from "./ReportCards";
 import MsgHub from "./MsgHub";
 import Learn from "./Learn";
@@ -63,7 +64,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       <span className="font-semibold text-snow">{data.student.name}</span><span>Gr {Number(data.student.grade) || data.student.grade}</span><span className="truncate">{data.student.school}</span>
       <span className="text-cyan">{data.student.reporting_period?.name}</span>
       <span className="ml-auto" title={data.student.last_fetched_at ?? ""}>⟳ {ago(data.student.last_fetched_at)}</span>
-      <button onClick={doSync} disabled={!!busy} className="btn btn-ghost !px-2 !py-0.5 text-[11px]" aria-label="Sync school data now">{busy || "⟳ Sync"}</button>
+      <button onClick={doSync} disabled={!!busy} className="btn btn-ghost !px-2 !py-0.5 text-[11px]" aria-label="Sync School Data Now">{busy || "⟳ Sync"}</button>
       {data.demo && <span className="rounded bg-amber-300/15 px-1.5 text-amber-200">demo data</span>}
     </div>
     <div className="grid grid-cols-3 gap-2 text-center">
@@ -95,10 +96,10 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
           <div className="min-w-0 flex-1"><div className="truncate text-snow" title={c.course}>{c.course}</div>
             <div className="truncate text-xs text-slate" title={`${c.teacher ?? ""} · ${sub}`}>{c.teacher} · <span data-sub>{sub}</span></div></div>
           <Spark pts={c.trend} />
-          <span className="shrink-0 text-right">{main != null ? <><span data-main className={`block font-mono text-sm ${tone(main)}`}>{fmt(main)}</span><span className="block text-[10px] text-slate">{mainLbl}</span></> : <span data-main className="text-xs text-ash">{qv === "final" || fp == null ? "Not posted" : "Not posted yet"}</span>}</span>
+          {main != null && <LetterBadge pct={main} />}<span className="shrink-0 text-right">{main != null ? <><span data-main className={`block font-mono text-sm ${tone(main)}`}>{fmt(main)}</span><span className="block text-[10px] text-slate">{mainLbl}</span></> : <span data-main className="text-xs text-ash">{qv === "final" || fp == null ? "Not posted" : "Not posted yet"}</span>}</span>
           <GradedAssignments courseKey={c.key} demo={data.demo} />
         </li>); })}{!gv.current.length && <li className="text-xs text-ash">No classes in the latest sync.</li>}</ul>
-      {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><span className={`font-mono ${tone(f.percent)}`}>{f.percent ?? f.mark}</span></li>)}</ul></div>}
+      {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><LetterBadge pct={f.percent} size="sm" /><span className={`font-mono ${tone(f.percent)}`}>{f.percent ?? f.mark}</span></li>)}</ul></div>}
       {gv.asOf && <p className="text-xs text-slate">Current term: {gv.term} · as of {fmt(gv.asOf)}</p>}
     </div>}
     {tab === "work" && <div className="space-y-2">

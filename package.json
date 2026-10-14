@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "lint:labels": "tsx scripts/title-case.mts",
+    "test:names": "tsx scripts/test-names.mts",
+    "test:periods": "tsx scripts/test-periods.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

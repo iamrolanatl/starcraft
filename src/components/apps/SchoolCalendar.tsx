@@ -35,9 +35,9 @@ export default function SchoolCalendar() {
   const detail = itemsOn(sel);
   return (<div className="cal-solid rounded-xl p-2 text-[#E8F4FF]">
     <div className="mb-2 flex flex-wrap items-center gap-1">
-      <button className="btn btn-ghost min-h-[44px] min-w-[44px] !px-2" onClick={() => mv(-1)} aria-label="Previous month">‹</button>
+      <button className="btn btn-ghost min-h-[44px] min-w-[44px] !px-2" onClick={() => mv(-1)} aria-label="Previous Month">‹</button>
       <h3 className="min-w-[9rem] flex-1 text-center text-base font-semibold" aria-live="polite">{cur.toLocaleDateString([], { month: "long", year: "numeric" })}</h3>
-      <button className="btn btn-ghost min-h-[44px] min-w-[44px] !px-2" onClick={() => mv(1)} aria-label="Next month">›</button>
+      <button className="btn btn-ghost min-h-[44px] min-w-[44px] !px-2" onClick={() => mv(1)} aria-label="Next Month">›</button>
       <button className="btn btn-ghost min-h-[44px] !px-3 text-sm" onClick={() => { const d = new Date(); setCur(new Date(d.getFullYear(), d.getMonth(), 1)); setSel(today); }}>Today</button>
       <button className="btn btn-ghost min-h-[44px] !px-3 text-sm" aria-pressed={view === "list"} onClick={() => setView(v => v === "month" ? "list" : "month")}>{view === "month" ? "☰ List" : "▦ Month"}</button>
     </div>
@@ -49,7 +49,7 @@ export default function SchoolCalendar() {
             className={`relative flex min-h-[48px] flex-col items-center rounded-md p-0.5 text-sm ${isS ? "bg-cyan/20 ring-2 ring-cyan" : "hover:bg-white/5"} ${isT ? "font-bold" : ""}`}>
             <span className={isT ? "grid h-6 w-6 place-items-center rounded-full bg-[#3ef2e0] text-[#04121a]" : ""}>{Number(d.slice(8))}</span>
             <span className="mt-0.5 flex flex-wrap justify-center gap-0.5" aria-hidden>{it.slice(0, 4).map((x, k) => <span key={k} className="h-1.5 w-1.5 rounded-full sm:h-2 sm:w-2" style={{ background: x.color }} />)}</span>
-            {it[0] && <span className="hidden w-full truncate rounded px-0.5 text-[10px] leading-tight sm:block" style={{ color: it[0].color }}>{it[0].title}</span>}
+            {it[0] && <span data-tip={it[0].title} className="cal-chip hidden w-full rounded px-0.5 text-[11px] leading-tight sm:block" style={{ color: it[0].color }}>{it[0].title}</span>}
           </button>; })}
       </div>
       <div className="mt-2 rounded-lg bg-[#060b18] p-2" aria-live="polite">

@@ -132,7 +132,7 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
 /* DEFCON theming */
 html[data-defcon="3"] { --color-cyan: #ffd166; }
 html[data-defcon="2"] { --color-cyan: #ff9a5c; }
-html[data-defcon="1"] { --color-cyan: #ff3b5c; }
+html[data-defcon="1"] { --color-cyan: #ff7088; }
 /* Night ops / stealth */
 html[data-theme="night"] { --color-cyan: #5a7f99; --color-mint: #6b8f7f; --color-ice: #9fb0c0; --color-snow: #c8d2dc; }
 html[data-theme="night"] .glass { background: rgba(4,6,10,.82); border-color: rgba(90,127,153,.25); box-shadow: none; }
@@ -158,14 +158,14 @@ html[data-glass="clear"] { --glass-a: .72; --glass-blur: 16px; --glass-sat: 90%;
 html[data-glass="solid"] { --glass-a: .96; --glass-blur: 24px; --glass-sat: 70%; }
 /* v4 glass: unlayered + later in file so it wins over the v1-v3 .glass rules */
   .glass {
-    background: linear-gradient(165deg, rgb(24 32 52 / var(--glass-a)), rgb(9 13 24 / var(--glass-a)) 60%, rgb(6 10 20 / calc(var(--glass-a) + .04)));
+    background: linear-gradient(165deg, rgb(var(--g1, 24 32 52) / var(--glass-a)), rgb(var(--g2, 9 13 24) / var(--glass-a)) 60%, rgb(var(--g3, 6 10 20) / calc(var(--glass-a) + .04)));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
-    border: 1px solid rgba(62,242,224,.28);
+    border: 1px solid rgb(var(--edge, 62 242 224) / .28);
     box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 0 24px rgba(62,242,224,.05) inset, var(--depth-2), 0 0 0 1px rgba(62,242,224,.06);
   }
   section.glass, .glass .input, .glass table, .glass li { color: var(--text-body); }
   section.glass > div { font-size: max(15px, var(--fs-body)); line-height: var(--lh-body); }
-  .glass :is(p, li, td, th, label, dd, span) { text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+  .glass :is(p, li, td, th, label, dd, span) { text-shadow: var(--txt-shadow, 0 1px 2px rgba(0,0,0,.55)); }
   .glass .text-slate, .glass .text-ash { color: var(--text-muted) !important; }
   .input { background: rgb(5 9 20 / .92); border-color: rgba(134,147,168,.65); color: var(--text-body); font-size: max(16px, 1rem); line-height: 1.5; }
   .glass table { background: rgb(6 10 20 / .6); } .glass th, .glass td { padding: 4px 8px; }
@@ -178,7 +178,7 @@ html[data-glass="solid"] { --glass-a: .96; --glass-blur: 24px; --glass-sat: 70%;
 @keyframes listen { 0%,100% { box-shadow: 0 0 0 0 rgba(62,242,224,.55) } 50% { box-shadow: 0 0 0 14px rgba(62,242,224,0) } }
 @media (prefers-reduced-motion: reduce) { .listen-ring { animation: none; box-shadow: 0 0 0 3px #3ef2e0 } }
 /* v4 delete affordances: trash subtle on desktop until row hover/focus, always visible on touch */
-@media (hover: hover) and (pointer: fine) { .del-btn { opacity: .45 } .group:hover .del-btn, .group:focus-within .del-btn, .del-btn:focus-visible { opacity: 1 } }
+@media (hover: hover) and (pointer: fine) { .del-btn { opacity: .8 } .group:hover .del-btn, .group:focus-within .del-btn, .del-btn:focus-visible { opacity: 1 } }
 [data-swipe] { touch-action: pan-y; transition: transform .2s ease, background-color .2s; }
 [data-swipe].swiping { transition: none; }
 [data-swipe].swipe-del { background: linear-gradient(270deg, rgba(255,59,92,.35), transparent 70%); }
@@ -187,14 +187,15 @@ html[data-glass="solid"] { --glass-a: .96; --glass-blur: 24px; --glass-sat: 70%;
 
 /* ===== v4 typography & wrapping (fix distortion / bad splits) ===== */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { font-size: clamp(15px, 0.9rem + 0.2vw, 17px); line-height: 1.5; overflow-wrap: break-word; word-break: normal; hyphens: auto; text-rendering: optimizeLegibility; }
+body { font-size: clamp(15px, 0.9rem + 0.2vw, 17px); line-height: 1.5; overflow-wrap: break-word; word-break: normal; hyphens: manual; text-rendering: optimizeLegibility; }
 h1, h2, h3, h4 { text-wrap: balance; line-height: 1.25; }
 p, li, dd, label, td { text-wrap: pretty; }
 h1 { font-size: clamp(1.5rem, 1.1rem + 2vw, 2.5rem); } h2 { font-size: clamp(1rem, .95rem + .3vw, 1.25rem); } h3 { font-size: clamp(.95rem, .9rem + .25vw, 1.125rem); }
 .text-xs { line-height: 1.4; } .text-\[10px\], .text-\[9px\], .text-\[11px\] { font-size: 11px !important; line-height: 1.35; }
 .hud-label { letter-spacing: .12em; line-height: 1.3; }
 .break-token { overflow-wrap: anywhere; }
-a[href^="http"], code, .font-mono { overflow-wrap: anywhere; }
+a[href^="http"], code, .break-token { overflow-wrap: anywhere; }
+.font-mono { overflow-wrap: normal; font-variant-numeric: tabular-nums; }
 [role="tab"], .btn, nav button { white-space: nowrap; flex-shrink: 0; }
 [role="tablist"] { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
 body { overflow-wrap: break-word; }
@@ -275,3 +276,76 @@ section[aria-label$="applet"] .text-ash, section[aria-label$="applet"] .text-sla
 section[aria-label$="applet"] :is(.bg-navy-2\/60, .bg-navy-2\/50, .bg-navy-2\/40, .rounded-lg.bg-navy-2\/60) { background-color: rgb(28 32 48 / .72) !important; }
 section[aria-label$="applet"] [data-sticky-tabs] { background-color: rgb(14 17 30 / .94) !important; }
 section[aria-label$="applet"] [role="tab"][aria-selected="true"] { color: #e6e8ef; border-color: var(--neon); }
+/* Shared tooltip (TipLayer): readable glass, high contrast. */
+.tip-layer { position: fixed; z-index: 200; max-width: min(320px, 90vw); pointer-events: none; padding: 6px 10px; border-radius: 8px;
+  background: rgb(6 11 26 / .96); color: #E8F4FF; border: 1px solid rgb(62 242 224 / .5); font-size: 13px; line-height: 1.35; font-weight: 500;
+  box-shadow: 0 6px 18px rgb(0 0 0 / .5); white-space: normal; overflow-wrap: break-word; animation: tip-in .12s ease-out; }
+@keyframes tip-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tip-layer { animation: none; } }
+
+/* Settings center: live-applied appearance. */
+html[data-textsize="S"] body { font-size: 15px; } html[data-textsize="M"] body { font-size: 16px; }
+html[data-textsize="L"] body { font-size: 18px; } html[data-textsize="XL"] body { font-size: 20px; }
+html[data-textsize="L"] .text-sm, html[data-textsize="XL"] .text-sm { font-size: 1em; }
+html[data-contrast="high"] { --color-ice: #ffffff; --color-snow: #ffffff; --color-ash: #e3ecf7; --color-slate: #cbd7e6; --text-muted: #d5e1ef; }
+html[data-contrast="high"] .glass { --glass-a: .97 !important; border-color: #ffffff99 !important; }
+html[data-reading="on"] .bg-video, html[data-video="off"] .bg-video { opacity: .15 !important; }
+html[data-reading="on"] .glass { --glass-a: .95 !important; }
+html[data-reading="on"] *, html[data-reading="on"] *::before, html[data-reading="on"] *::after { animation-duration: 3s !important; }
+html[data-reading="on"] .neon, html[data-reading="on"] .animate-glow { text-shadow: none !important; }
+html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after { animation: none !important; transition: none !important; }
+html[data-motion="reduced"] .animate-glow, html[data-motion="reduced"] .particle, html[data-motion="reduced"] .neon-frame::after, html[data-motion="reduced"] .alert-overlay { animation: none !important; }
+html[data-motion="reduced"] * { transition-duration: .12s !important; }
+
+/* ===== Theme skins (data-skin on <html>, set before first paint). Original CSS-generated art only; body text stays in a readable sans. ===== */
+html:not([data-skin="cockpit"]) .bg-video, html:not([data-skin="cockpit"]) .particle { display: none; }
+html:not([data-skin="cockpit"]) body::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; animation: skin-drift calc(40s / max(var(--bg-speed, 1), .25)) linear infinite; }
+html[data-bgpaused="1"] body::before { animation-play-state: paused; }
+@keyframes skin-drift { to { background-position: 0 0, 0 0, 640px 320px, 320px 0; } }
+html:not([data-skin="cockpit"]) .neon { text-shadow: none; }
+html:not([data-skin="cockpit"]) :is(h1, h2, h3, .hud-label) { font-family: var(--skin-display, inherit); }
+
+/* 1) Blockcraft: voxel blocks, grass + dirt, beveled panels, pixel headings */
+html[data-skin="blockcraft"] { --skin-display: var(--font-pixel), ui-monospace, monospace; --color-cyan: #8be05f; --color-mint: #b8f08a; --color-navy: #1d140c; --color-navy-2: #3a2a1a; --color-alert: #ff6b5b;
+  --g1: 58 40 24; --g2: 44 30 18; --g3: 34 23 14; --edge: 139 224 95; --glass-a: .96; --text-body: #f6eedd; --text-muted: #e0d2b4; --color-slate: #d8c8a6; --color-ash: #eadfc6; --txt-shadow: none; }
+html[data-skin="blockcraft"] body::before { background:
+  linear-gradient(#5fae3d 0 0) 0 0/100% 18%, repeating-linear-gradient(90deg, #6f4b2c 0 32px, #7d5534 32px 64px) 0 18%/100% 82%,
+  repeating-linear-gradient(0deg, transparent 0 31px, #00000033 31px 32px) 0 0/100% 100%, linear-gradient(#8fd3ff, #bfe7ff) 0 0/100% 100%; background-repeat: no-repeat, no-repeat, repeat, no-repeat; }
+html[data-skin="blockcraft"] .glass { border-radius: 4px !important; border: 3px solid #1b120a !important; box-shadow: inset 3px 3px 0 #ffffff26, inset -3px -3px 0 #00000059, 0 6px 0 #00000059 !important; }
+html[data-skin="blockcraft"] :is(h1, h2, h3, .hud-label) { letter-spacing: .02em; font-size: .8em; line-height: 1.6; }
+html[data-skin="blockcraft"] .btn-primary { background: #5fae3d; color: #10210a; border-radius: 3px; box-shadow: inset -3px -3px 0 #2e6b1b, inset 3px 3px 0 #9be27a; }
+
+/* 2) Brick City: bright primaries, chunky rounded tiles, playful sans (light) */
+html[data-skin="brickcity"] { color-scheme: light; --skin-display: var(--font-play), ui-rounded, system-ui, sans-serif; --color-navy: #eef3ff; --color-navy-2: #dde6fb; --color-cyan: #0a58d0; --color-mint: #0f7a3a; --color-ice: #121a33; --color-snow: #0d1530; --color-ash: #26304d; --color-slate: #3e4866; --color-alert: #c4121b;
+  --g1: 255 255 255; --g2: 250 252 255; --g3: 242 246 255; --edge: 10 88 208; --glass-a: .97; --text-body: #0d1530; --text-muted: #39435f; --txt-shadow: none; }
+html[data-skin="brickcity"] body::before { background:
+  radial-gradient(circle at 25% 25%, #ffffff88 0 6px, transparent 7px) 0 0/48px 48px, radial-gradient(circle at 75% 75%, #ffffff66 0 6px, transparent 7px) 0 0/48px 48px,
+  linear-gradient(135deg, #ffd23f 0 25%, #4aa3ff 25% 50%, #ff5a5f 50% 75%, #3ecf6e 75%) 0 0/640px 640px, #4aa3ff; }
+html[data-skin="brickcity"] .glass { border-radius: 22px !important; border: 3px solid #0d1530 !important; box-shadow: 0 6px 0 #0d1530 !important; }
+html[data-skin="brickcity"] .input { background: #fff; color: #0d1530; border-color: #6b7591; }
+html[data-skin="brickcity"] .btn-primary { background: #ffd23f; color: #0d1530; border: 2px solid #0d1530; box-shadow: 0 3px 0 #0d1530; }
+
+/* 3) Battle Island: purple/blue/yellow, storm sky, bold display type */
+html[data-skin="battleisland"] { --skin-display: var(--font-bold), Impact, system-ui, sans-serif; --color-cyan: #ffd23f; --color-mint: #7cf3ff; --color-navy: #140a33; --color-navy-2: #23125a; --color-alert: #ff6b8a;
+  --g1: 40 20 92; --g2: 28 14 70; --g3: 20 10 52; --edge: 255 210 63; --glass-a: .93; --text-body: #ffffff; --text-muted: #d9cff5; --color-slate: #cfc4ef; --color-ash: #e6defa; --txt-shadow: none; }
+html[data-skin="battleisland"] body::before { background:
+  radial-gradient(ellipse 60% 40% at 30% 20%, #8a5cff88, transparent 70%) 0 0/100% 100%, radial-gradient(ellipse 50% 35% at 75% 30%, #3fa9ff77, transparent 70%) 0 0/100% 100%,
+  repeating-linear-gradient(115deg, transparent 0 140px, #ffffff0d 140px 142px) 0 0/640px 320px, linear-gradient(180deg, #2a1170, #4b1fa8 55%, #1a3f8f); }
+html[data-skin="battleisland"] :is(h1, h2, h3) { text-transform: none; letter-spacing: .02em; }
+html[data-skin="battleisland"] .btn-primary { background: #ffd23f; color: #1a0b45; box-shadow: 0 4px 0 #b88a00; }
+
+/* 4) Kart Rush: cheerful red / yellow / blue, star + coin motifs */
+html[data-skin="kartrush"] { --skin-display: var(--font-round), ui-rounded, system-ui, sans-serif; --color-cyan: #ffd400; --color-mint: #7fe3ff; --color-navy: #0a1f55; --color-navy-2: #12317e; --color-alert: #ff7a7a;
+  --g1: 14 42 110; --g2: 10 32 88; --g3: 8 24 70; --edge: 255 212 0; --glass-a: .95; --text-body: #ffffff; --text-muted: #d6e2ff; --color-slate: #c8d6fb; --color-ash: #e3ebff; --txt-shadow: none; }
+html[data-skin="kartrush"] body::before { background:
+  radial-gradient(circle, #ffd400 0 9px, #e0a800 9px 11px, transparent 12px) 0 0/120px 120px,
+  conic-gradient(from 0deg at 50% 50%, #fff7 0 10%, transparent 10% 20%, #fff7 20% 30%, transparent 30% 40%, #fff7 40% 50%, transparent 50%) 60px 60px/120px 120px,
+  repeating-linear-gradient(90deg, #e4000f 0 40px, #ffffff 40px 80px) 0 100%/640px 24px, linear-gradient(180deg, #3aa0ff, #7fd0ff 70%, #5cc95c 70%); background-repeat: repeat, repeat, repeat-x, no-repeat; }
+html[data-skin="kartrush"] .glass { border-radius: 20px !important; border: 3px solid #ffd400 !important; }
+html[data-skin="kartrush"] .btn-primary { background: #e4000f; color: #fff; box-shadow: 0 4px 0 #8a0009; }
+
+
+/* Calendar event chips: up to 2 lines, full title in the tooltip (data-tip). */
+.cal-chip { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: break-word; word-break: normal; line-height: 1.25; }
+/* Nothing ghosts through an open applet: hide the launcher grid while an applet is maximized or tiled over it. */
+body:has(section[data-maximized="true"]) main section[aria-label="Modules"], body:has([data-tiled="true"]) main section[aria-label="Modules"] { visibility: hidden; }

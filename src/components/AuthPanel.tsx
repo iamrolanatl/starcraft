@@ -42,8 +42,8 @@ export default function AuthPanel() {
         <form onSubmit={verify} className="space-y-3">
           <label className="sr-only" htmlFor="code">One-time code</label>
           <input id="code" inputMode="numeric" required className="input tracking-[.4em]" placeholder="123456" value={code} onChange={e => setCode(e.target.value)} autoComplete="one-time-code" maxLength={10} />
-          <button className="btn btn-primary w-full" disabled={busy}>Verify & launch</button>
-          <button type="button" className="w-full text-xs text-slate hover:text-cyan" onClick={() => setStage("email")}>Use a different email</button>
+          <button className="btn btn-primary w-full" disabled={busy}>Verify & Launch</button>
+          <button type="button" className="w-full text-xs text-slate hover:text-cyan" onClick={() => setStage("email")}>Use a Different Email</button>
         </form>
       )}
       {msg && <p className="mt-3 text-xs text-ash" role="status">{msg}</p>}

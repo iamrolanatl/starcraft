@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { sfx } from "@/lib/synth";
 import { Boundary } from "@/components/ui/Guard";
-export type WinMode = "float" | "grid" | "sheet" | "max";
+export type WinMode = "float" | "grid" | "sheet" | "max" | "tile";
 export interface Geo { x: number; y: number; w: number; h: number }
-type P = { title: string; icon: string; onMin: () => void; onClose: () => void; children: React.ReactNode; focused: boolean; onFocus: () => void; mode?: WinMode; geo?: Geo; z?: number; onGeo?: (g: Geo) => void; rect?: Geo | null; origin?: { x: number; y: number }; onToggleMax?: () => void; canFloat?: boolean; size?: "full" | "normal" };
-export default function Applet({ title, icon, onMin, onClose, children, focused, onFocus, mode = "grid", geo, z = 1, onGeo, rect, origin, onToggleMax, canFloat, size }: P) {
+type P = { title: string; icon: string; onMin: () => void; onClose: () => void; children: React.ReactNode; focused: boolean; onFocus: () => void; mode?: WinMode; geo?: Geo; z?: number; onGeo?: (g: Geo) => void; rect?: Geo | null; origin?: { x: number; y: number }; onToggleMax?: () => void; canFloat?: boolean; size?: "full" | "normal"; onDrop?: (x: number, y: number) => void };
+export default function Applet({ title, icon, onMin, onClose, children, focused, onFocus, mode = "grid", geo, z = 1, onGeo, rect, origin, onToggleMax, canFloat, size, onDrop }: P) {
   const [anim, setAnim] = useState<"in" | "min" | "close">("in"); const [drag, setDrag] = useState(false);
   const ref = useRef<HTMLElement>(null); const g = useRef(geo);
   useEffect(() => { g.current = geo; }, [geo]);
@@ -14,6 +14,13 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
   useEffect(() => () => { cleanup.current?.(); clearTimeout(timer.current); }, []); // drop window listeners/timers if unmounted mid-drag
   const leave = (k: "min" | "close") => { setAnim(k); sfx(k === "min" ? "whoosh" : "close"); const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches; clearTimeout(timer.current); timer.current = setTimeout(k === "min" ? onMin : onClose, reduce ? 0 : k === "min" ? 300 : 240); };
   const startDrag = (e: React.PointerEvent, kind: "move" | "size") => {
+    if (mode === "tile" && kind === "move" && onDrop && !(e.target as HTMLElement).closest("button")) { // drag a tile → swap with the tile under the pointer
+      e.preventDefault(); onFocus(); setDrag(true); const px = e.clientX, py = e.clientY, el = ref.current;
+      const mv = (ev: PointerEvent) => { if (el) el.style.transform = `translate(${ev.clientX - px}px, ${ev.clientY - py}px)`; };
+      const off = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); cleanup.current = null; if (el) el.style.transform = ""; };
+      const up = (ev: PointerEvent) => { off(); setDrag(false); if (Math.hypot(ev.clientX - px, ev.clientY - py) > 12) onDrop(ev.clientX, ev.clientY); };
+      cleanup.current?.(); cleanup.current = off; addEventListener("pointermove", mv); addEventListener("pointerup", up); addEventListener("pointercancel", up); return;
+    }
     if (mode !== "float" || !g.current || (e.target as HTMLElement).closest("button") && kind === "move") return;
     e.preventDefault(); onFocus(); setDrag(true); const s = { ...g.current }, px = e.clientX, py = e.clientY;
     const mv = (ev: PointerEvent) => { const dx = ev.clientX - px, dy = ev.clientY - py; const n = kind === "move" ? { ...s, x: Math.max(0, Math.min(innerWidth - 120, s.x + dx)), y: Math.max(0, s.y + dy) } : { ...s, w: Math.max(260, s.w + dx), h: Math.max(180, s.h + dy) }; g.current = n; if (ref.current) Object.assign(ref.current.style, { left: `${n.x}px`, top: `${n.y}px`, width: `${n.w}px`, height: `${n.h}px` }); };
@@ -37,16 +44,16 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
   const keyMove = (e: React.KeyboardEvent) => { if (mode !== "float" || !g.current || !e.altKey || !e.shiftKey) return; const d = e.shiftKey ? 40 : 10; const n = { ...g.current }; if (e.key === "ArrowLeft") n.x -= d; else if (e.key === "ArrowRight") n.x += d; else if (e.key === "ArrowUp") n.y = Math.max(0, n.y - d); else if (e.key === "ArrowDown") n.y += d; else return; e.preventDefault(); onGeo?.(n); };
   const cls = anim === "in" ? "win-in" : anim === "min" ? "win-min" : "win-close";
   const ox = origin && origin.x >= 0 && rect ? `${origin.x - rect.x}px ${origin.y - rect.y}px` : "50% 50%";
-  const style: React.CSSProperties = mode === "max" ? { position: "fixed", left: rect?.x ?? 8, top: rect?.y ?? 64, width: rect?.w ?? "calc(100vw - 16px)", height: rect?.h ?? "60vh", zIndex: 40, transformOrigin: ox } : mode === "float" && geo ? { position: "absolute", left: geo.x, top: geo.y, width: geo.w, height: geo.h, zIndex: z } : {};
-  const base = mode === "max" ? "rounded-2xl win-maxed" : mode === "sheet" ? "fixed inset-x-0 bottom-0 z-[45] max-h-[78dvh] rounded-t-3xl sheet" : mode === "float" ? "rounded-2xl" : "max-h-[calc(100dvh-230px)] min-h-[200px] rounded-2xl";
+  const style: React.CSSProperties = mode === "tile" ? { position: "fixed", left: rect?.x ?? 8, top: rect?.y ?? 64, width: rect?.w ?? 300, height: rect?.h ?? 300, zIndex: drag ? 39 : 30, transition: drag ? "none" : "left .25s ease, top .25s ease, width .25s ease, height .25s ease" } : mode === "max" ? { position: "fixed", left: rect?.x ?? 8, top: rect?.y ?? 64, width: rect?.w ?? "calc(100vw - 16px)", height: rect?.h ?? "60vh", zIndex: 40, transformOrigin: ox } : mode === "float" && geo ? { position: "absolute", left: geo.x, top: geo.y, width: geo.w, height: geo.h, zIndex: z } : {};
+  const base = mode === "tile" ? `rounded-2xl ${drag ? "cursor-grabbing" : ""}` : mode === "max" ? "rounded-2xl win-maxed" : mode === "sheet" ? "fixed inset-x-0 bottom-0 z-[45] max-h-[78dvh] rounded-t-3xl sheet" : mode === "float" ? "rounded-2xl" : "max-h-[calc(100dvh-230px)] min-h-[200px] rounded-2xl";
   return (<>
     {mode === "sheet" && <div className="fade-in fixed inset-0 z-[44] bg-navy/50 backdrop-blur-[2px]" onClick={() => leave("min")} aria-hidden />}
     <section ref={ref} onPointerDown={onFocus} onKeyDown={keyMove} aria-label={`${title} applet`} style={style}
       className={`glass corner-ticks flex flex-col overflow-hidden ${base} ${mode === "max" ? (anim === "in" ? "win-spring" : cls) : mode !== "sheet" ? cls : anim !== "in" ? cls : ""} ${focused ? "neon-frame" : ""} ${drag ? "win-drag" : ""}`}
-      data-maximized={mode === "max" ? "true" : undefined} data-winsize={mode === "max" ? size ?? "full" : undefined} role={mode === "sheet" ? "dialog" : undefined} aria-modal={mode === "sheet" ? true : undefined}>
+      data-maximized={mode === "max" ? "true" : undefined} data-winsize={mode === "max" ? size ?? "full" : undefined} data-tiled={mode === "tile" ? "true" : undefined} role={mode === "sheet" ? "dialog" : undefined} aria-modal={mode === "sheet" ? true : undefined}>
       {mode === "sheet" && <div className="flex justify-center pt-2" onPointerDown={e => { const y0 = e.clientY; const up = (ev: PointerEvent) => { removeEventListener("pointerup", up); if (ev.clientY - y0 > 60) leave("min"); }; addEventListener("pointerup", up); }}><span className="h-1.5 w-12 rounded-full bg-slate/60" aria-hidden /></div>}
       <header onPointerDown={e => startDrag(e, "move")} onDoubleClick={() => onToggleMax?.()}
-        className={`flex items-center justify-between border-b border-cyan/15 bg-gradient-to-r from-navy-2/80 via-navy-2/40 to-transparent px-3 py-2 ${mode === "float" ? "cursor-grab select-none" : ""}`}>
+        className={`flex items-center justify-between border-b border-cyan/15 bg-gradient-to-r from-navy-2/80 via-navy-2/40 to-transparent px-3 py-2 ${mode === "float" || mode === "tile" ? "cursor-grab select-none" : ""}`}>
         <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-snow"><span className={`text-cyan ${focused ? "animate-glow" : ""}`}>{icon}</span>{title}</h2>
         <div className="flex gap-1">
           {onToggleMax && (mode === "max" ? canFloat : true) && <button onClick={onToggleMax} onMouseEnter={() => sfx("hover")} aria-label={mode === "max" ? `Restore ${title} to a movable window` : `Maximize ${title}`} className="tap h-7 w-7 rounded-md text-ash hover:bg-cyan/15 hover:text-cyan">{mode === "max" ? "❐" : "⤢"}</button>}

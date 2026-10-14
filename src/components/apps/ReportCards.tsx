@@ -35,9 +35,9 @@ export default function ReportCards({ demo }: { demo: boolean }) {
     {open && <div role="dialog" aria-modal="true" aria-label={`Report card ${open.rc.period ?? ""}`} className="fixed inset-0 z-[200] flex flex-col bg-black/90 backdrop-blur-sm" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="flex flex-wrap items-center gap-2 border-b border-cyan/20 bg-navy-2/80 px-3 py-2 text-xs">
         <span className="min-w-0 flex-1 truncate font-semibold text-snow">{open.rc.period || "Report card"} · <span className="text-ash">{open.rc.school_year} · {fmt(open.rc.issue_date)}</span></span>
-        <button className="btn btn-ghost !px-2 !py-0.5" onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))} aria-label="Zoom out">−</button>
+        <button className="btn btn-ghost !px-2 !py-0.5" onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))} aria-label="Zoom Out">−</button>
         <span className="w-10 text-center font-mono text-cyan">{Math.round(zoom * 100)}%</span>
-        <button className="btn btn-ghost !px-2 !py-0.5" onClick={() => setZoom(z => Math.min(3, +(z + 0.25).toFixed(2)))} aria-label="Zoom in">+</button>
+        <button className="btn btn-ghost !px-2 !py-0.5" onClick={() => setZoom(z => Math.min(3, +(z + 0.25).toFixed(2)))} aria-label="Zoom In">+</button>
         <a className="btn btn-ghost !px-2 !py-0.5" href={open.url} target="_blank" rel="noreferrer" download>⤓ Download</a>
         <button className="btn btn-ghost !px-2 !py-0.5" onClick={() => setOpen(null)} aria-label="Close (Esc)">✕ Esc</button>
       </div>

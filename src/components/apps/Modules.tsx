@@ -71,7 +71,7 @@ export function Health({ log }: { log: Log }) {
         <input className="input col-span-3 text-sm sm:col-span-1" placeholder="Medication" value={med.name} onChange={e => setMed({ ...med, name: e.target.value })} aria-label="Medication name" />
         <input className="input text-sm" placeholder="Dose" value={med.dose} onChange={e => setMed({ ...med, dose: e.target.value })} aria-label="Dose" />
         <input className="input text-sm" placeholder="When (e.g. 8am)" value={med.schedule} onChange={e => setMed({ ...med, schedule: e.target.value })} aria-label="Schedule" />
-        <button className="btn btn-primary col-span-3 text-sm">Add medication</button>
+        <button className="btn btn-primary col-span-3 text-sm">Add Medication</button>
       </form>
       <ul className="space-y-1">{m.rows.map(r => { const taken = r.last_taken && String(r.last_taken).slice(0, 10) === new Date().toISOString().slice(0, 10); return (
         <li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
@@ -200,9 +200,9 @@ export function Shopping({ log }: { log: Log }) {
       <input type="checkbox" data-done checked={!!r.done} onChange={() => s.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Got ${r.name}`} />
       <span className={`flex-1 ${r.done ? "text-slate line-through" : "text-snow"}`}>{r.url && /^https?:\/\//.test(String(r.url)) ? <a href={String(r.url)} target="_blank" rel="noopener noreferrer" className="hover:text-cyan">{String(r.name)} ↗</a> : String(r.name)}{Number(r.qty) > 1 ? <span className="text-xs text-ash"> ×{String(r.qty)}</span> : null}</span>
       <span className="text-xs text-ash">{money(r.price)}</span>
-      {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to shopping list">→🛒</button>}
+      {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to Shopping List">→🛒</button>}
       <Del onClick={() => s.del(r.id)} label={String(r.name)} /></li>))}
-      {rows.some(r => r.done) && <li className="pt-1"><button className="btn btn-ghost !py-1 text-xs" onClick={() => s.delMany(rows.filter(r => r.done).map(r => r.id), `Cleared ${rows.filter(r => r.done).length} completed`)}>🧹 Clear completed</button></li>}
+      {rows.some(r => r.done) && <li className="pt-1"><button className="btn btn-ghost !py-1 text-xs" onClick={() => s.delMany(rows.filter(r => r.done).map(r => r.id), `Cleared ${rows.filter(r => r.done).length} completed`)}>🧹 Clear Completed</button></li>}
 </ul><State r={s} n={rows.length} empty={li === "wish" ? "Wish list is empty" : "Shopping list is empty"} hint={li === "wish" ? "Try “add headphones to wish list”" : "Try “add milk to shopping list”"} />
     {est > 0 && <p className="mt-2 text-xs text-ash">Estimated: <span className="text-snow">{money(est)}</span></p>}
     <LocalNote on={s.local} />
@@ -244,7 +244,7 @@ export function SchoolHub({ log }: { log: Log }) {
       </form>
       <ul className="space-y-1">{c.rows.map(r => (<li key={r.id} data-swipe className="group rounded px-2 py-1 text-sm hover:bg-cyan/5"><div className="flex items-center gap-2">
         <span className="text-xs text-ash">{fmtD(r.checkin_on)}</span><span className="flex-1 text-snow">{String(r.title)}</span>
-        {r.file_path ? <button className="text-xs text-cyan underline" onClick={() => handoutUrl(String(r.file_path)).then(u => window.open(u, "_blank", "noopener")).catch(e => log(String(e.message), "warn"))}>📎 handout</button> : null}
+        {r.file_path ? <button className="text-xs text-cyan underline" onClick={() => handoutUrl(String(r.file_path)).then(u => window.open(u, "_blank", "noopener")).catch(e => log(String(e.message), "warn"))}>📎 Handout</button> : null}
         <Del onClick={() => c.del(r.id)} label={String(r.title)} /></div>{r.note ? <p className="pl-14 text-xs text-ash">{String(r.note)}</p> : null}</li>))}
 </ul><State r={c} n={c.rows.length} empty="No check-ins yet" hint="Snap a handout and save it here" />
       <LocalNote on={c.local} />

@@ -52,9 +52,9 @@ export function TaskList({ tasks, reload, log }: TaskProps) {
     </form>
     <div className="flex flex-wrap items-center gap-2 text-xs">
       <button className="btn btn-ghost !py-1 text-xs" aria-pressed={!!sel} onClick={() => setSel(s => s ? null : new Set())}>{sel ? "Cancel select" : "☐ Select"}</button>
-      {sel && <><button className="btn btn-ghost !py-1 text-xs" onClick={() => setSel(new Set(view.map(t => t.id)))}>Select all</button>
-        <button className="btn !py-1 text-xs border border-alert/60 text-alert disabled:opacity-40" disabled={!sel.size} onClick={() => del(view.filter(t => sel.has(t.id)), `Deleted ${sel.size} task${sel.size > 1 ? "s" : ""}`)}>🗑 Delete selected ({sel.size})</button></>}
-      {completed.length > 0 && <button className="btn btn-ghost !py-1 text-xs ml-auto" onClick={() => del(completed, `Cleared ${completed.length} completed`)}>🧹 Clear completed ({completed.length})</button>}
+      {sel && <><button className="btn btn-ghost !py-1 text-xs" onClick={() => setSel(new Set(view.map(t => t.id)))}>Select All</button>
+        <button className="btn !py-1 text-xs border border-alert/60 text-alert disabled:opacity-40" disabled={!sel.size} onClick={() => del(view.filter(t => sel.has(t.id)), `Deleted ${sel.size} task${sel.size > 1 ? "s" : ""}`)}>🗑 Delete Selected ({sel.size})</button></>}
+      {completed.length > 0 && <button className="btn btn-ghost !py-1 text-xs ml-auto" onClick={() => del(completed, `Cleared ${completed.length} completed`)}>🧹 Clear Completed ({completed.length})</button>}
     </div>
     <ul className="space-y-1" aria-label="To-do list">{view.map(t => (
       <li key={t.id} data-swipe className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
@@ -65,7 +65,7 @@ export function TaskList({ tasks, reload, log }: TaskProps) {
           <form className="flex-1" onSubmit={e => { e.preventDefault(); wrap(() => updateTask(t.id, { title: editText.trim() || t.title }), "Task updated"); setEdit(null); }}>
             <input autoFocus className="input py-1 text-sm" value={editText} onChange={e => setEditText(e.target.value)} onBlur={() => setEdit(null)} aria-label="Edit task" />
           </form>
-        ) : (<button className={`flex-1 text-left ${t.done ? "text-[var(--text-muted)] line-through" : "text-[#E8F4FF]"}`} onDoubleClick={() => { setEdit(t.id); setEditText(t.title); }} title="Double-click to edit">{t.title}</button>)}
+        ) : (<button className={`flex-1 text-left ${t.done ? "text-[var(--text-muted)] line-through" : "text-[#E8F4FF]"}`} onDoubleClick={() => { setEdit(t.id); setEditText(t.title); }} title="Double-Click to Edit">{t.title}</button>)}
         {t.due_date && <span className={`text-xs ${!t.done && t.due_date < today() ? "text-alert" : "text-ash"}`}>{fmt(t.due_date)}</span>}
         <button onClick={() => { setEdit(t.id); setEditText(t.title); }} aria-label={`Edit ${t.title}`} className="del-btn tap grid h-7 w-7 place-items-center rounded-md text-[var(--text-muted)] hover:text-cyan">✎</button>
         <SrcBadge src="local" />
@@ -113,12 +113,12 @@ export function Calendar({ tasks }: { tasks: Task[] }) {
   }, [off, byDay]);
   const t0 = today(); const detail = sel ? byDay.get(sel) ?? [] : [];
   return (<div>
-    <div className="mb-2 flex items-center justify-between"><button onClick={() => setOff(o => o - 1)} className="btn btn-ghost !py-1 text-xs" aria-label="Previous month">‹</button><span className="font-semibold text-snow">{label}</span><button onClick={() => setOff(o => o + 1)} className="btn btn-ghost !py-1 text-xs" aria-label="Next month">›</button></div>
+    <div className="mb-2 flex items-center justify-between"><button onClick={() => setOff(o => o - 1)} className="btn btn-ghost !py-1 text-xs" aria-label="Previous Month">‹</button><span className="font-semibold text-snow">{label}</span><button onClick={() => setOff(o => o + 1)} className="btn btn-ghost !py-1 text-xs" aria-label="Next Month">›</button></div>
     <div className="grid grid-cols-7 gap-px text-[10px]">
       {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} className="py-1 text-center text-slate">{d}</div>)}
       {cells.map(c => (<button type="button" key={c.k} onClick={() => setSel(c.k)} aria-label={`${c.k}: ${c.items.length} items`} className={`min-h-[52px] rounded p-1 text-left ${c.inMonth ? "bg-navy-2/50" : "opacity-40"} ${c.k === t0 ? "neon-border" : ""} ${sel === c.k ? "ring-1 ring-cyan" : ""}`}>
         <div className={c.k === t0 ? "text-cyan" : "text-ash"}>{c.d.getDate()}</div>
-        {c.items.slice(0, 2).map(t => <div key={t.id} className={`truncate rounded px-0.5 ${t.done ? "line-through opacity-60" : ""}`} style={{ color: t.color, background: t.color + "22" }} title={`${t.title} (${t.src})`}>{t.title}</div>)}
+        {c.items.slice(0, 2).map(t => <div key={t.id} data-tip={t.title} className={`cal-chip rounded px-0.5 ${t.done ? "line-through opacity-60" : ""}`} style={{ color: t.color, background: t.color + "22" }} title={`${t.title} (${t.src})`}>{t.title}</div>)}
         {c.items.length > 2 && <div className="text-slate">+{c.items.length - 2}</div>}
       </button>))}
     </div>

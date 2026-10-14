@@ -11,7 +11,7 @@ export default function SalesChat() {
         <div className="glass flex h-[min(480px,70dvh)] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl" role="dialog" aria-label="Chat with Crystal">
           <div className="flex items-center justify-between border-b border-cyan/15 px-3 py-2">
             <span className="neon text-sm font-semibold">Crystal · Sales Support</span>
-            <button onClick={() => { setOpen(false); sfx("close"); }} aria-label="Close chat" className="text-ash hover:text-cyan">✕</button>
+            <button onClick={() => { setOpen(false); sfx("close"); }} aria-label="Close Chat" className="text-ash hover:text-cyan">✕</button>
           </div>
           <ChatPanel mode="sales" onMood={setMood} className="min-h-0 flex-1" greeting="Hi! I'm Crystal 🤖✨ Ask me anything about the cockpit — features, privacy, or how to get started." />
         </div>

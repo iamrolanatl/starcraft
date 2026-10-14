@@ -140,13 +140,13 @@ export function HudBar({ onCloseAll, hotkey, abilities, feed, blips, alert, onAl
       )}
       {phone && <div className="mb-1 flex items-center gap-1">
         <button onClick={() => setAbSheet(true)} className="btn btn-ghost flex-1 text-sm" aria-haspopup="dialog">⚡ Abilities</button>
-        <button onClick={onHome} className="btn btn-ghost text-sm" aria-label="Return home">⌂</button>
-        {onCloseAll && <button onClick={onCloseAll} className="btn btn-ghost text-sm" aria-label="Close all applets">✕</button>}
-        <button onClick={onAlert} aria-pressed={alert} aria-label="Red alert" className={`btn text-sm font-bold ${alert ? "bg-alert text-white" : "border border-alert/60 text-alert"}`}>!</button>
+        <button onClick={onHome} className="btn btn-ghost text-sm" aria-label="Return Home">⌂</button>
+        {onCloseAll && <button onClick={onCloseAll} className="btn btn-ghost text-sm" aria-label="Close All Applets">✕</button>}
+        <button onClick={onAlert} aria-pressed={alert} aria-label="Red Alert" className={`btn text-sm font-bold ${alert ? "bg-alert text-navy font-semibold" : "border border-alert/60 text-alert"}`}>!</button>
         <button onClick={() => setExpanded(x => !x)} aria-expanded={expanded} className="btn btn-ghost flex-1 text-sm">{expanded ? "▾ Hide radar/feeds" : "▴ Radar & feeds"}</button>
       </div>}
       {abSheet && <div className="fixed inset-0 z-[60] flex items-end bg-navy/60" onClick={() => setAbSheet(false)}><div role="dialog" aria-label="Abilities" className="glass sheet w-full rounded-t-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
-        <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-[#E8F4FF]">Abilities</h2><button className="btn btn-ghost" onClick={() => setAbSheet(false)} aria-label="Close abilities">✕</button></div>
+        <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-[#E8F4FF]">Abilities</h2><button className="btn btn-ghost" onClick={() => setAbSheet(false)} aria-label="Close Abilities">✕</button></div>
         <div onClick={() => setTimeout(() => setAbSheet(false), 150)}><AbilityGrid abilities={abilities} /></div></div></div>}
       <div className={`mx-auto max-w-[1600px] items-stretch gap-2 sm:h-[132px] ${compact ? "hidden" : "flex h-[112px]"}`}>
         <div className="flex min-w-0 flex-1 snap-x items-stretch gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="HUD panels (swipe on mobile)">
@@ -161,11 +161,11 @@ export function HudBar({ onCloseAll, hotkey, abilities, feed, blips, alert, onAl
           <div className="w-[220px] shrink-0 snap-start lg:w-auto lg:min-w-[180px] lg:flex-1"><CommFeed items={feedsMuted ? [] : feed} /></div>
         </div>
         <div className="ml-auto flex shrink-0 flex-col justify-between gap-1">
-          <button onClick={onHome} className="btn btn-ghost !px-3 !py-1.5 text-xs" aria-label="Return home">⌂ Home</button>
-          <button onClick={onAlert} aria-pressed={alert} className={`btn !px-3 !py-1.5 text-xs font-bold ${alert ? "bg-alert text-white shadow-[0_0_18px_#ff3b5c]" : "border border-alert/60 text-alert"}`}>{alert ? "DEFCON 1" : "Red Alert"}</button>
+          <button onClick={onHome} className="btn btn-ghost !px-3 !py-1.5 text-xs" aria-label="Return Home">⌂ Home</button>
+          <button onClick={onAlert} aria-pressed={alert} className={`btn !px-3 !py-1.5 text-xs font-bold ${alert ? "bg-alert text-navy font-semibold shadow-[0_0_18px_#ff3b5c]" : "border border-alert/60 text-alert"}`}>{alert ? "DEFCON 1" : "Red Alert"}</button>
           <div className="flex gap-1">
             <button onClick={() => { setMuted(!muted); setM(!muted); if (muted) sfx("ping"); }} aria-label={muted ? "Unmute sounds" : "Mute sounds"} className="btn btn-ghost flex-1 !px-2 !py-1.5 text-xs">{muted ? "🔇" : "🔊"}</button>
-            <button onClick={onLogout} className="btn btn-ghost flex-1 !px-2 !py-1.5 text-xs" aria-label="Log out">⏻</button>
+            <button onClick={onLogout} className="btn btn-ghost flex-1 !px-2 !py-1.5 text-xs" aria-label="Log Out">⏻</button>
           </div>
         </div>
       </div>

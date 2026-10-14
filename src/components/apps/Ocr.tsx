@@ -57,9 +57,9 @@ export default function Ocr({ onCommand, log }: { onCommand: (text: string) => P
     {text && (<>
       <textarea className="input font-mono text-xs" rows={5} value={text} onChange={e => setText(e.target.value)} aria-label="Recognized text" />
       <div className="flex flex-wrap gap-2">
-        <button className="btn btn-primary text-xs" onClick={() => onCommand(`task: ${lines[0] || text.slice(0, 120)}`)}>Make task</button>
-        <button className="btn btn-ghost text-xs" onClick={async () => { for (const l of lines.slice(0, 15)) await onCommand(`add ${l} to shopping list`); }}>Lines → shopping list</button>
-        <button className="btn btn-ghost text-xs" onClick={() => onCommand(text.split("\n").find(l => l.trim()) || text)}>Run as command</button>
+        <button className="btn btn-primary text-xs" onClick={() => onCommand(`task: ${lines[0] || text.slice(0, 120)}`)}>Make Task</button>
+        <button className="btn btn-ghost text-xs" onClick={async () => { for (const l of lines.slice(0, 15)) await onCommand(`add ${l} to shopping list`); }}>Lines → Shopping List</button>
+        <button className="btn btn-ghost text-xs" onClick={() => onCommand(text.split("\n").find(l => l.trim()) || text)}>Run as Command</button>
         <button className="btn btn-ghost text-xs" onClick={() => navigator.clipboard?.writeText(text)}>Copy</button>
       </div>
     </>)}

@@ -48,7 +48,7 @@ function Composer({ base, draft, onDone }: { base: Mail; draft?: Out; onDone: ()
     <div className="flex flex-wrap items-center gap-2">
       <button className="btn btn-primary text-sm" disabled={!ok || busy}>{busy ? "Queuing…" : "Send"}</button>
       {draft && <><button type="button" className="btn text-sm" onClick={regen} disabled={draft.regen_requested}>↻ Regenerate</button>
-        <button type="button" className="btn text-sm" onClick={() => saveDraft(draft.id, { to, cc: cc || null, subject, body }).then(() => { toast("Draft saved"); onDone(); }, e => toast((e as Error).message, "warn"))}>Save draft</button>
+        <button type="button" className="btn text-sm" onClick={() => saveDraft(draft.id, { to, cc: cc || null, subject, body }).then(() => { toast("Draft saved"); onDone(); }, e => toast((e as Error).message, "warn"))}>Save Draft</button>
         <button type="button" className="text-xs text-ash hover:text-alert" onClick={() => cancelOut(draft.id).then(onDone)}>Discard</button></>}
       <span className="text-[10px] text-slate">Sent from your Gmail by the 5-minute queue. You can cancel until it goes.</span>
     </div>

@@ -9,12 +9,14 @@ const SUBJ: [RegExp, RegExp][] = [
   [/\b(pe|p\.e\.|gym|health|physical)\b/i, /\bpe\b|phys|health|gym/i], [/\bspanish|french|german|chinese|latin\b/i, /spanish|french|german|chinese|latin/i], [/\bart\b/i, /\bart\b/i],
 ];
 import { gradeView, type CurrentClass } from "../../src/lib/gradeview";
+import { letterGrade } from "../../src/lib/letter";
+const lg = (p: number | null | undefined) => { const L = letterGrade(p); return L ? ` (${L})` : ""; };
 /** Current classes (latest snapshot) joined to their latest final; completed = finals not in the latest snapshot. */
 export function courseTable(g: Grade[]) { return gradeView(g); }
 const gradeLine = (c: CurrentClass) => {
   const t = c.teacher ? ` (${c.teacher})` : "";
-  const now = c.posted ? `${c.term}: ${c.percent}%` : c.final ? `${c.term}: not posted yet` : `${c.term}: no grade yet`;
-  const fin = c.final ? `; ${c.final.term} final ${c.final.percent ?? c.final.mark}%` : "";
+  const now = c.posted ? `${c.term}: ${c.percent}%${lg(c.percent)}` : c.final ? `${c.term}: not posted yet` : `${c.term}: no grade yet`;
+  const fin = c.final ? `; ${c.final.term} final ${c.final.percent ?? c.final.mark}%${lg(c.final.percent)}` : "";
   return `${c.course}${t}: ${now}${fin}`;
 };
 const completedLine = (v: ReturnType<typeof gradeView>) => v.completed.length ? ` Completed courses: ${v.completed.map(f => `${f.course}${f.teacher ? ` (${f.teacher})` : ""}: ${f.term} final ${f.percent ?? f.mark}%`).join("; ")}.` : "";
@@ -45,7 +47,7 @@ export function answerSchool(q: string, f: Facts): string | null {
   if (/\b(grade|grades|doing|score|percent|average|gpa|mark)\b/i.test(q) || (subj && /\bhow\b/i.test(q))) {
     if (!rows.length) return `I don't have any grades in the synced data${tag(f)}.`;
     if (subj) { const hit = rows.filter(r => subj[1].test(r.course) || subj[1].test(r.key)); const done = v.completed.filter(r => subj[1].test(r.course) || subj[1].test(r.course_key));
-      return hit.length ? `${hit.map(gradeLine).join("; ")}${tag(f)}.` : done.length ? `${done.map(d => `${d.course} is a completed course: ${d.term} final ${d.percent ?? d.mark}%`).join("; ")}${tag(f)}.` : `I don't have a class matching that in ${who(f)}'s synced schedule. Classes I can see: ${rows.map(r => r.course).join(", ")}.`; }
+      return hit.length ? `${hit.map(gradeLine).join("; ")}${tag(f)}.` : done.length ? `${done.map(d => `${d.course} is a completed course: ${d.term} final ${d.percent ?? d.mark}%${lg(d.percent)}`).join("; ")}${tag(f)}.` : `I don't have a class matching that in ${who(f)}'s synced schedule. Classes I can see: ${rows.map(r => r.course).join(", ")}.`; }
     return `${who(f)}'s grades: ${rows.map(gradeLine).join("; ")}.${completedLine(v)}${tag(f)}.`;
   }
   if (/\b(class|classes|course|courses|schedule|subjects?|teachers?|taking|take)\b/i.test(q)) {

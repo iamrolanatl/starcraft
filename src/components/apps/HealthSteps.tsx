@@ -6,6 +6,7 @@ import type { Row } from "@/lib/store";
 import { sb } from "@/lib/supabase";
 import { lsRaw, lsSet } from "@/lib/safe";
 import { toast } from "@/components/ui/kit";
+import { getSettings, saveSettings } from "@/lib/settings";
 
 export const ENDPOINT = "https://crystal-7ot.pages.dev/api/health/steps";
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -55,8 +56,8 @@ function Bars({ days, by, goal }: { days: string[]; by: Map<string, number>; goa
 
 export function StepsPanel({ rows, onLog }: { rows: Row[]; onLog: (v: number) => void }) {
   const [goal, setGoalS] = useState(10000); const [range, setRange] = useState<7 | 30>(7); const [val, setVal] = useState(""); const [connect, setConnect] = useState(false);
-  useEffect(() => { const g = Number(lsRaw("crystal.stepGoal")); if (g >= 500 && g <= 100000) setGoalS(g); }, []);
-  const setGoal = (g: number) => { if (g >= 500 && g <= 100000) { setGoalS(g); lsSet("crystal.stepGoal", String(g)); } };
+  useEffect(() => { const g = getSettings().stepGoal || Number(lsRaw("crystal.stepGoal")); if (g >= 500 && g <= 100000) setGoalS(g); const f = () => setGoalS(getSettings().stepGoal); addEventListener("crystal-settings", f); return () => removeEventListener("crystal-settings", f); }, []);
+  const setGoal = (g: number) => { if (g >= 500 && g <= 100000) { setGoalS(g); saveSettings({ stepGoal: g }); } };
   const by = useMemo(() => dailySteps(rows), [rows]);
   const t = ymd(new Date()); const today = by.get(t) ?? 0;
   const d7 = daysBack(7), d30 = daysBack(30);
@@ -108,9 +109,9 @@ function ConnectIphone() {
   return (<div className="space-y-2 rounded-md border border-cyan/30 bg-[rgba(4,12,24,.92)] p-3 text-xs leading-relaxed text-snow">
     <div className="font-semibold text-cyan">Connect iPhone (Apple Health → Crystal)</div>
     {err && <p className="text-amber-200">{err}</p>}
-    <div><div className="text-slate">Endpoint</div><div className="flex items-center gap-2"><code className="break-all text-mint">{ENDPOINT}</code><button onClick={() => copy(ENDPOINT, "URL")} className="text-cyan">Copy</button></div></div>
+    <div><div className="text-slate">Endpoint</div><div className="flex items-center gap-2"><code className="break-token text-mint">{ENDPOINT}</code><button onClick={() => copy(ENDPOINT, "URL")} className="text-cyan">Copy</button></div></div>
     <div><div className="text-slate">Token {st?.last_used_at ? `· last used ${new Date(st.last_used_at).toLocaleString()}` : ""}</div>
-      {tok ? <div className="flex flex-wrap items-center gap-2"><code className="break-all">{show ? tok : "hst_" + "•".repeat(16)}</code><button onClick={() => setShow(s => !s)} className="text-cyan">{show ? "Hide" : "Reveal"}</button><button onClick={() => copy(tok, "Token")} className="text-cyan">Copy</button></div>
+      {tok ? <div className="flex flex-wrap items-center gap-2"><code className="break-token">{show ? tok : "hst_" + "•".repeat(16)}</code><button onClick={() => setShow(s => !s)} className="text-cyan">{show ? "Hide" : "Reveal"}</button><button onClick={() => copy(tok, "Token")} className="text-cyan">Copy</button></div>
         : <p className="text-ash">{st?.has_token ? "A token exists but isn't saved on this device (only its fingerprint is stored on the server). Make a new one to see it here." : "No token yet."}</p>}
       <button onClick={gen} className="mt-1 rounded border border-cyan/40 px-2 py-0.5 text-cyan hover:bg-cyan/10">{st?.has_token ? "Make new token" : "Create token"}</button></div>
     <ol className="list-decimal space-y-1 pl-4 text-ash">

@@ -24,7 +24,7 @@ export default function GradingPeriods({ rp }: { rp: { name?: string; start?: st
       <Countdown label="Current term" s={term} />
       <Countdown label="Semester" s={S.find(s => s.current)} />
     </div>
-    <button className="text-xs text-cyan hover:underline" onClick={() => setOpen(o => !o)} aria-expanded={open}>{open ? "Hide" : "Show"} all period dates</button>
+    <button className="text-xs text-cyan hover:underline" onClick={() => setOpen(o => !o)} aria-expanded={open}>{open ? "Hide" : "Show"}  All Period Dates</button>
     {open && <table className="w-full text-xs" aria-label="Period dates"><tbody>
       {[...Q, ...S].map(s => <tr key={s.id} data-current={s.current || undefined} className={s.current ? "bg-cyan/10 text-snow" : "text-ash"}>
         <td className="px-1 py-0.5 font-mono">{s.id}{s.current && <span className="ml-1 rounded bg-cyan/25 px-1 text-[10px] text-cyan">now</span>}</td>

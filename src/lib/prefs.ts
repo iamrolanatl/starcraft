@@ -4,7 +4,7 @@ import { sb } from "./supabase";
 import { isDemo } from "./store";
 import { lsGet, lsSet } from "./safe";
 export type Clarity = "clear" | "balanced" | "solid";
-export interface Prefs { glass?: Clarity; tiles?: string[]; favorites?: string[]; win?: "full" | "normal"; handsFree?: boolean }
+export interface Prefs { glass?: Clarity; tiles?: string[]; favorites?: string[]; win?: "full" | "normal"; handsFree?: boolean; s?: Record<string, unknown> }
 const KEY = "crystal-uiprefs"; let cache: Prefs = typeof window !== "undefined" ? lsGet<Prefs>(KEY, {}) : {};
 export const getPrefs = () => cache;
 export function applyGlass(c: Clarity = cache.glass ?? "balanced") { if (typeof document !== "undefined") document.documentElement.dataset.glass = c; }

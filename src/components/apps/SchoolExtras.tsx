@@ -74,7 +74,7 @@ export function AttendanceTab({ demo, rp }: { demo: boolean; totals: Record<stri
           <span className="ml-auto">{e ? (st === "sent" ? <span className="text-[11px] text-mint">✓ Excuse sent {e.mail_outbox?.sent_at ? new Date(e.mail_outbox.sent_at).toLocaleDateString() : ""}</span>
             : st === "queued" ? <span className="flex items-center gap-1 text-[11px] text-amber-200">Queued <button className="btn btn-ghost !px-1.5 !py-0 text-[10px]" onClick={() => cancelExcuse(e.outbox_id).then(() => setTick(x => x + 1)).catch(() => {})}>Cancel</button></span>
             : st === "sending" ? <span className="text-[11px] text-cyan">Sending…</span> : st === "failed" ? <span className="text-[11px] text-alert" title={e.mail_outbox?.error ?? ""}>Send failed</span> : null)
-            : needs && ex !== "missing" && !demo ? <button className="btn btn-ghost !px-2 !py-0.5 text-[11px]" onClick={() => setCompose(g)}>✎ Draft excuse letter</button> : null}</span></div>
+            : needs && ex !== "missing" && !demo ? <button className="btn btn-ghost !px-2 !py-0.5 text-[11px]" onClick={() => setCompose(g)}>✎ Draft Excuse Letter</button> : null}</span></div>
         {g.rows[0].note && <div className="text-[11px] italic text-ice">“{g.rows[0].note}”</div>}
         <div className="mt-1 flex flex-wrap gap-1">{g.rows.sort((a, b) => a.period - b.period).map(r => <span key={r.period} title={`${r.course ?? ""} · ${r.teacher ?? ""}`} className="rounded bg-black/30 px-1.5 py-0.5 text-[10px] text-ash">P{r.period}{r.course ? ` ${r.course}` : ""}</span>)}</div>
       </li>; })}</ul>}
