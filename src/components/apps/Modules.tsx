@@ -6,6 +6,7 @@ import { Skeleton, Empty, ErrorNote, Gauge, Sparkline, toast, undoableDelete, Tr
 import { haptic } from "@/lib/synth";
 import { lsRaw, lsSet, fetchJSON } from "@/lib/safe";
 import dynamic from "next/dynamic";
+import { StepsPanel } from "./HealthSteps";
 const SchoolCalendar = dynamic(() => import("./SchoolCalendar"), { ssr: false });
 import { DMS, schoolDay, DMS_EVENTS, PORTALS, type Grade } from "@/lib/school";
 
@@ -49,7 +50,7 @@ export function Health({ log }: { log: Log }) {
   const goal = 8000;
   return (<div>
     <Tabs tabs={["Steps", "Glucose", "Meds"]} cur={tab} set={setTab} />
-    {tab !== "Meds" ? (<>
+    {tab === "Steps" ? (!h.loaded || h.err ? <State r={h} empty="" n={1} /> : <StepsPanel rows={h.rows} onLog={v => h.add({ kind: "steps", value: v, unit: "steps", logged_on: today() }, `Logged ${v} steps`)} />) : tab !== "Meds" ? (<>
       {!h.loaded || h.err ? <State r={h} empty="" n={1} /> : <div className="flex items-center gap-2">
         {tab === "Steps" ? <Gauge value={todaySteps} max={goal} label="Steps today" unit={`goal ${goal / 1000}k`} bands={[[goal * .5, "#ff9a5c"], [goal - 1, "#ffd166"], [1e9, "#7dffc8"]]} />
           : series.length ? <Gauge value={Number(series.at(-1)!.value)} min={40} max={250} label="Glucose" unit="mg/dL" bands={[[69, "#ff3b5c"], [180, "#7dffc8"], [1e9, "#ff3b5c"]]} /> : null}
@@ -60,7 +61,7 @@ export function Health({ log }: { log: Log }) {
       </form>
       {h.loaded && !h.err && !series.length && <Empty title={`No ${tab.toLowerCase()} logged yet`} hint={tab === "Steps" ? "Try “log 8000 steps”" : "Try “glucose 110”"} />}
       <ul className="space-y-1 text-sm">{series.slice(-8).reverse().map(r => <li key={r.id} data-swipe className="group flex justify-between rounded px-2 py-1 hover:bg-cyan/5"><span className="text-ash">{fmtD(r.logged_on)}</span><span className="text-snow">{Number(r.value).toLocaleString()} {String(r.unit || "")}</span><Del onClick={() => h.del(r.id)} label="entry" /></li>)}</ul>
-      <p className="mt-2 text-[10px] text-slate">Manual entry. Apple Health / Google Fit / Dexcom auto-import needs account linking.</p>
+      <p className="mt-2 text-[10px] text-slate">Manual entry. Dexcom auto-import needs account linking.</p>
       <LocalNote on={h.local} />
     </>) : (<>
       <form className="mb-2 grid grid-cols-3 gap-2" onSubmit={e => { e.preventDefault(); if (!med.name.trim()) return; m.add({ ...med, name: med.name.trim() }, `Med added: ${med.name}`); setMed({ name: "", dose: "", schedule: "" }); }}>

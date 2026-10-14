@@ -58,8 +58,8 @@ check("due today (tasks+bills+school, overdue)", A("what's due today?"), ["Pay w
 check("bills due", A("what bills do I have?"), ["Georgia Power $142.37", "Netflix $15.49", "Total $157.86", "source: bills"], ["Old"]);
 check("med schedule", A("what's my med schedule"), ["Metformin 500mg: 8am & 8pm", "last taken"], ["Stopped med"]);
 check("latest glucose", A("what was my latest glucose"), ["Latest glucose: 118 mg/dL", "Previous: 131", "source: health_logs"]);
-check("steps", A("how many steps today"), ["6421"]);
-check("my steps", A("what are my steps"), ["6421"]);
+check("steps", A("how many steps today"), ["6,421 steps", "source: health_logs"]);
+check("my steps", A("what are my steps"), ["6,421"]);
 check("step-by-step does NOT hit health", String(A("explain step-by-step how to budget")), ["null"]);
 check("'steps to' does NOT hit health", String(A("what are the steps to file taxes")), ["null"]);
 check("stock price (live quote cited)", A("what's the price of AAPL"), ["AAPL: $231.50", "+1.25%", "10 shares", "Yahoo Finance"]);

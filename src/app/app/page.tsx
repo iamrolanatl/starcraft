@@ -13,6 +13,7 @@ const Priorities = dynamic(() => import("@/components/apps/Apps").then(m => m.Pr
 const TaskList = dynamic(() => import("@/components/apps/Apps").then(m => m.TaskList), { ssr: false, loading: Ld });
 const Weather = dynamic(() => import("@/components/apps/Apps").then(m => m.Weather), { ssr: false, loading: Ld });
 const Calendar = dynamic(() => import("@/components/apps/Apps").then(m => m.Calendar), { ssr: false, loading: Ld });
+import { dailySteps } from "@/components/apps/HealthSteps";
 const Health = dynamic(() => import("@/components/apps/Modules").then(m => m.Health), { ssr: false, loading: Ld });
 const Comms = dynamic(() => import("@/components/apps/Modules").then(m => m.Comms), { ssr: false, loading: Ld });
 const Finance = dynamic(() => import("@/components/apps/Modules").then(m => m.Finance), { ssr: false, loading: Ld });
@@ -271,7 +272,7 @@ export default function Cockpit() {
   const sd = schoolDay(new Date());
   const squad: Squad[] = [
     { id: "home", label: "Home", status: overdue.length ? "warn" : "ok", detail: `${open.length} open` },
-    { id: "health", label: "Health", status: gluBad || medsDue.length ? "warn" : M("health_logs").length ? "ok" : "off", detail: `${M("health_logs").filter(r => r.kind === "steps" && r.logged_on === t0).reduce((a, r) => a + Number(r.value || 0), 0).toLocaleString()} steps · ${medsDue.length} meds` },
+    { id: "health", label: "Health", status: gluBad || medsDue.length ? "warn" : M("health_logs").length ? "ok" : "off", detail: `${(dailySteps(M("health_logs")).get(t0) ?? 0).toLocaleString()} steps · ${medsDue.length} meds` },
     { id: "comms", label: "Comms", status: comms.some(r => r.due_date && String(r.due_date) < t0) ? "warn" : comms.length ? "ok" : "off", detail: `${comms.length} to handle` },
     { id: "education", label: "School", status: missing.length || syncAlerts.length ? "warn" : sd.kind === "none" ? "off" : "ok", detail: missing.length ? `${missing.length} missing` : sd.label },
     { id: "finance", label: "Finance", status: billsOver.length ? "warn" : unpaid.length ? "ok" : "off", detail: `${unpaid.length} bills${billsOver.length ? `, ${billsOver.length} late` : ""}` },

@@ -3,7 +3,7 @@
 export interface Life {
   fetchedAt: string; missing: string[];
   tasks: { title: string; due_date: string | null; done: boolean; priority?: number | null }[];
-  health: { kind: string; value: number | null; unit: string | null; note: string | null; logged_on: string; created_at: string }[];
+  health: { kind: string; value: number | null; unit: string | null; note: string | null; logged_on: string; created_at: string; source?: string | null }[];
   meds: { name: string; dose: string | null; schedule: string | null; last_taken: string | null; active: boolean }[];
   bills: { name: string; amount: number | null; due_date: string | null; autopay: boolean; paid: boolean }[];
   credit: { bureau: string; score: number | null; checked_on: string }[];
@@ -42,7 +42,7 @@ export async function loadLife(q: <T>(path: string) => Promise<T[] | null>, extr
   const get = async <T>(name: string, path: string): Promise<T[]> => { const r = await q<T>(path); if (r == null) { L.missing.push(name); return []; } return r; };
   [L.tasks, L.health, L.meds, L.bills, L.credit, L.stocks, L.shop, L.comms, L.checkins] = await Promise.all([
     get<Life["tasks"][number]>("tasks", "tasks?select=title,due_date,done,priority&order=done,due_date&limit=60"),
-    get<Life["health"][number]>("health_logs", "health_logs?select=kind,value,unit,note,logged_on,created_at&order=created_at.desc&limit=60"),
+    get<Life["health"][number]>("health_logs", "health_logs?select=kind,value,unit,note,logged_on,created_at,source&order=logged_on.desc,created_at.desc&limit=120"),
     get<Life["meds"][number]>("meds", "meds?select=name,dose,schedule,last_taken,active&order=name&limit=40"),
     get<Life["bills"][number]>("bills", "bills?select=name,amount,due_date,autopay,paid&order=due_date&limit=60"),
     get<Life["credit"][number]>("credit_scores", "credit_scores?select=bureau,score,checked_on&order=checked_on.desc&limit=10"),
@@ -56,7 +56,7 @@ export async function loadLife(q: <T>(path: string) => Promise<T[] | null>, extr
 }
 export function sanitizeLife(x: Partial<Life> | undefined): Life {
   const L = emptyLife(); if (!x || typeof x !== "object") return L; const arr = <T>(v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n) : []) as T[];
-  return { ...L, tasks: arr(x.tasks, 60), health: arr(x.health, 60), meds: arr(x.meds, 40), bills: arr(x.bills, 60), credit: arr(x.credit, 10), stocks: arr(x.stocks, 30), shop: arr(x.shop, 100), comms: arr(x.comms, 40), checkins: arr(x.checkins, 10), fetchedAt: typeof x.fetchedAt === "string" ? x.fetchedAt : L.fetchedAt };
+  return { ...L, tasks: arr(x.tasks, 60), health: arr(x.health, 120), meds: arr(x.meds, 40), bills: arr(x.bills, 60), credit: arr(x.credit, 10), stocks: arr(x.stocks, 30), shop: arr(x.shop, 100), comms: arr(x.comms, 40), checkins: arr(x.checkins, 10), fetchedAt: typeof x.fetchedAt === "string" ? x.fetchedAt : L.fetchedAt };
 }
 
 /* ---------- deterministic answers ---------- */
@@ -103,6 +103,7 @@ export function answerLife(q: string, L: Life, demo: boolean, assignments: Assig
   if (hk) {
     const pre = need(L, "health_logs", "health logs"); if (pre) return pre.trim();
     const r = L.health.filter(h => h.kind === hk).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    if (hk === "steps" && r.length) return stepsAnswer(r, q) + cite("health_logs", r[0].created_at, demo);
     if (!r.length) return `I don't have any ${hk} readings in your data.${cite("health_logs", at, demo)}`;
     const u = r[0].unit || (hk === "glucose" ? "mg/dL" : hk === "weight" ? "lb" : "steps");
     return `Latest ${hk}: ${r[0].value ?? "?"} ${u} on ${dday(r[0].logged_on)} (logged ${fmtT(r[0].created_at)})${r.length > 1 ? `. Previous: ${r.slice(1, 4).map(x => `${x.value} ${x.unit || u} (${dday(x.logged_on)})`).join(", ")}` : ""}.${cite("health_logs", r[0].created_at, demo)}`;
@@ -158,4 +159,19 @@ export function lifeBlock(L: Life, demo: boolean): string {
     `shopping: ${j(L.shop.filter(s => s.list === "shopping" && !s.done).map(s => s.name))}`, `wish list: ${j(L.shop.filter(s => s.list === "wish" && !s.done).map(s => s.name))}`,
     `comms follow-ups: ${j(L.comms.filter(c => !c.done).map(c => `${c.channel}: ${c.title}`))}`, `check-ins: ${j(L.checkins.slice(0, 5).map(c => `${c.checkin_on}: ${c.title}`))}`,
     `weather: ${L.weather ? `${Math.round(L.weather.tempF)}F code ${L.weather.code}` : "unavailable"}`].join("\n");
+}
+
+/** Steps from real rows only: per day the iPhone value wins, else manual entries summed. */
+export function stepsAnswer(rows: Life["health"], q: string): string {
+  const by = new Map<string, number>(), ip = new Set<string>();
+  for (const h of rows) { const v = Number(h.value || 0); if (h.source === "iphone") { by.set(h.logged_on, Math.max(v, ip.has(h.logged_on) ? by.get(h.logged_on) ?? 0 : 0)); ip.add(h.logged_on); } }
+  for (const h of rows) if (h.source !== "iphone" && !ip.has(h.logged_on)) by.set(h.logged_on, (by.get(h.logged_on) ?? 0) + Number(h.value || 0));
+  const d = (n: number) => { const x = new Date(Date.now() - 4 * 3600e3 - n * 864e5); return x.toISOString().slice(0, 10); };
+  const f = (n: number) => n.toLocaleString("en-US");
+  const days = [...by.keys()].sort().reverse();
+  if (/yesterday/i.test(q)) return by.has(d(1)) ? `Yesterday (${d(1)}): ${f(by.get(d(1))!)} steps.` : `I don't have steps for yesterday (${d(1)}) in your data.`;
+  if (/week|7 ?days|average/i.test(q)) { const w = Array.from({ length: 7 }, (_, i) => d(i)); const have = w.filter(x => by.has(x)); if (!have.length) return "I don't have any steps for the last 7 days in your data.";
+    const tot = have.reduce((s, x) => s + by.get(x)!, 0); return `Last 7 days: ${f(tot)} steps total across ${have.length} day(s) with data, average ${f(Math.round(tot / have.length))}/day. ${w.map(x => `${x.slice(5)}: ${by.has(x) ? f(by.get(x)!) : "no data"}`).join(", ")}.`; }
+  const t = d(0); if (by.has(t)) return `Today (${t}): ${f(by.get(t)!)} steps${ip.has(t) ? " from your iPhone" : ""}.`;
+  return `I don't have steps for today yet. Most recent: ${f(by.get(days[0])!)} on ${days[0]}.`;
 }
