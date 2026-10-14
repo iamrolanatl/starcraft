@@ -121,6 +121,12 @@ def process(job):
         rc = rc_store(body, URL, KEY, owner()) if owner() else None
         if rc and rc["added"]: jlog(jid, f"> report cards: {len(rc['added'])} new", "ok")
     except Exception as e: say(f"report cards skipped: {type(e).__name__}: {str(e)[:200]}")
+    try:   # graded assignments history + category weights (all quarters): permanent upsert, never fails the job
+        from graded_assignments import store as ga_store
+        ga = ga_store(body, URL, KEY, owner()) if owner() else None
+        if ga and (ga["upserted"] or ga["weights"]): jlog(jid, f"> graded assignments: {ga['upserted']} new/updated, {ga['weights']} weight rows", "ok")
+        if ga and ga["skipped_periods"]: jlog(jid, f"> graded assignments: suspicious pull kept out for {', '.join(ga['skipped_periods'])}", "warn")
+    except Exception as e: say(f"graded assignments skipped: {type(e).__name__}: {str(e)[:200]}")
     stage = stage_copy(); z = stage / "incoming" / "raw.zip"; z.write_bytes(body)
     jlog(jid, "> parsing + building model (staging)", "step")
     ing = subprocess.run(["bash", str(stage / "ingest_zip.sh"), str(z)], cwd=stage, capture_output=True, text=True)

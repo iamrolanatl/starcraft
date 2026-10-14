@@ -34,3 +34,59 @@ create policy "report card pdf owner read" on storage.objects for select to auth
   using (bucket_id = 'raw' and name like 'report-cards/%'
          and exists (select 1 from public.report_cards r where r.storage_path = storage.objects.name and r.user_id = (select auth.uid())));
 notify pgrst, 'reload schema';
+
+-- Graded assignments history (Education › Grades › each class). One row per class + period + ParentVUE GradebookID.
+-- Kept permanently; the box upserts and never blanks an existing score with an empty one (007 rules). Owner read-only.
+create table if not exists public.edu_graded_assignments (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  period_name text not null,
+  period_index int,
+  course_key text not null,
+  course text,
+  teacher text,
+  gradebook_id text not null,
+  name text,
+  category text,
+  assigned_date date,
+  due_date date,
+  score_display text,
+  points_display text,
+  earned numeric,
+  possible numeric,
+  percent numeric,
+  notes text,
+  graded boolean not null default false,
+  missing boolean not null default false,
+  first_seen_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, course_key, period_name, gradebook_id)
+);
+-- Category weights per class + period from ParentVUE GradeCalculationSummary/AssignmentGradeCalc (the primary truth).
+create table if not exists public.edu_grade_calc (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  period_name text not null,
+  course_key text not null,
+  category text not null,
+  weight numeric,
+  points numeric,
+  points_possible numeric,
+  weighted_pct numeric,
+  calculated_mark text,
+  updated_at timestamptz not null default now(),
+  unique (user_id, course_key, period_name, category)
+);
+do $$ declare t text; begin
+  foreach t in array array['edu_graded_assignments','edu_grade_calc'] loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('drop policy if exists "%s own read" on public.%I', t, t);
+    execute format('create policy "%s own read" on public.%I for select to authenticated using (user_id = (select auth.uid()))', t, t);
+    execute format('revoke all on public.%I from anon, authenticated', t);
+    execute format('grant select on public.%I to authenticated', t);
+  end loop; end $$;
+create or replace function public.edu_graded_no_delete() returns trigger language plpgsql as $$
+begin raise exception 'graded assignment history is permanent; deletes are not allowed'; end $$;
+drop trigger if exists edu_graded_no_delete on public.edu_graded_assignments;
+create trigger edu_graded_no_delete before delete on public.edu_graded_assignments for each row execute function public.edu_graded_no_delete();
+notify pgrst, 'reload schema';

@@ -4,6 +4,7 @@ import { gradeView, type GRow } from "@/lib/gradeview";
 import GradingPeriods from "./GradingPeriods";
 import ReportCards from "./ReportCards";
 import MsgHub from "./MsgHub";
+import GradedAssignments from "./GradedAssignments";
 import { loadEducation, loadSyncStatus, requestSync, jobStatus, type EduData, type GradeRow, type SyncStatus } from "@/lib/education";
 import { sfx } from "@/lib/synth";
 
@@ -87,12 +88,13 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
         const liveTxt = lp != null ? `${lq}: ${fmt(lp)}%${delta != null ? ` ${delta >= 0 ? "▲" : "▼"}${fmt(Math.abs(delta))} vs ${fq}` : ""}` : `${lq}: not posted yet`;
         const main = qv === "final" ? fp : lp; const mainLbl = qv === "final" ? `${fq} final` : lq;
         const sub = qv === "final" ? liveTxt : fp != null ? `${fq} final ${fmt(fp)}` : `${fq}: not posted`;
-        return (<li key={c.key} data-class={c.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
+        return (<li key={c.key} data-class={c.key} className="flex flex-wrap items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
           <span className="w-4 font-mono text-xs text-slate">{c.period}</span>
           <div className="min-w-0 flex-1"><div className="truncate text-snow" title={c.course}>{c.course}</div>
             <div className="truncate text-xs text-slate" title={`${c.teacher ?? ""} · ${sub}`}>{c.teacher} · <span data-sub>{sub}</span></div></div>
           <Spark pts={c.trend} />
           <span className="shrink-0 text-right">{main != null ? <><span data-main className={`block font-mono text-sm ${tone(main)}`}>{fmt(main)}</span><span className="block text-[10px] text-slate">{mainLbl}</span></> : <span data-main className="text-xs text-ash">{qv === "final" || fp == null ? "Not posted" : "Not posted yet"}</span>}</span>
+          <GradedAssignments courseKey={c.key} demo={data.demo} />
         </li>); })}{!gv.current.length && <li className="text-xs text-ash">No classes in the latest sync.</li>}</ul>
       {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><span className={`font-mono ${tone(f.percent)}`}>{f.percent ?? f.mark}</span></li>)}</ul></div>}
       {gv.asOf && <p className="text-xs text-slate">Current term: {gv.term} · as of {fmt(gv.asOf)}</p>}
