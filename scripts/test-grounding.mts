@@ -59,6 +59,9 @@ check("bills due", A("what bills do I have?"), ["Georgia Power $142.37", "Netfli
 check("med schedule", A("what's my med schedule"), ["Metformin 500mg: 8am & 8pm", "last taken"], ["Stopped med"]);
 check("latest glucose", A("what was my latest glucose"), ["Latest glucose: 118 mg/dL", "Previous: 131", "source: health_logs"]);
 check("steps", A("how many steps today"), ["6421"]);
+check("my steps", A("what are my steps"), ["6421"]);
+check("step-by-step does NOT hit health", String(A("explain step-by-step how to budget")), ["null"]);
+check("'steps to' does NOT hit health", String(A("what are the steps to file taxes")), ["null"]);
 check("stock price (live quote cited)", A("what's the price of AAPL"), ["AAPL: $231.50", "+1.25%", "10 shares", "Yahoo Finance"]);
 check("unknown ticker → no guess", A("price of ZZZZ"), ["won't guess"], [/\$\d/]);
 check("portfolio", A("how are my stocks"), ["AAPL $231.50", "Holdings value $2315.00"]);

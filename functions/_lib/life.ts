@@ -99,7 +99,7 @@ export function answerLife(q: string, L: Life, demo: boolean, assignments: Assig
     const m = L.meds.filter(x => x.active !== false);
     return m.length ? `Med schedule: ${m.map(x => `${x.name}${x.dose ? ` ${x.dose}` : ""}: ${x.schedule || "no schedule set"}${x.last_taken ? `, last taken ${fmtT(x.last_taken)}` : ", not logged as taken"}`).join("; ")}.${cite("meds", at, demo)}` : `You have no active medications in your data.${cite("meds", at, demo)}`;
   }
-  const hk = /\b(glucose|blood sugar|bg)\b/i.test(q) ? "glucose" : /\bsteps?\b/i.test(q) ? "steps" : /\b(weight|weigh)\b/i.test(q) ? "weight" : null;
+  const hk = /\b(glucose|blood sugar|bg)\b/i.test(q) ? "glucose" : (/\b(my steps|step count|steps? (today|yesterday|this week|walked|taken|did i)|how many steps|steps? (have|did) i)\b/i.test(q) && !/step[- ]by[- ]step|steps to\b/i.test(q)) ? "steps" : /\b(weight|weigh)\b/i.test(q) ? "weight" : null;
   if (hk) {
     const pre = need(L, "health_logs", "health logs"); if (pre) return pre.trim();
     const r = L.health.filter(h => h.kind === hk).sort((a, b) => b.created_at.localeCompare(a.created_at));
