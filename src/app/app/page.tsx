@@ -442,7 +442,7 @@ export default function Cockpit() {
         </div>
       </header>
 
-      <main data-m-open={visible.some(w => !w.minimized) ? "1" : undefined} className="relative z-10 mx-auto max-w-[1600px] px-3 pb-[190px] pt-3">
+      <main data-m-open={!desk && visible.some(w => !w.minimized && !HOME.includes(w.id)) ? "1" : undefined} className="relative z-10 mx-auto max-w-[1600px] px-3 pb-[190px] pt-3">
         {demo && !slim && <div className="mb-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-xs text-amber-200">Demo mode: sample data stays on this device. <a href="/#launch" className="underline">Sign in</a> to save for real.</div>}
         <div data-safe-top data-m-greet className={`mb-3 flex items-center gap-4 ${slim ? "hidden" : ""}`}>
           <div className="relative shrink-0"><div className={listening ? "listen-ring" : ""}><CrystalBot size={76} mood={listening ? "thinking" : mood} say={caption || say} onClick={() => { openApp("crystal"); react("wave"); sfx("chirp"); speakBubble("Hi pilot! Need anything? 💙"); }} label="Open Crystal co-pilot chat" /></div>
