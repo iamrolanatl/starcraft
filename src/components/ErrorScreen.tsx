@@ -25,10 +25,10 @@ export default function ErrorScreen({ code, detail, onRetry, chatOpen = false }:
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-navy p-4 text-ice" style={{ ["--hue" as string]: info.hue }}>
       <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(60% 50% at 50% 20%, ${info.hue}22, transparent 70%), radial-gradient(40% 40% at 80% 90%, #3ef2e014, transparent 70%)` }} />
       <div className={`relative grid w-full gap-4 ${open ? "max-w-5xl md:grid-cols-[1fr_1.1fr]" : "max-w-lg"}`}>
-        <section className="glass rounded-2xl p-6 text-center sm:p-8" role="alert" aria-live="assertive">
-          <div className="text-5xl" aria-hidden>{info.icon}</div>
-          {/^\d+$/.test(code) && <div className="mt-2 font-mono text-6xl font-bold tracking-widest" style={{ color: info.hue, textShadow: `0 0 18px ${info.hue}99, 0 0 42px ${info.hue}44` }}>{code}</div>}
-          <h1 className="neon mt-2 text-2xl font-semibold">{info.title}</h1>
+        <section className="glass self-start rounded-2xl p-6 text-center sm:p-8" role="alert" aria-live="assertive">
+          <div aria-hidden style={{ fontSize: 44, lineHeight: 1 }}>{info.icon}</div>
+          {/^\d+$/.test(code) && <div className="mt-2 font-mono font-bold tracking-widest" style={{ fontSize: "clamp(56px, 12vw, 88px)", lineHeight: 1.05, color: info.hue, textShadow: `0 0 18px ${info.hue}99, 0 0 42px ${info.hue}44` }}>{code}</div>}
+          <h1 className="neon mt-2 font-semibold" style={{ fontSize: 28 }}>{info.title}</h1>
           <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-ice/90">{info.msg}</p>
           {detail && <p className="mx-auto mt-2 max-w-sm break-words font-mono text-xs text-ice/50">{detail.slice(0, 160)}</p>}
           <div className="mt-6 flex flex-wrap justify-center gap-2">
