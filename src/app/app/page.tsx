@@ -176,7 +176,7 @@ export default function Cockpit() {
   const doOpen = (id: AppId) => { sfx("open"); haptic(10); zTop.current += 1; const z = zTop.current;
     origin.current = { ...lastPointer };
     // v4 window manager: opening anything minimizes ALL other applets to the dock and maximizes this one into the safe area.
-    const full = !desk || winPrefRef.current !== "normal"; const g0 = { x: Math.max(12, innerWidth / 2 - 330), y: 12, w: Math.min(660, innerWidth - 24), h: 540 };
+    const full = true; const g0 = { x: Math.max(12, innerWidth / 2 - 330), y: 12, w: Math.min(660, innerWidth - 24), h: 540 };
     setWins(w => { w = w.map(x => x.id === id ? x : { ...x, minimized: true, max: false }); return w.some(x => x.id === id) ? w.map(x => x.id === id ? { ...x, minimized: false, max: full, z, geo: x.geo ?? g0 } : x) : [...w, { id, title: META[id].title, minimized: false, max: full, z, geo: savedGeo(id) ?? g0 }]; });
     setFocus(id); log(`Applet opened: ${META[id].title}`); };
   const openApp = (id: AppId) => { if (HOME.includes(id) || reduced() || wins.some(w => w.id === id && !w.minimized)) return doOpen(id); origin.current = { ...lastPointer }; setWarp(true); sfx("whoosh"); haptic([10, 20, 30]); setTimeout(() => { doOpen(id); setWarp(false); }, 520); };
@@ -184,8 +184,9 @@ export default function Cockpit() {
   const ORDER: AppId[] = [...MODULES, "crystal"];
   const closeAll = () => { setWins(w => w.map(x => ({ ...x, minimized: true, max: false }))); sfx("whoosh"); haptic(8); log("All applets minimized: clean cockpit."); };
   const cycle = (d: number) => { const cur = wins.find(w => !w.minimized && w.max)?.id ?? focus; const i = ORDER.indexOf(cur); const n = ORDER[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + ORDER.length) % ORDER.length]; openApp(n); };
-  const toggleFull = () => { const m = wins.find(w => !w.minimized && w.max); if (m) { if (!desk) return; unMax(m.id); setWinPref("normal"); savePrefs({ win: "normal" }); toast("Normal window size (press F for full screen)", "info"); }
-    else { const f = wins.find(w => !w.minimized && w.id === focus) ?? wins.find(w => !w.minimized && !HOME.includes(w.id)); if (f) { setWinPref("full"); savePrefs({ win: "full" }); doOpen(f.id); } } };
+  const toggleFull = () => { if (!desk) return; const n = winPrefRef.current === "normal" ? "full" : "normal"; setWinPref(n); savePrefs({ win: n }); sfx("whoosh");
+    const f = wins.find(w => !w.minimized && w.max); if (!f) { const g = wins.find(w => !w.minimized && w.id === focus) ?? wins.find(w => !w.minimized && !HOME.includes(w.id)); if (g) doOpen(g.id); }
+    toast(n === "normal" ? "Normal window size (F or double-click title for full screen)" : "Full screen", "info"); };
   const minimize = (id: AppId) => setWins(w => w.map(x => x.id === id ? { ...x, minimized: true, max: false } : x));
   const unMax = (id: AppId) => { setWins(w => w.map(x => x.id === id ? { ...x, max: false } : x)); sfx("whoosh"); };
   const close = (id: AppId) => setWins(w => w.filter(x => x.id !== id));
@@ -292,6 +293,8 @@ export default function Cockpit() {
   useEffect(() => { if (!ready) return; loadPrefs().then(p => { setClarity(p.glass ?? "balanced"); if (p.win) setWinPref(p.win); }); }, [ready, user, demo]);
   const [coarse, setCoarse] = useState(false); useEffect(() => { setCoarse(matchMedia("(pointer: coarse)").matches); }, []);
   const safeRect = useSafeArea(wins.some(w => !w.minimized && w.max));
+  const winRect = useMemo(() => { if (!safeRect || !desk || winPref !== "normal") return safeRect; const w = Math.min(safeRect.w, Math.max(560, Math.round(safeRect.w * 0.62))), h = Math.min(safeRect.h, Math.max(420, Math.round(safeRect.h * 0.8)));
+    return { ...safeRect, x: Math.round(safeRect.x + (safeRect.w - w) / 2), y: Math.round(safeRect.y + (safeRect.h - h) / 2), w, h }; }, [safeRect, desk, winPref]);
   if (!ready) return (<><SpaceBackground /><div className="flex h-dvh flex-col items-center justify-center gap-3"><CrystalBot size={90} mood="thinking" label="Crystal loading" /><p className="neon animate-glow font-mono">Establishing uplink…</p></div></>);
 
   const blips: Blip[] = open.map(t => ({ label: t.title, days: t.due_date ? daysTo(t.due_date) : null, hot: (!!t.due_date && t.due_date < t0) || (alert && t.priority === 1) }));
@@ -416,7 +419,7 @@ export default function Cockpit() {
           </div>
         )}
       </main>
-      {maxed && <Applet key={`max-${maxed.id}`} title={maxed.title} icon={META[maxed.id].icon} mode="max" rect={safeRect} origin={origin.current} z={maxed.z} focused onFocus={() => setFocus(maxed.id)}
+      {maxed && <Applet key={`max-${maxed.id}`} title={maxed.title} icon={META[maxed.id].icon} mode="max" rect={winRect} size={desk && winPref === "normal" ? "normal" : "full"} origin={origin.current} z={maxed.z} focused onFocus={() => setFocus(maxed.id)}
         onMin={() => minimize(maxed.id)} onClose={() => close(maxed.id)} onToggleMax={toggleFull} canFloat={desk}>{content(maxed.id)}</Applet>}
 
       {focusEnd && <ShieldsTimer endsAt={focusEnd} total={25 * 60000} onEnd={shieldsDone} onAbort={() => { setFocusEnd(null); log("Shields down (aborted).", "info"); sfx("close"); }} />}

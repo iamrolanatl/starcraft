@@ -5,8 +5,8 @@ import { sfx } from "@/lib/synth";
 import { Boundary } from "@/components/ui/Guard";
 export type WinMode = "float" | "grid" | "sheet" | "max";
 export interface Geo { x: number; y: number; w: number; h: number }
-type P = { title: string; icon: string; onMin: () => void; onClose: () => void; children: React.ReactNode; focused: boolean; onFocus: () => void; mode?: WinMode; geo?: Geo; z?: number; onGeo?: (g: Geo) => void; rect?: Geo | null; origin?: { x: number; y: number }; onToggleMax?: () => void; canFloat?: boolean };
-export default function Applet({ title, icon, onMin, onClose, children, focused, onFocus, mode = "grid", geo, z = 1, onGeo, rect, origin, onToggleMax, canFloat }: P) {
+type P = { title: string; icon: string; onMin: () => void; onClose: () => void; children: React.ReactNode; focused: boolean; onFocus: () => void; mode?: WinMode; geo?: Geo; z?: number; onGeo?: (g: Geo) => void; rect?: Geo | null; origin?: { x: number; y: number }; onToggleMax?: () => void; canFloat?: boolean; size?: "full" | "normal" };
+export default function Applet({ title, icon, onMin, onClose, children, focused, onFocus, mode = "grid", geo, z = 1, onGeo, rect, origin, onToggleMax, canFloat, size }: P) {
   const [anim, setAnim] = useState<"in" | "min" | "close">("in"); const [drag, setDrag] = useState(false);
   const ref = useRef<HTMLElement>(null); const g = useRef(geo);
   useEffect(() => { g.current = geo; }, [geo]);
@@ -43,7 +43,7 @@ export default function Applet({ title, icon, onMin, onClose, children, focused,
     {mode === "sheet" && <div className="fade-in fixed inset-0 z-[44] bg-navy/50 backdrop-blur-[2px]" onClick={() => leave("min")} aria-hidden />}
     <section ref={ref} onPointerDown={onFocus} onKeyDown={keyMove} aria-label={`${title} applet`} style={style}
       className={`glass corner-ticks flex flex-col overflow-hidden ${base} ${mode === "max" ? (anim === "in" ? "win-spring" : cls) : mode !== "sheet" ? cls : anim !== "in" ? cls : ""} ${focused ? "neon-frame" : ""} ${drag ? "win-drag" : ""}`}
-      data-maximized={mode === "max" ? "true" : undefined} role={mode === "sheet" ? "dialog" : undefined} aria-modal={mode === "sheet" ? true : undefined}>
+      data-maximized={mode === "max" ? "true" : undefined} data-winsize={mode === "max" ? size ?? "full" : undefined} role={mode === "sheet" ? "dialog" : undefined} aria-modal={mode === "sheet" ? true : undefined}>
       {mode === "sheet" && <div className="flex justify-center pt-2" onPointerDown={e => { const y0 = e.clientY; const up = (ev: PointerEvent) => { removeEventListener("pointerup", up); if (ev.clientY - y0 > 60) leave("min"); }; addEventListener("pointerup", up); }}><span className="h-1.5 w-12 rounded-full bg-slate/60" aria-hidden /></div>}
       <header onPointerDown={e => startDrag(e, "move")} onDoubleClick={() => onToggleMax?.()}
         className={`flex items-center justify-between border-b border-cyan/15 bg-gradient-to-r from-navy-2/80 via-navy-2/40 to-transparent px-3 py-2 ${mode === "float" ? "cursor-grab select-none" : ""}`}>
