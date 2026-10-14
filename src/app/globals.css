@@ -410,3 +410,7 @@ html:is([data-motion=off],[data-motion=reduced]) .pb-fill { transition: none; } 
 /* Pre-login landing: Calm background motion for every skin, regardless of saved prefs */
 html[data-calm="1"] body::before { animation-play-state: running !important; }
 html[data-calm="1"][data-video="off"] .bg-video { opacity: 1 !important; }
+/* Header module row: one line, horizontal scroll with fade edges; never wraps */
+.mod-scroll{scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent);padding-inline:6px}
+.mod-scroll::-webkit-scrollbar{display:none}
+header[data-safe-top]>div{min-height:0}

@@ -295,11 +295,10 @@ export default function Cockpit() {
   // ---- voice ----
   const [listening, setListening] = useState(false); const [caption, setCaption] = useState(""); const [handsFree, setHandsFree] = useState(false);
   useEffect(() => { setProfile(getProfile()); applySettings(); setQs(getSettings()); const f = () => setProfile({ ...getProfile() }); const g = () => setQs(getSettings()); addEventListener("crystal-profile", f); addEventListener("crystal-settings", g); return () => { removeEventListener("crystal-profile", f); removeEventListener("crystal-settings", g); }; }, []);
-  // Slim chrome: short screens (<900px tall) or any open applet → one slim top row + compact HUD. Chevron remembers an explicit choice.
+  // Slim chrome: short screens (<900px tall) only — never depends on applet state, so the header keeps one fixed height → one slim top row + compact HUD. Chevron remembers an explicit choice.
   const [slimPref, setSlimPref] = useState<"auto" | "expanded" | "collapsed">(() => { try { return (localStorage.getItem("crystal-slim") as "auto" | "expanded" | "collapsed") || "auto"; } catch { return "auto"; } });
   const [shortScr, setShortScr] = useState(false); useEffect(() => { const u = () => setShortScr(innerHeight < 900 && innerWidth >= 640); u(); addEventListener("resize", u); return () => removeEventListener("resize", u); }, []);
-  const anyOpen = wins.some(w => !w.minimized);
-  const slim = slimPref === "collapsed" || (slimPref === "auto" && (shortScr || anyOpen) && typeof window !== "undefined" && innerWidth >= 640);
+    const slim = slimPref === "collapsed" || (slimPref === "auto" && shortScr && typeof window !== "undefined" && innerWidth >= 640);
   const toggleSlim = () => { const v = slim ? "expanded" : "collapsed"; setSlimPref(v); try { localStorage.setItem("crystal-slim", v); } catch {} };
   const bootOpened = useRef(false); useEffect(() => { if (!ready || bootOpened.current) return; bootOpened.current = true; const d = getSettings().defaultApplet as AppId; if (d && d !== "home" && META[d]) setTimeout(() => openApp(d), 600); }); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (ready && !demo) loadProfile().then(p => setProfile({ ...p })); }, [ready, demo]);
@@ -429,7 +428,7 @@ export default function Cockpit() {
             <MicBtn on={listening} onClick={toggleMic} /><button onClick={() => setHandsFreeOn(!handsFree)} aria-pressed={handsFree} title={handsFree ? "Hands-Free On: Tap To Stop" : "Hands-Free Voice: Tap To Start"} className={`btn btn-ghost px-2 text-xs ${handsFree ? "border-cyan text-cyan" : ""} ${!handsFree && hf.text === "Tap to Start Hands-Free" ? "hf-cue border-cyan text-cyan" : ""}`}>{handsFree ? "● Hands-Free" : !handsFree && hf.text === "Tap to Start Hands-Free" ? (slim ? "▶ Hands-Free" : "Tap to Start Hands-Free") : "Hands-Free"}</button>
             <button className="btn btn-primary !py-1.5 text-sm" disabled={cmdBusy}>{cmdBusy ? "…" : "Go"}</button>
           </form>
-          {slim && <nav aria-label="Modules" data-testid="slim-modules" className="flex min-w-0 flex-1 flex-wrap gap-1">{MODS.map(id => { const q = squad.find(x => x.id === id); return <button key={id} onClick={() => openApp(id)} title={q?.detail ? `${META[id].title}: ${q.detail}` : META[id].title} className={`relative flex h-7 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[11.5px] font-semibold text-snow ${q?.status === "warn" ? "border-alert/60" : "border-cyan/25"} bg-[rgb(10_12_22/.6)] hover:border-cyan/60`}><span className="text-sm text-cyan">{META[id].icon}</span>{META[id].title}</button>; })}</nav>}
+          {slim && <nav aria-label="Modules" data-testid="slim-modules" className="mod-scroll flex min-w-0 flex-1 flex-nowrap gap-1 overflow-x-auto">{MODS.map(id => { const q = squad.find(x => x.id === id); return <button key={id} onClick={() => openApp(id)} title={q?.detail ? `${META[id].title}: ${q.detail}` : META[id].title} className={`relative flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 text-[11.5px] font-semibold text-snow ${q?.status === "warn" ? "border-alert/60" : "border-cyan/25"} bg-[rgb(10_12_22/.6)] hover:border-cyan/60`}><span className="text-sm text-cyan">{META[id].icon}</span>{META[id].title}</button>; })}</nav>}
           <button onClick={toggleSlim} aria-expanded={!slim} aria-label={slim ? "Expand Toolbar" : "Collapse Toolbar"} title={slim ? "Expand Toolbar" : "Collapse Toolbar"} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex">{slim ? "▾" : "▴"}</button>
           <button onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open Command Palette"><kbd>⌘K</kbd></button>
           <span data-testid="user-chip" data-hide-slim={slim ? "1" : undefined} title={demo ? "Demo mode" : [fullName(profile), user].filter(Boolean).join(" · ")} className={`ml-auto hidden max-w-[14rem] truncate text-xs text-ash ${slim ? "2xl:inline" : "md:inline"}`}>{demo ? "Demo mode" : shortName(profile, user)} · <span className="text-cyan">{RANKS[rankI]}</span></span>
@@ -464,7 +463,7 @@ export default function Cockpit() {
         {desk ? (
           <div className="relative" style={{ height: `max(calc(100dvh - 330px), ${Math.max(...visible.map(w => (w.geo?.y ?? 0) + (w.geo?.h ?? 0)), 400) + 20}px)` }}>
             {tiled.map((w, i) => <div key={w.id} className={focusEnd && !ESSENTIAL.includes(w.id) && focus !== w.id ? "focus-dim" : ""}>
-              <Applet title={w.title} icon={META[w.id].icon} mode={tileRects[i] ? "tile" : "float"} rect={tileRects[i] ?? null} geo={w.geo} z={w.z} onGeo={g => setGeo(w.id, g)} onDrop={(x, y) => dropTile(w.id, x, y)} focused={focus === w.id} onFocus={() => front(w.id)} onMin={() => minimize(w.id)} onClose={() => close(w.id)} onToggleMax={() => { setWinPref("full"); savePrefs({ win: "full" }); doOpen(w.id); }}>{content(w.id)}</Applet></div>)}
+              <Applet title={w.title} icon={META[w.id].icon} mode={tileRects[i] ? "tile" : "float"} rect={tileRects[i] ?? null} geo={w.geo} z={w.z} onGeo={g => setGeo(w.id, g)} onDrop={(x, y) => dropTile(w.id, x, y)} focused={focus === w.id} onFocus={() => front(w.id)} onMin={() => minimize(w.id)} onClose={() => close(w.id)} bounds={safeRect} persistKey={w.id} onToggleMax={() => { setWinPref("full"); savePrefs({ win: "full" }); doOpen(w.id); }}>{content(w.id)}</Applet></div>)}
             {!visible.filter(w => !w.max).length && !maxed && <div className="glass flex flex-col items-center rounded-2xl p-6 text-center text-ash"><CrystalBot size={64} mood="wave" label="Crystal" />All applets closed. Press <kbd className="mx-1 rounded border border-slate/50 px-1">H</kbd> or ⌂ Home to restore.</div>}
           </div>
         ) : (
@@ -474,7 +473,7 @@ export default function Cockpit() {
           </div>
         )}
       </main>
-      {maxed && <Applet key={`max-${maxed.id}`} title={maxed.title} icon={META[maxed.id].icon} mode="max" rect={winRect} size={desk && winPref === "normal" ? "normal" : "full"} origin={origin.current} z={maxed.z} focused onFocus={() => setFocus(maxed.id)}
+      {maxed && <Applet key={`max-${maxed.id}`} title={maxed.title} icon={META[maxed.id].icon} mode="max" rect={winRect} bounds={safeRect} persistKey={`${maxed.id}-${desk && winPref === "normal" ? "normal" : "full"}`} size={desk && winPref === "normal" ? "normal" : "full"} origin={origin.current} z={maxed.z} focused onFocus={() => setFocus(maxed.id)}
         onMin={() => minimize(maxed.id)} onClose={() => close(maxed.id)} onToggleMax={toggleFull} canFloat={desk}>{content(maxed.id)}</Applet>}
 
       {focusEnd && <ShieldsTimer endsAt={focusEnd} total={25 * 60000} onEnd={shieldsDone} onAbort={() => { setFocusEnd(null); log("Shields down (aborted).", "info"); sfx("close"); }} />}
