@@ -1,0 +1,16 @@
+name = "crystal-health"
+main = "index.ts"
+compatibility_date = "2025-09-01"
+workers_dev = false
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[ai]
+binding = "AI"
+
+[vars]
+SITE = "https://crystal-7ot.pages.dev"
+SUPABASE_URL = "https://ogrrjkxkccbywbiikcak.supabase.co"
+CF_ACCOUNT = "74b54514480f0ab4da30dc3e835e13d2"
+# secrets (wrangler secret put): HEALTH_KEY, SUPABASE_ANON_KEY, CF_API_TOKEN (analytics read; never sent to browsers)
