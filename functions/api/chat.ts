@@ -5,6 +5,7 @@ import { loadFacts, type Facts } from "../_lib/facts";
 import { answerSchool, dataBlock } from "../_lib/answer";
 import { answerDistrict } from "../_lib/district-answer";
 import { districtCalendar } from "./district-calendar";
+import { escalate, hardUpfront, hardAfter, type QueueBinding } from "../_lib/escalate";
 import { answerLife, lifeBlock, sanitizeLife, fetchQuotes, fetchWeather, tickerIn } from "../_lib/life";
 
 const SALES = `You are Crystal, the cheerful robot assistant on the landing page of "Crystal", a personal productivity and task management app with a StarCraft-style space cockpit theme. Features: top priorities, to-do list with natural language ("remind me Friday to pay the water bill"), weather, calendar, an AI co-pilot robot, a cockpit HUD with pilot view, radar, ability grid and Red Alert, on-device OCR scanning. Modules: Health (steps, glucose, meds), Communications (mail/email/drive follow-ups), Education (grades, check-ins with handout upload, school calendar, bell schedules), Finance (bills, credit score tracking, stock quotes), Shopping (shopping and wish lists). Bank/credit-bureau/Gmail auto-sync is not yet connected. It's a free proof of concept; sign up with Google or an email code. Be fun, brief (under 80 words), and honest; never invent pricing or features.`;
@@ -13,7 +14,7 @@ STRICT RULES: For anything about the user's student, school, grades, classes, te
 General productivity advice that needs no personal data is fine. To create things, suggest the command bar, e.g. "add milk to shopping list".`;
 
 type Req = ChatRequest & { demoFacts?: Facts; coords?: { lat: number; lon: number } | null };
-export const onRequestPost: PagesFunction<Env & { SUPABASE_ANON_KEY?: string }> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env & { SUPABASE_ANON_KEY?: string; ESCALATIONS?: QueueBinding }> = async ({ request, env }) => {
   const b = await body<Req>(request);
   if (!b || !Array.isArray(b.messages) || !b.messages.length) return json({ error: "messages required" }, 400);
   if (b.mode !== "pilot") return json(await complete(env, SALES, b.messages));
@@ -30,7 +31,16 @@ export const onRequestPost: PagesFunction<Env & { SUPABASE_ANON_KEY?: string }> 
   const cal = await districtCalendar(); const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   const direct = answerDistrict(q, cal, todayStr) ?? answerLife(q, facts.life, facts.demo, facts.assignments) ?? answerSchool(q, facts);
   if (direct) return json({ reply: direct, model: "grounded-db", provider: "fallback", grounded: true });
-  const res = await complete(env, `${PILOT}\n\n${dataBlock(facts)}\n\n${lifeBlock(facts.life, facts.demo)}\n\nCCSD DISTRICT CALENDAR 2026-27 (official, cobbk12.org): ${cal.events.filter(e => e.cat !== "board").map(e => `${e.title} ${e.start}${e.end !== e.start ? `..${e.end}` : ""}`).join(" | ")}`, b.messages);
+  const ctx = `${dataBlock(facts)}\n\n${lifeBlock(facts.life, facts.demo)}\n\nCCSD DISTRICT CALENDAR 2026-27 (official, cobbk12.org): ${cal.events.filter(e => e.cat !== "board").map(e => `${e.title} ${e.start}${e.end !== e.start ? `..${e.end}` : ""}`).join(" | ")}`;
+  // Escalation needs a signed-in user (the row is owner-only under RLS); demo / signed-out stays on the small model.
+  const canEsc = !!(token && anon && facts.signedIn && !facts.demo);
+  const esc = async (reason: string) => canEsc ? escalate({ token: token!, anon: anon!, queue: env.ESCALATIONS, question: q, history: b.messages, context: ctx, reason }) : null;
+  const pending = (id: string, reason: string) => json({ reply: "That one needs deeper thought, so I've escalated it. The answer will appear here shortly. 🛰️", model: "escalated", provider: "fallback", grounded: false, escalation: { id, status: "queued", reason } });
+  const up = canEsc ? hardUpfront(q) : null;
+  if (up) { const e = await esc(up); if (e) return pending(e.id, up); }
+  const res = await complete(env, `${PILOT}\n\n${ctx}`, b.messages);
+  const after = canEsc ? hardAfter(q, res.reply, res.provider) : null;
+  if (after) { const e = await esc(after); if (e) return pending(e.id, after); }
   return json({ ...res, grounded: false });
 };
 function sanitizeDemo(f: Facts): Facts { // demo payload comes from the client; cap sizes

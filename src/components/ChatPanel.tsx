@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { call, Routes, type ChatMessage, type ChatRequest, type ChatResponse } from "@/contracts/api";
-import { sfx } from "@/lib/synth";
+import { sfx, speak, isMuted } from "@/lib/synth";
+import { waitEscalation, escText } from "@/lib/escalation";
 import { askPilot } from "@/lib/ask";
 import type { Mood } from "./CrystalBot";
 
@@ -15,7 +16,9 @@ export default function ChatPanel({ mode, greeting, onMood, className = "" }: { 
     const next = [...msgs, { role: "user" as const, content: q }]; setMsgs(next); setText(""); setBusy(true); onMood?.("thinking"); sfx("click");
     try {
       const r = mode === "pilot" ? await askPilot(next.slice(1)) : await call<ChatRequest, ChatResponse>(Routes.chat, { mode, messages: next.slice(1) });
-      setMsgs([...next, { role: "assistant", content: r.reply }]); setMeta(r.model === "grounded-db" ? "your synced data (no AI)" : r.provider === "workers-ai" ? `Workers AI · ${r.model.split("/").pop()}` : r.provider); onMood?.("happy"); sfx("chirp");
+      setMsgs([...next, { role: "assistant", content: r.reply }]);
+      if (r.escalation) { const id = r.escalation.id; const at = next.length; setMeta("escalated · queued");
+        void waitEscalation(id, st => setMeta(`escalated · ${st}`)).then(x => { const a = escText(x); setMsgs(m => m.map((y, i) => i === at ? { ...y, content: `${a}` } : y)); setMeta(x.status === "answered" ? `escalated · answered${x.model ? ` · ${x.model.split("/").pop()}` : ""}` : "escalation failed"); sfx(x.status === "answered" ? "chirp" : "error"); if (x.status === "answered" && !isMuted()) speak(a.replace(/\[source:[^\]]*\]/g, "").slice(0, 400)); }); return; } setMeta(r.model === "grounded-db" ? "your synced data (no AI)" : r.provider === "workers-ai" ? `Workers AI · ${r.model.split("/").pop()}` : r.provider); onMood?.("happy"); sfx("chirp");
     } catch { setMsgs([...next, { role: "assistant", content: "Signal lost. Try again?" }]); onMood?.("alert"); sfx("error"); }
     finally { setBusy(false); setTimeout(() => onMood?.("idle"), 1800); }
   }

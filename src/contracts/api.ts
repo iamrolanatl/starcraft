@@ -4,7 +4,7 @@ export type Role = "user" | "assistant";
 export interface ChatMessage { role: Role; content: string }
 
 export interface ChatRequest { mode: "sales" | "pilot"; messages: ChatMessage[] }
-export interface ChatResponse { reply: string; model: string; provider: "workers-ai" | "grok" | "fallback" }
+export interface ChatResponse { reply: string; model: string; provider: "workers-ai" | "grok" | "fallback"; escalation?: { id: string; status: "queued" | "working" | "answered" | "failed"; reason?: string } }
 
 export interface CommandRequest { text: string; nowIso: string; tzOffsetMinutes: number }
 export type CommandIntent =

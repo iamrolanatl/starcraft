@@ -32,6 +32,7 @@ import { sfx, ambient, haptic, isMuted, stopSpeech, speak } from "@/lib/synth";
 import { listenOnce, wakeWord, voiceSupported, hasWebSpeech, type Listen } from "@/lib/voice";
 import { loadPrefs, savePrefs, type Clarity } from "@/lib/prefs";
 import { askPilot } from "@/lib/ask";
+import { waitEscalation, escText } from "@/lib/escalation";
 import { safeJSON, lsRaw, lsSet } from "@/lib/safe";
 import { useSafeArea, lastPointer } from "@/lib/safearea";
 import { Boundary, useGlobalErrorHooks, OfflineBanner } from "@/components/ui/Guard";
@@ -215,7 +216,7 @@ export default function Cockpit() {
       if (it.kind === "create_task") { await addTask({ title: it.title, due_date: it.dueDate, priority: it.priority }); await reload(); toast(`Task filed: ${it.title}${it.dueDate ? ` · due ${it.dueDate}` : ""}`); log(`Task created: ${it.title}`, "ok"); sfx("success"); haptic(12); sparks(); react("happy"); speakBubble("Mission logged! ✅"); say2(`Mission logged: ${it.title}`, voice); }
       else if (it.kind === "create_item") { await insertRow(it.table, it.row); toast(it.summary); log(it.summary, "ok"); sfx("success"); haptic(12); sparks(); react("happy"); speakBubble("Got it! ✨"); say2(it.summary, voice); openApp(it.app); }
       else if (it.kind === "open_app") { openApp(it.app); react("wave"); say2(`Opening ${META[it.app].title}`, voice); }
-      else { const g = await askPilot([{ role: "user", content: text }]); speakBubble(g.reply.slice(0, 220), 9000); toast(g.reply.slice(0, 220), "info"); log(`Crystal${g.grounded ? " [data]" : ""}: ${g.reply.slice(0, 160)}`); react("happy", 2500); say2(g.reply, voice); }
+      else { const g = await askPilot([{ role: "user", content: text }]); speakBubble(g.reply.slice(0, 220), 9000); toast(g.reply.slice(0, 220), "info"); log(`Crystal${g.grounded ? " [data]" : ""}: ${g.reply.slice(0, 160)}`); react("happy", 2500); say2(g.reply, voice); if (g.escalation) void waitEscalation(g.escalation.id).then(x => { const a = escText(x); speakBubble(a.slice(0, 220), 12000); toast(a.slice(0, 220), x.status === "answered" ? "info" : "warn"); log(`Crystal [escalated]: ${a.slice(0, 160)}`); say2(a, voice); }); }
       setCmd("");
     } catch (err) { toast((err as Error).message, "warn"); log(`Command failed: ${(err as Error).message}`, "warn"); sfx("error"); haptic([30, 30, 30]); react("alert"); }
     finally { setCmdBusy(false); }

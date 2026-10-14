@@ -10,3 +10,8 @@ binding = "AI"
 name = "RL"
 class_name = "RateLimiter"
 script_name = "crystal-ratelimiter"
+
+# Hard chat questions -> box worker (sync/escalation_worker.py pulls via the HTTP pull consumer)
+[[queues.producers]]
+queue = "crystal-escalations"
+binding = "ESCALATIONS"
