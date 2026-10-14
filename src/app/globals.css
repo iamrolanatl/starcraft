@@ -156,7 +156,7 @@ html[data-theme="night"] .bg-video { opacity: .25; filter: grayscale(.8); }
 }
 html[data-glass="clear"] { --glass-a: .72; --glass-blur: 16px; --glass-sat: 90%; }
 html[data-glass="solid"] { --glass-a: .96; --glass-blur: 24px; --glass-sat: 70%; }
-@layer components {
+/* v4 glass: unlayered + later in file so it wins over the v1-v3 .glass rules */
   .glass {
     background: linear-gradient(165deg, rgb(24 32 52 / var(--glass-a)), rgb(9 13 24 / var(--glass-a)) 60%, rgb(6 10 20 / calc(var(--glass-a) + .04)));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
@@ -169,8 +169,7 @@ html[data-glass="solid"] { --glass-a: .96; --glass-blur: 24px; --glass-sat: 70%;
   .glass .text-slate, .glass .text-ash { color: var(--text-muted) !important; }
   .input { background: rgb(5 9 20 / .92); border-color: rgba(134,147,168,.65); color: var(--text-body); font-size: max(16px, 1rem); line-height: 1.5; }
   .glass table { background: rgb(6 10 20 / .6); } .glass th, .glass td { padding: 4px 8px; }
-  .glass ul > li, .glass ol > li { background-color: rgb(6 10 20 / .35); }
-}
+
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass { background: #0a1122 !important; }
 }
@@ -217,3 +216,5 @@ header.glass { padding-top: env(safe-area-inset-top); padding-left: env(safe-are
 @media (max-width: 640px) {
   nav[aria-label="Cockpit HUD"] .hud-scroll { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
 }
+
+.win-maxed { background: linear-gradient(165deg, rgb(20 28 48 / max(var(--glass-a), .9)), rgb(8 12 22 / max(var(--glass-a), .92))); }
