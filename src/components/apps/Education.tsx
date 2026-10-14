@@ -41,6 +41,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
   useEffect(() => { loadEducation(demo).then(d => { setData(d); if (d) log(`Education uplink: ${d.student.name}, synced ${ago(d.student.last_synced_at)}.`, "ok"); }).catch(e => { setErr((e as Error).message); log(`Education: ${(e as Error).message}`, "warn"); }); }, [demo, log]);
 
   const gv = useMemo(() => gradeView((data?.grades ?? []) as GRow[]), [data]);
+  const [qv, setQv] = useState<"final" | "live">("final");
 
   if (err) return <p className="text-sm text-alert">{err}</p>;
   if (data === undefined) return <p className="text-sm text-ash">Linking to school uplink…</p>;
@@ -68,14 +69,27 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       {TABS.map(([id, label, n]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`-mb-px border-b-2 px-2 py-1 text-xs ${tab === id ? "border-cyan text-cyan" : "border-transparent text-ash hover:text-snow"}`}>{label}{n ? <span className="ml-1 rounded-full bg-alert/30 px-1.5 text-[10px] text-snow">{n}</span> : null}</button>)}
     </div>
     {tab === "grades" && <div className="space-y-2">
-      <ul className="space-y-1" aria-label="Current classes">{gv.current.map(c => (
-        <li key={c.key} data-class={c.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
+      <div className="flex items-center gap-1 text-xs" role="radiogroup" aria-label="Quarter view">
+        {(["final", "live"] as const).map(v => { const lbl = v === "final" ? (gv.current.find(c => c.final)?.final?.term.replace(/^Quarter\s*/i, "Q") ?? "Q1") : (gv.term?.replace(/^Quarter\s*/i, "Q").replace(/^Progress Period\s*/i, "Q") ?? "Q2");
+          return <button key={v} role="radio" aria-checked={qv === v} onClick={() => setQv(v)} className={`rounded px-2 py-0.5 ${qv === v ? "bg-cyan/20 text-cyan" : "text-ash hover:text-snow"}`}>{lbl}</button>; })}
+      </div>
+      <ul className="space-y-1" aria-label="Current classes">{gv.current.map(c => {
+        const fq = c.final ? c.final.term.replace(/^Quarter\s*/i, "Q") : "Q1";
+        const lq = c.term.replace(/^Quarter\s*/i, "Q").replace(/^Progress Period\s*/i, "Q");
+        const fp = c.final?.percent != null ? Number(c.final.percent) : null;
+        const lp = c.posted && c.term !== c.final?.term ? Number(c.percent) : null;
+        const fmt = (n: number) => n.toFixed(n % 1 ? 1 : 0);
+        const delta = lp != null && fp != null ? lp - fp : null;
+        const liveTxt = lp != null ? `${lq}: ${fmt(lp)}%${delta != null ? ` ${delta >= 0 ? "▲" : "▼"}${fmt(Math.abs(delta))} vs ${fq}` : ""}` : `${lq}: not posted yet`;
+        const main = qv === "final" ? fp : lp; const mainLbl = qv === "final" ? `${fq} final` : lq;
+        const sub = qv === "final" ? liveTxt : fp != null ? `${fq} final ${fmt(fp)}` : `${fq}: not posted`;
+        return (<li key={c.key} data-class={c.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
           <span className="w-4 font-mono text-xs text-slate">{c.period}</span>
           <div className="min-w-0 flex-1"><div className="truncate text-snow" title={c.course}>{c.course}</div>
-            <div className="truncate text-xs text-slate" title={`${c.teacher ?? ""} · ${c.status}`}>{c.teacher}{c.final ? ` · ${c.final.term} final ${c.final.percent ?? c.final.mark}` : ""}</div></div>
+            <div className="truncate text-xs text-slate" title={`${c.teacher ?? ""} · ${sub}`}>{c.teacher} · <span data-sub>{sub}</span></div></div>
           <Spark pts={c.trend} />
-          <span className={`shrink-0 text-right text-xs ${c.posted ? `font-mono text-sm ${tone(c.percent)}` : "text-ash"}`}>{c.posted ? Number(c.percent).toFixed(Number(c.percent) % 1 ? 1 : 0) : c.status}</span>
-        </li>))}{!gv.current.length && <li className="text-xs text-ash">No classes in the latest sync.</li>}</ul>
+          <span className="shrink-0 text-right">{main != null ? <><span data-main className={`block font-mono text-sm ${tone(main)}`}>{fmt(main)}</span><span className="block text-[10px] text-slate">{mainLbl}</span></> : <span data-main className="text-xs text-ash">{qv === "final" || fp == null ? "Not posted" : "Not posted yet"}</span>}</span>
+        </li>); })}{!gv.current.length && <li className="text-xs text-ash">No classes in the latest sync.</li>}</ul>
       {gv.completed.length > 0 && <div><div className="hud-label mb-1">Completed courses</div><ul className="space-y-1" aria-label="Completed courses">{gv.completed.map(f => <li key={f.course_key} data-class={f.course_key} className="flex items-center gap-2 rounded-lg px-2 py-1 text-ash"><div className="min-w-0 flex-1"><div className="truncate">{f.course}</div><div className="truncate text-xs text-slate">{f.teacher} · {f.term} final</div></div><span className={`font-mono ${tone(f.percent)}`}>{f.percent ?? f.mark}</span></li>)}</ul></div>}
       {gv.asOf && <p className="text-xs text-slate">Current term: {gv.term} · as of {fmt(gv.asOf)}</p>}
     </div>}
