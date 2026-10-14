@@ -15,7 +15,8 @@
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
-html, body { background: var(--color-navy); color: var(--color-ice); }
+html { background: var(--color-navy); color: var(--color-ice); }
+body { background: transparent; color: var(--color-ice); }
 body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
 :focus-visible { outline: 2px solid var(--color-cyan); outline-offset: 2px; }
 
