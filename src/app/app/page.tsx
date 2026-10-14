@@ -111,7 +111,7 @@ export default function Cockpit() {
     setNight(pref("theme") === "night"); const pt = () => setPrefTick(x => x + 1); addEventListener("crystal-prefs", pt);
     return () => { sub.subscription.unsubscribe(); mq.removeEventListener("change", upd); removeEventListener("crystal-prefs", pt); };
   }, []);
-  useEffect(() => { if (!ready) return; setWins(HOME.map((id, i) => ({ id, title: META[id].title, minimized: false, z: i + 1, geo: savedGeo(id) ?? tileGeo(i, innerWidth) })));
+  useEffect(() => { if (!ready) return; /* boot: ALL applets closed (minimized to the dock) */ setWins(HOME.map((id, i) => ({ id, title: META[id].title, minimized: true, z: i + 1, geo: savedGeo(id) ?? tileGeo(i, innerWidth) })));
     reload().then(() => log("Systems online. Welcome aboard, pilot.", "ok")); loadMods(); loadEdu(demo);
     const un = onStoreChange(loadMods); const iv = setInterval(() => { loadEdu(demo); loadMods(); }, 300000);
     if (pref("tour") !== "done") setTour(true); else if (pref("brief-date") !== ymd()) setBrief(true);
