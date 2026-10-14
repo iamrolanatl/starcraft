@@ -33,8 +33,8 @@ async function run(env: Env) {
   const checks = await Promise.all([
     probe("site", "route", `${S}/`, r => r.status === 200), probe("app", "route", `${S}/app/`, r => r.status === 200), probe("admin_page", "route", `${S}/admin/`, r => r.status === 200),
     probe("api_admin", "api", `${S}/api/admin/whoami`, r => r.status === 403 && isJson(r)),   // must refuse anonymous
-    probe("api_support", "api", `${S}/api/support`, r => r.status < 500 && isJson(r)), probe("api_sync", "api", `${S}/api/sync/status`, r => r.status < 500 && isJson(r)),
-    probe("api_transcribe", "api", `${S}/api/transcribe`, r => r.status < 500), probe("api_health", "api", `${S}/api/health/steps`, r => r.status < 500 && isJson(r)),
+    probe("api_support", "api", `${S}/api/support`, r => r.status < 500 && isJson(r), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }), probe("api_sync", "api", `${S}/api/sync/poll`, r => r.status === 401 && isJson(r), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }),
+    probe("api_transcribe", "api", `${S}/api/transcribe`, r => r.status < 500 && isJson(r), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }), probe("api_health", "api", `${S}/api/health/steps`, r => r.status < 500 && isJson(r)),
     probe("supabase_rest", "core", `${A}/rest/v1/`, r => r.status < 500, { headers: anon }), probe("supabase_auth", "core", `${A}/auth/v1/health`, r => r.ok, { headers: anon }),
     (async (): Promise<Check> => { const t = Date.now(); try { await env.AI!.run("@cf/baai/bge-small-en-v1.5", { text: ["ping"] }); return { target: "workers_ai", kind: "core", ok: true, status: 200, ms: Date.now() - t }; } catch (e) { return { target: "workers_ai", kind: "core", ok: false, ms: Date.now() - t, detail: String(e).slice(0, 200) }; } })(),
     probe("status_supabase", "dep", "https://status.supabase.com/api/v2/status.json", statusPage), probe("status_cloudflare", "dep", "https://www.cloudflarestatus.com/api/v2/status.json", statusPage),
