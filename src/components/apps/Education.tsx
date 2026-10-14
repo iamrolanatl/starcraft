@@ -6,6 +6,7 @@ import LetterBadge from "@/components/ui/LetterBadge";
 import ReportCards from "./ReportCards";
 import MsgHub from "./MsgHub";
 import Learn from "./Learn";
+import GradingRules from "./GradingRules";
 import GradedAssignments from "./GradedAssignments";
 import { Schedule, AttendanceTab, Unavailable } from "./SchoolExtras";
 import { loadEducation, loadSyncStatus, requestSync, jobStatus, type EduData, type GradeRow, type SyncStatus } from "@/lib/education";
@@ -15,7 +16,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d: string | null) => d ? new Date(d.length === 10 ? d + "T12:00" : d).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "—";
 const tone = (p: number | null) => p == null ? "text-slate" : p >= 90 ? "text-mint" : p >= 80 ? "text-cyan" : p >= 70 ? "text-amber-300" : "text-alert";
 const ago = (iso: string | null) => { if (!iso) return "never"; const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000); return m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
-type Tab = "grades" | "work" | "comms" | "calendar" | "sync" | "reportcards" | "msg" | "schedule" | "attendance" | "more" | "learn";
+type Tab = "grades" | "work" | "comms" | "calendar" | "sync" | "reportcards" | "msg" | "schedule" | "attendance" | "more" | "learn" | "rules";
 
 function Spark({ pts }: { pts: number[] }) {
   if (pts.length < 2) return <span className="inline-block w-16 text-[10px] text-slate">no trend</span>;
@@ -57,7 +58,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
   const upcoming = data.assignments.filter(a => !a.missing && a.due_date && a.due_date >= today()).slice(0, 12);
   const cal = data.calendar.filter(c => c.date >= today()).slice(0, 14);
   const at = data.student.attendance_totals || {};
-  const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["learn", "Learn"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "Msg"], ["more", "Other"], ["sync", "Sync log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
+  const TABS: [Tab, string, number?][] = [["grades", "Grades"], ["rules", "Grading Rules"], ["learn", "Learn"], ["work", "Work", missing.length], ["comms", "Messages", data.messages.filter(m => m.unread).length], ["calendar", "Calendar"], ["schedule", "Schedule"], ["attendance", "Attendance"], ["reportcards", "Report Cards"], ["msg", "Msg"], ["more", "Other"], ["sync", "Sync log", sync?.alerts.filter(a => Date.now() - new Date(a.created_at).getTime() < 864e5).length]];
 
   return (<div className="space-y-3 text-sm">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ash">
@@ -111,6 +112,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       <div className="truncate text-[10px] text-ash">{m.sender}{m.body ? ` — ${m.body}` : ""}</div></li>)}{!data.messages.length && <li className="text-xs text-ash">No messages.</li>}</ul>}
     {tab === "calendar" && <ul className="space-y-1">{cal.map(c => <li key={c.date + c.title} className="flex gap-2 rounded-lg bg-navy-2/50 px-2 py-1"><span className="w-20 shrink-0 font-mono text-xs text-cyan">{fmt(c.date)}</span><span className="text-snow">{c.title.replace(/\s+-\s+Score:\s*-?$/, "")}</span></li>)}{!cal.length && <li className="text-xs text-ash">No upcoming school events.</li>}</ul>}
     {tab === "learn" && <Learn demo={data.demo} />}
+    {tab === "rules" && <GradingRules classes={gv.current.map(c => ({ key: c.key, course: c.course, percent: c.posted && c.term !== c.final?.term && c.percent != null ? Number(c.percent) : c.final?.percent != null ? Number(c.final.percent) : null }))} />}
     {tab === "reportcards" && <ReportCards demo={data.demo} />}
     {tab === "msg" && <MsgHub messages={data.messages} />}
     {tab === "schedule" && <Schedule demo={data.demo} />}
