@@ -54,7 +54,7 @@ export default function SettingsCenter({ open, onClose, initialTab = "Profile" }
         <span className="flex gap-2"><button className="btn btn-ghost text-sm" onClick={() => { if (confirm("Reset all settings to defaults?")) { resetSettings(); setS(getSettings()); toast("Settings reset to defaults", "info"); } }}>Reset to Defaults</button>
           <button className="btn btn-ghost text-sm" onClick={onClose} aria-label="Close Settings">✕</button></span></header>
       <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
-        <nav role="tablist" aria-label="Settings sections" className="flex shrink-0 gap-1 overflow-x-auto border-b border-cyan/10 p-2 sm:w-48 sm:flex-col sm:border-b-0 sm:border-r">
+        <nav role="tablist" aria-label="Settings sections" className="flex shrink-0 gap-1 overflow-x-auto border-b border-cyan/10 p-2 sm:min-h-0 sm:w-48 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden sm:overscroll-contain sm:border-b-0 sm:border-r [@media(max-height:820px)]:sm:gap-0 [@media(max-height:820px)]:[&>button]:sm:py-1.5">
           {TABS.map(t => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`tap rounded-lg px-3 py-2 text-left text-sm ${tab === t ? "bg-cyan/15 text-snow" : "text-ash hover:text-snow"}`}>{t}</button>)}
         </nav>
         <div className="applet-body min-h-0 flex-1 overflow-y-auto px-4 pb-6" role="tabpanel" aria-label={tab}>
