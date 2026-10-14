@@ -218,3 +218,7 @@ header.glass { padding-top: env(safe-area-inset-top); padding-left: env(safe-are
 }
 
 .win-maxed { background: linear-gradient(165deg, rgb(20 28 48 / max(var(--glass-a), .9)), rgb(8 12 22 / max(var(--glass-a), .92))); }
+/* Applet windows: .corner-ticks' background shorthand was wiping the glass fill — restore an opaque navy backing under the ticks. */
+.glass.corner-ticks { background-color: rgb(10 15 30 / var(--glass-a)); }
+.glass.corner-ticks.win-maxed { background-color: rgb(9 14 28 / max(var(--glass-a), .9)); }
+html[data-glass="solid"] .glass.corner-ticks { background-color: #0a1122; }
