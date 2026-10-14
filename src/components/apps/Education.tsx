@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { gradeView, type GRow } from "@/lib/gradeview";
+import GradingPeriods from "./GradingPeriods";
 import { loadEducation, loadSyncStatus, requestSync, jobStatus, type EduData, type GradeRow, type SyncStatus } from "@/lib/education";
 import { sfx } from "@/lib/synth";
 
@@ -69,6 +70,7 @@ export default function Education({ demo, log }: { demo: boolean; log: (s: strin
       {TABS.map(([id, label, n]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`-mb-px border-b-2 px-2 py-1 text-xs ${tab === id ? "border-cyan text-cyan" : "border-transparent text-ash hover:text-snow"}`}>{label}{n ? <span className="ml-1 rounded-full bg-alert/30 px-1.5 text-[10px] text-snow">{n}</span> : null}</button>)}
     </div>
     {tab === "grades" && <div className="space-y-2">
+      <GradingPeriods rp={data.student.reporting_period as Parameters<typeof GradingPeriods>[0]["rp"]} />
       <div className="flex items-center gap-1 text-xs" role="radiogroup" aria-label="Quarter view">
         {(["final", "live"] as const).map(v => { const lbl = v === "final" ? (gv.current.find(c => c.final)?.final?.term.replace(/^Quarter\s*/i, "Q") ?? "Q1") : (gv.term?.replace(/^Quarter\s*/i, "Q").replace(/^Progress Period\s*/i, "Q") ?? "Q2");
           return <button key={v} role="radio" aria-checked={qv === v} onClick={() => setQv(v)} className={`rounded px-2 py-0.5 ${qv === v ? "bg-cyan/20 text-cyan" : "text-ash hover:text-snow"}`}>{lbl}</button>; })}

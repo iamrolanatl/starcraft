@@ -1,0 +1,46 @@
+{
+ "source": "ParentVUE Gradebook ReportPeriods (raw pull)",
+ "pulled": "2026-10-14T07:05:00Z",
+ "periods": [
+  {
+   "name": "Progress Period 1",
+   "start": "2026-08-03",
+   "end": "2026-09-02"
+  },
+  {
+   "name": "Quarter 1",
+   "start": "2026-08-03",
+   "end": "2026-10-09"
+  },
+  {
+   "name": "Progress Period 2",
+   "start": "2026-09-03",
+   "end": "2026-11-11"
+  },
+  {
+   "name": "Quarter 2",
+   "start": "2026-10-12",
+   "end": "2026-12-18"
+  },
+  {
+   "name": "Progress Period 3",
+   "start": "2026-11-12",
+   "end": "2027-02-03"
+  },
+  {
+   "name": "Quarter 3",
+   "start": "2027-01-05",
+   "end": "2027-03-12"
+  },
+  {
+   "name": "Progress Period 4",
+   "start": "2027-02-04",
+   "end": "2027-04-21"
+  },
+  {
+   "name": "Quarter 4",
+   "start": "2027-03-15",
+   "end": "2027-05-19"
+  }
+ ]
+}
