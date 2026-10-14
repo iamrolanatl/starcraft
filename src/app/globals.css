@@ -453,9 +453,10 @@ html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(
   main { padding-left: max(.75rem, env(safe-area-inset-left)); padding-right: max(.75rem, env(safe-area-inset-right)); }
   /* Larger type: lift tiny utility sizes */
   .text-xs { font-size: 14px !important; line-height: 1.4; }
-  .text-\[9px\], .text-\[10px\], .text-\[11px\], .text-\[11\.5px\], .\!text-\[8px\] { font-size: 12.5px !important; }
+  .text-\[9px\], .text-\[10px\], .text-\[11px\], .text-\[11\.5px\], .\!text-\[8px\], [class*="text-[12px]"], [class*="text-[12.5px]"] { font-size: 13px !important; }
   .text-sm { font-size: 15px !important; }
-  .hud-label { font-size: 12px !important; letter-spacing: .12em; }
+  .hud-label { font-size: 13px !important; letter-spacing: .1em; }
+  section[aria-label$="applet"] svg text { font-size: max(11px, 1em); }
   /* Tap targets */
   .btn, [role="tab"], section[aria-label$="applet"] > header button, [aria-label="Dock: minimized applets"] button { min-height: 44px; }
   section[aria-label$="applet"] > header button { min-width: 44px; }
