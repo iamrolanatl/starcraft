@@ -25,7 +25,7 @@ export default function SchoolCalendar() {
   const itemsOn = useMemo(() => (d: string): Item[] => [
     ...eventsOn(d, cal.events).map((e: DEvent) => ({ title: e.title, color: COLOR[e.cat], kind: CAT_LABEL[e.cat], src: e.source === "ics" ? "CCSD calendar feed" : "CCSD year-at-a-glance PDF", cat: catFor({ district: e.cat, title: e.title }) })),
     ...pv.filter(p => p.date?.slice(0, 10) === d).map(p => { const c = cleanPv(p.title); return { title: c.title, score: c.score, tip: `${p.title}`, color: COLOR.pv, kind: "ParentVUE", src: "ParentVUE sync", cat: catFor({ pv: true, title: c.title, score: c.score }) }; }),
-    ...due.filter(a => a.due_date?.slice(0, 10) === d).map(a => { const t = `${a.course ? cleanPv(a.course + " : x").course + ": " : ""}${a.name}`; return { title: t, tip: `${a.course ?? ""} · ${a.name}`, color: COLOR.due, kind: a.missing ? "Assignment due (MISSING)" : "Assignment due", src: "ParentVUE sync", cat: catFor({ due: true, title: t }) }; }),
+    ...due.filter(a => a.due_date?.slice(0, 10) === d).map(a => { const t = `${a.course ? cleanPv(a.course + " : x").course + ": " : ""}${a.name.replace(/\s+due\s*$/i, "")}`; return { title: t, tip: `${a.course ?? ""} · ${a.name}`, color: COLOR.due, kind: a.missing ? "Assignment due (MISSING)" : "Assignment due", src: "ParentVUE sync", cat: catFor({ due: true, title: t }) }; }),
     ...(extOn.get(d) ?? []),
   ], [cal, pv, due, extOn]);
   const today = ymd(new Date());

@@ -6,4 +6,5 @@ eq("plain", cleanPv("Picture Day").title, "Picture Day");
 eq("cat test", catFor({ pv: true, title: "Reading: Chapter 4 Quiz" }), "test");
 eq("cat graded", catFor({ pv: true, title: "x", score: 90 }), "graded");
 eq("cat holiday", catFor({ district: "holiday", title: "Winter" }), "holiday");
+eq("strip due", cleanPv("Science: Lab Safety Video Assessment due").title, "Science: Lab Safety Video Assessment");
 process.exit(f ? 1 : 0);

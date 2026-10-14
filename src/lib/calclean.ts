@@ -13,13 +13,13 @@ const TEST = /\b(test|quiz|exam|assessment|eog|milestones?|benchmark|cfa)\b/i;
 export function cleanPv(raw: string): { title: string; score: number | null; teacher: string | null; course: string | null } {
   let t = raw.trim(); let score: number | null = null;
   const sm = t.match(/\s*[-–]\s*Score:\s*([\d.]+)\s*%?\s*$/i); if (sm) { score = Number(sm[1]); t = t.slice(0, sm.index).trim(); }
-  const parts = t.split(/\s+:\s+|\s*:\s+/); if (parts.length < 2) return { title: t, score, teacher: null, course: null };
+  const parts = t.split(/\s+:\s+|\s*:\s+/); if (parts.length < 2) return { title: t.replace(/\s+due\s*$/i, ""), score, teacher: null, course: null };
   const left = parts[0], what = parts.slice(1).join(": ");
   // teacher = "Last, F" optionally "/Coteacher"; course = first word(s) before a grade number / period marker
   const tm = left.match(/^([A-Z][\w'’-]+,\s*[A-Z]\.?(?:\s*\/\s*[A-Z][\w'’-]+)?)\s+(.*)$/);
   const teacher = tm ? tm[1].replace(/\s+/g, " ") : null; const rest = tm ? tm[2] : left;
   const course = (rest.match(/^([A-Za-z][A-Za-z &]*?)(?=\s+(?:\d|Q\d|\(|$))/)?.[1] ?? rest.split(/\s+/)[0]).trim();
-  return { title: `${course}: ${what}`, score, teacher, course };
+  return { title: `${course}: ${what.replace(/\s+due\s*$/i, "")}`, score, teacher, course };
 }
 export function catFor(o: { district?: string; pv?: boolean; due?: boolean; personal?: boolean; title: string; score?: number | null }): ChipCat {
   if (o.district) return /holiday|break|no school/i.test(o.district) || o.district === "holiday" || o.district === "student_holiday" ? "holiday" : "school";
