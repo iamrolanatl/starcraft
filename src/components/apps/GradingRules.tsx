@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 // Facts below come ONLY from Cobb County School District Administrative Rule IHA-R "Grading Systems" (rev. 1/16/25).
-// Source: https://media.cobbk12.org/media/WWWCobb/medialib/iha-r.f670e337165.pdf. Page numbers are the PDF's own "Page N of 7".
+// Source: https://media.cobbk12.org/media/WWWCobb/medialib/iha-r.f670e337165.pdf. Page numbers are the PDF’s own "Page N of 7".
 const SRC = "https://media.cobbk12.org/media/WWWCobb/medialib/iha-r.f670e337165.pdf";
 const BANDS = [
   { l: "A", lo: 90, hi: 100, c: "#3ddc84", d: "superior achievement" },
@@ -56,7 +56,7 @@ export default function GradingRules({ classes }: { classes: RuleClass[] }) {
 
     <div className="gr-card"><div className="gr-h">What Matters Most for a 90%+ 7th Grader</div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="gr-call" style={{ borderColor: "#3ddc84" }}><b>90 is the A line.</b> An 89 is a B — there's no rounding rule in IHA-R. <Cite s="§C.1, p.3" /></div>
+        <div className="gr-call" style={{ borderColor: "#3ddc84" }}><b>90 is the A line.</b> An 89 is a B — there’s no rounding rule in IHA-R. <Cite s="§C.1, p.3" /></div>
         <div className="gr-call" style={{ borderColor: "#ff4d6a" }}><b>Below 70 is failing</b> (state minimum passing score is 70). <Cite s="§B.2.d, p.2 · Rule 160-4-2-.13, p.7" /></div>
         <div className="gr-call" style={{ borderColor: "#f5b83d" }}><b>Parents are notified before a failing final</b> for a period, quarter or semester (per school procedure). <Cite s="§A.3, p.1" /></div>
         <div className="gr-call" style={{ borderColor: "#4aa8ff" }}><b>14-day make-up window</b> after each semester closes. <Cite s="§C.2, p.3" /></div>
@@ -68,11 +68,11 @@ export default function GradingRules({ classes }: { classes: RuleClass[] }) {
       <div className="grid gap-2 sm:grid-cols-3 gr-txt text-xs">
         <div className="gr-call"><b>Quality points</b> (p.6): Regular +0 · Honors A–D +0.5 · AP/IB/college A–D +1 · F always 0.</div>
         <div className="gr-call"><b>Honor Graduate</b>: GPA 3.500 or better (§D.9.b(4), p.6).</div>
-        <div className="gr-call"><b>Withdraw after day 10</b> of a semester → grade of 10 recorded (§D.6.a, p.4). Credit earned can't be repeated to raise a grade; an F can be (§D.8, p.5).</div>
+        <div className="gr-call"><b>Withdraw after day 10</b> of a semester → grade of 10 recorded (§D.6.a, p.4). Credit earned can’t be repeated to raise a grade; an F can be (§D.8, p.5).</div>
       </div></div>
 
     <div className="gr-card gr-miss"><div className="gr-h">Not in This Rule</div>
-      <p className="gr-sub">IHA-R does <b>not</b> set category weights, late-work penalties, retake/reassessment rules, minimum grades, honor roll, or report-period dates. Those come from teacher syllabi, school procedures, or other Cobb rules (promotion/retention is in IHE-R, referenced at §D.4, p.3). Crystal won't chart numbers this rule doesn't contain.</p></div>
+      <p className="gr-sub">IHA-R does <b>not</b> set category weights, late-work penalties, retake/reassessment rules, minimum grades, honor roll, or report-period dates. Those come from teacher syllabi, school procedures, or other Cobb rules (promotion/retention is in IHE-R, referenced at §D.4, p.3). Crystal won’t chart numbers this rule doesn’t contain.</p></div>
     <p className="gr-note">Source: Cobb County School District Administrative Rule IHA-R, Grading Systems, revised 1/16/25. <a href={SRC} target="_blank" rel="noreferrer" className="gr-cite">Open PDF</a></p>
   </div>);
 }
