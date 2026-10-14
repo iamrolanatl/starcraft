@@ -45,7 +45,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
   const txt = await r.text();
   if (r.ok) return new Response(txt, { status: 200, headers: { "content-type": "application/json", "cache-control": "no-store" } });
   let e: { code?: string; message?: string } = {}; try { e = JSON.parse(txt); } catch { /* */ }
-  if (e.code === "PGRST202" || r.status === 404) return json({ pending: true, error: (fn.startsWith("sync_") ? "Migration 020_sync_devices.sql" : "Migration 019_admin.sql") + " has not been applied yet." }, 503);
+  if (e.code === "PGRST202" || r.status === 404) return json({ pending: true, error: (fn.startsWith("sync_") ? "Migration 020_sync_devices.sql" : fn === "admin_health" || fn === "admin_logs" ? "Migration 021_health.sql" : "Migration 019_admin.sql") + " has not been applied yet." }, 503);
   if (e.code === "42501") return json({ error: "forbidden" }, 403);
   if (e.code === "P0429") return json({ error: "rate limited" }, 429);
   return json({ error: String(e.message || "error").slice(0, 300) }, 400);
