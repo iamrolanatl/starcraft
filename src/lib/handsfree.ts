@@ -21,7 +21,9 @@ export function hint(err: string): string {
   return "Tap Hands-Free off and on again, or use the keyboard.";
 }
 export function handsFreeSupported() { return hasWebSpeech() || canRecord(); }
-export function startHandsFree(onText: (t: string) => Promise<void>, setState: (s: HFState) => void, onDead?: () => void): { stop(): void } {
+export type HFOpts = { onDiag?: (m: string) => void; heardSound?: () => boolean; preferRecord?: boolean; onEngine?: (e: "web-speech" | "recording") => void };
+export function startHandsFree(onText: (t: string) => Promise<void>, setState: (s: HFState) => void, onDead?: () => void, o: HFOpts = {}): { stop(): void } {
+  const diag = (m: string) => { try { o.onDiag?.(m); } catch {} }; let empty = 0;
   let user = false; let on = true, rec: SR | null = null, stream: MediaStream | null = null, ctx: AudioContext | null = null, mr: MediaRecorder | null = null, errs = 0;
   const err = (e: string) => { errs++; setState({ kind: "error", text: e.startsWith("Voice") ? e : `Voice error: ${e}`, hint: hint(e) }); };
   const fatal = (e: string) => /not-allowed|NotAllowed|denied|Permission|NotFound|audio-capture|insecure/i.test(e);
@@ -38,9 +40,18 @@ export function startHandsFree(onText: (t: string) => Promise<void>, setState: (
   const webTurn = () => new Promise<string>(res => {
     const C = SRC()!; const r = new C(); rec = r; r.lang = "en-US"; r.interimResults = true; r.continuous = false; let txt = "", fin = "", e0 = "";
     r.onresult = e => { txt = ""; for (let i = 0; i < e.results.length; i++) { txt += e.results[i][0].transcript; if (e.results[i].isFinal) fin = txt; } setState({ kind: "listening", text: txt }); };
-    r.onerror = e => { if (e.error !== "no-speech" && e.error !== "aborted") e0 = e.error; };
-    r.onend = () => { rec = null; if (e0) { if (fatal(e0)) { end(); } err(e0); res(""); } else res((fin || txt).trim()); };
-    try { r.start(); setState({ kind: "listening" }); } catch (e) { err(String(e)); res(""); }
+    let loud = false; const poll = setInterval(() => { if (o.heardSound?.()) loud = true; }, 100);
+    (r as unknown as { onaudiostart: () => void }).onaudiostart = () => diag("recognizer: audio started");
+    (r as unknown as { onspeechstart: () => void }).onspeechstart = () => diag("recognizer: speech detected");
+    r.onerror = e => { diag(`recognizer error: ${e.error}`); if (e.error !== "no-speech" && e.error !== "aborted") e0 = e.error; };
+    r.onend = () => { clearInterval(poll); rec = null; const t = (fin || txt).trim();
+      // Web Speech heard nothing although the mic picked up sound (or it errored with network/aborted): switch to recording + server transcription.
+      // Recognizer-only failures (network, audio-capture, service, language) while getUserMedia works: switch engines instead of giving up.
+      if (e0 && !/not-allowed/.test(e0) && canRecord()) { useWeb = false; o.onEngine?.("recording"); diag(`switched to recording mode after "${e0}"`); e0 = ""; res(""); return; }
+      if (!t && (loud || /aborted/.test(e0))) { empty++; if (empty >= 2) { useWeb = false; o.onEngine?.("recording"); diag("switched to recording mode (server transcription)"); e0 = ""; } }
+      else if (t) empty = 0;
+      if (e0) { if (fatal(e0)) { end(); } err(e0); res(""); } else res(t); };
+    try { r.start(); setState({ kind: "listening" }); diag("recognizer: started"); } catch (e) { clearInterval(poll); diag(`recognizer start failed: ${String(e)}`); useWeb = false; o.onEngine?.("recording"); res(""); }
   });
   // ---- Whisper fallback: keep mic open, record until ~1.1 s of silence after speech ----
   const recTurn = async (): Promise<string> => {
@@ -61,11 +72,11 @@ export function startHandsFree(onText: (t: string) => Promise<void>, setState: (
     src.disconnect(); if (m.state === "recording") m.stop(); await stopped; mr = null;
     if (!on || !speech) return "";
     const blob = new Blob(chunks, { type: m.mimeType || "audio/webm" }); if (blob.size < 1500) return "";
-    setState({ kind: "thinking", text: "Transcribing…" }); return transcribe(blob);
+    setState({ kind: "thinking", text: "Transcribing…" }); diag(`recorded ${Math.round(blob.size / 1024)} KB, transcribing`); const tx = await transcribe(blob); diag(tx ? `transcribed: "${tx.slice(0, 60)}"` : "transcription empty"); return tx;
   };
-  const useWeb = hasWebSpeech() && !(isIOS() && (navigator as Navigator & { standalone?: boolean }).standalone); // iOS Home-Screen apps have no Web Speech
+  let useWeb = !o.preferRecord && hasWebSpeech() && !(isIOS() && (navigator as Navigator & { standalone?: boolean }).standalone); // iOS Home-Screen apps have no Web Speech
   (async () => {
-    setState({ kind: "starting" });
+    setState({ kind: "starting" }); o.onEngine?.(useWeb ? "web-speech" : "recording");
     if (!window.isSecureContext) { err("insecure"); end(); return; }
     while (on) {
       try { const t = useWeb ? await webTurn() : await recTurn(); if (!on) break; if (t) { errs = 0; await handle(t); } }
