@@ -385,3 +385,10 @@ html:is([data-motion=off],[data-motion=reduced]) .hf-cue{animation:none;outline:
 /* Sticky tabs never cover the first row: content scrolls into view below them */
 .applet-body { scroll-padding-top: 5.5rem; }
 .applet-body [data-sticky-tabs] + * { margin-top: .5rem; }
+/* School calendar month grid */
+.cal-cell { background: rgb(18 22 36 / .78); border-color: rgb(148 163 184 / .22); transition: border-color .15s; }
+.cal-cell:hover { border-color: rgb(148 163 184 / .5); }
+.cal-weekend { background: rgb(12 15 26 / .7); }
+.cal-today { border-color: #3ef2e0; box-shadow: 0 0 0 1px #3ef2e0, 0 0 14px -2px #3ef2e0; }
+.cal-sel:not(.cal-today) { border-color: #c7d2fe; }
+.cal-chip2 { overflow-wrap: normal; word-break: keep-all; }
