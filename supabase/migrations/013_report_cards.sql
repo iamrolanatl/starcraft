@@ -28,6 +28,9 @@ begin raise exception 'report_cards history is permanent; deletes are not allowe
 drop trigger if exists report_cards_no_delete on public.report_cards;
 create trigger report_cards_no_delete before delete on public.report_cards for each row execute function public.report_cards_no_delete();
 
+-- the private raw bucket must accept PDFs (it was zip-only); applied via the Storage API on 2026-10-14
+update storage.buckets set allowed_mime_types = array(select distinct unnest(coalesce(allowed_mime_types, '{}') || array['application/pdf'])) where id = 'raw' and allowed_mime_types is not null;
+
 -- let the owner sign URLs for (only) their own report-card PDFs in the private raw bucket
 drop policy if exists "report card pdf owner read" on storage.objects;
 create policy "report card pdf owner read" on storage.objects for select to authenticated
