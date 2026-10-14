@@ -3,7 +3,7 @@
 import { getPrefs, savePrefs } from "./prefs";
 export interface Settings {
   theme: "cockpit" | "blockcraft" | "brickcity" | "battleisland" | "kartrush"; accent: string; textSize: "S" | "M" | "L" | "XL"; highContrast: boolean; reading: boolean;
-  video: "on" | "off" | "rotate"; glassOpacity: number; uiMotion: "off" | "reduced" | "full" | "system"; bgSpeed: number;
+  video: "on" | "off" | "rotate"; glassOpacity: number; uiMotion: "off" | "reduced" | "full" | "system"; bgSpeed: number; dv?: number;
   defaultApplet: string; openMode: "maximize" | "tile"; dock: string[];
   voice: boolean; voiceName: string; voiceRate: number; autoSpeak: boolean; wakeOnMic: boolean; escalate: boolean;
   alerts: { gradeBelow: boolean; gradeThreshold: number; missing: boolean; absences: boolean; teacherEmail: boolean; lowSteps: boolean };
@@ -14,7 +14,7 @@ export interface Settings {
   weekStart: "sun" | "mon"; calSources: { tasks: boolean; school: boolean; district: boolean; google: boolean }; timezone: string;
 }
 export const DEFAULTS: Settings = {
-  theme: "cockpit", accent: "#3ef2e0", textSize: "M", highContrast: false, reading: false, video: "on", glassOpacity: 84, uiMotion: "system", bgSpeed: 1,
+  theme: "cockpit", accent: "#3ef2e0", textSize: "M", highContrast: false, reading: false, video: "on", glassOpacity: 84, uiMotion: "reduced", bgSpeed: 0.5, dv: 2, /* Rolan defaults (Oct 14): Calm background, Reduced UI motion */
   defaultApplet: "home", openMode: "maximize", dock: [],
   voice: true, voiceName: "", voiceRate: 1, autoSpeak: false, wakeOnMic: false, escalate: true,
   alerts: { gradeBelow: true, gradeThreshold: 90, missing: true, absences: true, teacherEmail: true, lowSteps: false },
@@ -24,7 +24,9 @@ export const DEFAULTS: Settings = {
   stepGoal: 8000, units: "imperial",
   weekStart: "sun", calSources: { tasks: true, school: true, district: true, google: true }, timezone: "America/New_York",
 };
-export function getSettings(): Settings { const s = (getPrefs() as { s?: Partial<Settings> }).s ?? {}; return { ...DEFAULTS, ...s, alerts: { ...DEFAULTS.alerts, ...(s.alerts ?? {}) }, calSources: { ...DEFAULTS.calSources, ...(s.calSources ?? {}) } }; }
+/** Defaults v2: values still equal to the old v1 defaults (bgSpeed 1, uiMotion "system") were never explicitly changed → adopt the new defaults. */
+export function upgradeDefaults(s: Partial<Settings>): Partial<Settings> { if (s.dv === 2) return s; const o = { ...s }; if (o.bgSpeed === 1) delete o.bgSpeed; if (o.uiMotion === "system") delete o.uiMotion; o.dv = 2; return o; }
+export function getSettings(): Settings { const s = upgradeDefaults((getPrefs() as { s?: Partial<Settings> }).s ?? {}); return { ...DEFAULTS, ...s, alerts: { ...DEFAULTS.alerts, ...(s.alerts ?? {}) }, calSources: { ...DEFAULTS.calSources, ...(s.calSources ?? {}) } }; }
 export function applySettings(s = getSettings()) {
   if (typeof document === "undefined") return; const h = document.documentElement, d = h.dataset;
   d.textsize = s.textSize; d.contrast = s.highContrast ? "high" : ""; d.reading = s.reading ? "on" : ""; d.video = s.video; d.skin = s.theme; d.bgpaused = s.bgSpeed === 0 ? "1" : "";

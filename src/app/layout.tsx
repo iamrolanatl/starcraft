@@ -11,7 +11,7 @@ const play = Fredoka({ subsets: ["latin"], variable: "--font-play", display: "sw
 const bold = Bungee({ weight: "400", subsets: ["latin"], variable: "--font-bold", display: "swap", preload: false });
 const round = Baloo_2({ subsets: ["latin"], variable: "--font-round", display: "swap", preload: false });
 // Applies saved skin / text size / contrast before first paint (no theme flash).
-const BOOT = `try{var p=JSON.parse(localStorage.getItem('crystal-uiprefs')||'{}'),s=p.s||{},d=document.documentElement.dataset;d.skin=s.theme||'cockpit';if(s.bgSpeed===0)d.bgpaused='1';if(p.glass)d.glass=p.glass;if(s.textSize)d.textsize=s.textSize;if(s.highContrast)d.contrast='high';if(s.reading)d.reading='on';if(s.video)d.video=s.video;var m=s.uiMotion;d.motion=m&&m!=='system'?m:(matchMedia('(prefers-reduced-motion: reduce)').matches?'reduced':'full')}catch(e){}`;
+const BOOT = `try{var p=JSON.parse(localStorage.getItem('crystal-uiprefs')||'{}'),s=p.s||{},d=document.documentElement.dataset;d.skin=s.theme||'cockpit';if(s.bgSpeed===0)d.bgpaused='1';if(p.glass)d.glass=p.glass;if(s.textSize)d.textsize=s.textSize;if(s.highContrast)d.contrast='high';if(s.reading)d.reading='on';if(s.video)d.video=s.video;var m=s.uiMotion;if(s.dv!==2&&m==='system')m=0;d.motion=!m?'reduced':m!=='system'?m:(matchMedia('(prefers-reduced-motion: reduce)').matches?'reduced':'full')}catch(e){}`;
 
 export const metadata: Metadata = {
   title: "Crystal — Your Cockpit for the Day",

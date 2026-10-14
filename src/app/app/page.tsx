@@ -309,7 +309,7 @@ export default function Cockpit() {
     if (!handsFreeSupported()) { setHf({ kind: "error", text: "Voice isn't supported in this browser.", hint: "Use Chrome or Safari, or type your command." }); setHandsFree(false); return; }
     const w = startHandsFree(async t => { setCmd(t); await execCommand(t, true); }, s => { setHf(s); if (s.kind === "error") console.warn("[hands-free]", s.text); }, () => setHandsFree(false));
     return () => w.stop(); }, [handsFree]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!ready) return; loadPrefs().then(p => { setClarity(p.glass ?? "balanced"); if (p.win) setWinPref(p.win); if (p.handsFree) { setHf({ kind: "error", text: "Hands-Free was on last time.", hint: "Tap Start to resume (browsers need a tap to use the mic)." }); } }); }, [ready, user, demo]);
+  useEffect(() => { if (!ready) return; loadPrefs().then(p => { setClarity(p.glass ?? "balanced"); if (p.win) setWinPref(p.win); if ((p.handsFree ?? true) && handsFreeSupported()) { setHf({ kind: "error", text: "Tap to Start Hands-Free", hint: "Hands-Free is on by default. Browsers need one tap before Crystal can use the mic." }); } }); }, [ready, user, demo]);
   const [coarse, setCoarse] = useState(false); useEffect(() => { setCoarse(matchMedia("(pointer: coarse)").matches); }, []);
   const maxedId = wins.find(w => !w.minimized && w.max)?.id;
   const safeRect = useSafeArea(wins.some(w => !w.minimized));
