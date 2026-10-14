@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
+import { LETTER_STYLE, gradeHex, gradeText, isLow, type Letter } from "@/lib/letter";
+import LetterBadge from "@/components/ui/LetterBadge";
 
 // Facts below come ONLY from Cobb County School District Administrative Rule IHA-R "Grading Systems" (rev. 1/16/25).
 // Source: https://media.cobbk12.org/media/WWWCobb/medialib/iha-r.f670e337165.pdf. Page numbers are the PDF’s own "Page N of 7".
 const SRC = "https://media.cobbk12.org/media/WWWCobb/medialib/iha-r.f670e337165.pdf";
 const BANDS = [
-  { l: "A", lo: 90, hi: 100, c: "#3ddc84", d: "superior achievement" },
-  { l: "B", lo: 80, hi: 89, c: "#4aa8ff", d: "above average achievement" },
-  { l: "C", lo: 74, hi: 79, c: "#f5b83d", d: "average achievement" },
-  { l: "D", lo: 70, hi: 73, c: "#ff8a3d", d: "minimum achievement" },
-  { l: "F", lo: 0, hi: 69, c: "#ff4d6a", d: "failure to achieve" },
+  { l: "A", lo: 90, hi: 100, c: LETTER_STYLE.A.bg, d: "superior achievement" },
+  { l: "B", lo: 80, hi: 89, c: LETTER_STYLE.B.bg, d: "above average achievement" },
+  { l: "C", lo: 74, hi: 79, c: LETTER_STYLE.C.bg, d: "average achievement" },
+  { l: "D", lo: 70, hi: 73, c: LETTER_STYLE.D.bg, d: "minimum achievement" },
+  { l: "F", lo: 0, hi: 69, c: LETTER_STYLE.F.bg, d: "failure to achieve" },
 ];
 const MIN = 60; // visual axis floor only (not a rule)
 export const letterOf = (p: number) => (BANDS.find(b => Math.floor(p) >= b.lo) ?? BANDS[4]);
@@ -27,19 +29,19 @@ export default function GradingRules({ classes }: { classes: RuleClass[] }) {
     <div className="gr-card"><div className="gr-h">Cobb Middle School Grading Scale <Cite s="IHA-R §C.1, p.3" /></div>
       <p className="gr-sub">“All subjects shall be graded by means of numerical grades.” Letters represent these averages:</p>
       <div className="gr-scale" role="img" aria-label="Grading scale: A 90 to 100, B 80 to 89, C 74 to 79, D 70 to 73, F below 70">
-        {[...BANDS].reverse().map(b => { const lo = Math.max(b.lo, MIN), hi = b.hi + 1; return <div key={b.l} className="gr-band" style={{ left: pos(lo), width: on ? `calc(${pos(Math.min(hi, 100))} - ${pos(lo)} + ${hi > 100 ? "0%" : "0%"})` : 0, background: b.c }}><span>{b.l}</span></div>; })}
+        {[...BANDS].reverse().map(b => { const lo = Math.max(b.lo, MIN), hi = b.hi + 1; return <div key={b.l} className="gr-band" style={{ left: pos(lo), width: on ? `calc(${pos(Math.min(hi, 100))} - ${pos(lo)} + ${hi > 100 ? "0%" : "0%"})` : 0, background: b.c, color: LETTER_STYLE[b.l as Letter].fg }}><span>{b.l}</span></div>; })}
         {[60, 70, 74, 80, 90, 100].map(t => <span key={t} className="gr-tick" style={{ left: pos(t) }}>{t}</span>)}
         {graded.map(c => <span key={c.key} className="gr-pin" style={{ left: on ? pos(c.percent) : pos(MIN) }} title={`${c.course}: ${c.percent}`} />)}
       </div>
-      <ul className="gr-legend">{BANDS.map(b => <li key={b.l}><b className="gr-box" style={{ borderColor: b.c, color: b.c }}>{b.l}</b>{b.l === "F" ? "below 70" : `${b.lo}–${b.hi}`} · {b.d}</li>)}</ul>
+      <ul className="gr-legend">{BANDS.map(b => <li key={b.l}><b className="gr-box" style={{ background: b.c, borderColor: LETTER_STYLE[b.l as Letter].ring, color: LETTER_STYLE[b.l as Letter].fg }}>{b.l}</b>{b.l === "F" ? "below 70" : `${b.lo}–${b.hi}`} · {b.d}</li>)}</ul>
       <p className="gr-note">Bars start at 60 for readability. Note C is only 6 points wide (74–79) and D only 4 (70–73).</p>
     </div>
 
     {graded.length > 0 && <div className="gr-card"><div className="gr-h">Eli vs. the Scale <span className="gr-sub">(live grades from your sync, scale from <Cite s="§C.1, p.3" />)</span></div>
       <ul className="space-y-2">{graded.map(c => { const L = letterOf(c.percent); const to90 = 90 - c.percent; const next = BANDS.find(b => b.lo > c.percent && b.lo <= 90 && BANDS.indexOf(b) === BANDS.indexOf(L) - 1);
         return <li key={c.key}>
-          <div className="flex items-center gap-2"><b className="gr-box" style={{ borderColor: L.c, color: L.c }}>{L.l}</b><span className="min-w-0 flex-1 truncate gr-txt" title={c.course}>{c.course}</span><span className="font-mono gr-txt">{c.percent.toFixed(c.percent % 1 ? 1 : 0)}</span></div>
-          <div className="gr-track"><div className="gr-fill" style={{ width: on ? `${Math.min(100, c.percent)}%` : 0, background: L.c }} /><span className="gr-90" title="90 = A" /></div>
+          <div className="flex items-center gap-2"><LetterBadge pct={c.percent} size="sm" /><span className="min-w-0 flex-1 truncate gr-txt" title={c.course}>{c.course}</span><span className={`font-mono ${gradeText(c.percent)}`}>{c.percent.toFixed(c.percent % 1 ? 1 : 0)}</span></div>
+          <div className="gr-track"><div className={`gr-fill${isLow(c.percent) ? " grade-low grade-low-bar" : ""}`} style={{ width: on ? `${Math.min(100, c.percent)}%` : 0, background: gradeHex(c.percent) }} /><span className="gr-90" title="90 = A" /></div>
           <div className="gr-note">{to90 <= 0 ? `In the A band, ${(c.percent - 90).toFixed(1)} pts of cushion above 90.` : `${to90.toFixed(1)} pts to 90 (A)${next && next.l !== "A" ? ` · ${(next.lo - c.percent).toFixed(1)} to ${next.l}` : ""}.`}</div>
         </li>; })}</ul></div>}
 
@@ -88,7 +90,7 @@ const CSS = `
 .gr-root .gr-cite:hover{background:rgba(125,211,252,.12)}
 .gr-root .gr-scale{position:relative;height:34px;margin:22px 0 22px;background:rgba(255,255,255,.05);border-radius:8px}
 .gr-root .gr-band{position:absolute;top:0;bottom:0;opacity:.85;transition:width 1s cubic-bezier(.2,.8,.2,1);display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:2px solid rgba(10,14,28,.9)}
-.gr-root .gr-band span{font-weight:900;font-size:16px;color:#0a0e1c}
+.gr-root .gr-band span{font-weight:900;font-size:16px;color:inherit}
 .gr-root .gr-tick{position:absolute;top:100%;transform:translateX(-50%);font:10px ui-monospace,monospace;color:var(--gr-dim);margin-top:3px}
 .gr-root .gr-pin{position:absolute;top:-10px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff;transition:left 1.2s cubic-bezier(.2,.8,.2,1)}
 .gr-root .gr-legend{display:grid;gap:3px;font-size:12px;color:var(--gr-txt)}
@@ -97,12 +99,12 @@ const CSS = `
 .gr-root .gr-box{display:inline-flex;min-width:30px;height:26px;padding:0 4px;align-items:center;justify-content:center;border:2px solid;border-radius:6px;font-weight:900;font-size:15px;background:rgba(0,0,0,.25)}
 .gr-root .gr-track{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.07);margin-top:4px;overflow:visible}
 .gr-root .gr-fill{height:100%;border-radius:5px;transition:width 1.1s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 8px currentColor}
-.gr-root .gr-90{position:absolute;left:90%;top:-3px;bottom:-3px;width:2px;background:#3ddc84}
+.gr-root .gr-90{position:absolute;left:90%;top:-3px;bottom:-3px;width:2px;background:#22c55e}
 .gr-root .gr-tl{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--gr-dim)}
 .gr-root .gr-tl-bar{position:relative;flex:1;height:14px;border-radius:7px;background:rgba(255,255,255,.07);display:grid;grid-template-columns:repeat(14,1fr);overflow:hidden}
 .gr-root .gr-tl-bar i{border-right:1px solid rgba(10,14,28,.8);position:relative;z-index:1}
 .gr-root .gr-tl-fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#4aa8ff,#f5b83d);transition:width 1.4s linear}
 .gr-root .gr-call{border-left:3px solid rgba(125,211,252,.4);background:rgba(255,255,255,.04);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.45;color:var(--gr-txt)}
 .gr-root .gr-miss{border-style:dashed}
-@media (prefers-reduced-motion:reduce){.gr-root *{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){.gr-root *{transition:none!important}.gr-root *:not(.grade-low){animation:none!important}}
 `;
