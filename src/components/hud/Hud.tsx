@@ -122,7 +122,7 @@ export function SquadStatus({ squad, onOpen }: { squad: Squad[]; onOpen: (id: Ap
   );
 }
 
-export function HudBar({ slim, onCloseAll, hotkey, abilities, feed, blips, alert, onAlert, onHome, onLogout, open, onRestore, pilot, mood, onPilot, squad, contacts, tactical, radar, pulse, defcon, bars, feedsMuted }: { slim?: boolean;
+export function HudBar({ slim, mods, onOpenMod, activeMod, onCloseAll, hotkey, abilities, feed, blips, alert, onAlert, onHome, onLogout, open, onRestore, pilot, mood, onPilot, squad, contacts, tactical, radar, pulse, defcon, bars, feedsMuted }: { slim?: boolean; mods?: { id: AppId; title: string; icon: string; warn?: boolean }[]; onOpenMod?: (id: AppId) => void; activeMod?: AppId;
   abilities: Ability[]; feed: FeedItem[]; blips: number; alert: boolean; onAlert: () => void; onHome: () => void; onLogout: () => void;
   pilot: string; mood: Mood; onPilot: () => void; squad: Squad[]; contacts: Contact[]; tactical: FeedItem[];
   radar: Blip[]; pulse: number; defcon: { level: number; reasons: string[] }; bars: { shields: number; hull: number; energy: number; labels: [string, string, string] }; feedsMuted: boolean;
@@ -132,20 +132,22 @@ export function HudBar({ slim, onCloseAll, hotkey, abilities, feed, blips, alert
   // Phones: HUD collapses to a compact bar; abilities open in a bottom sheet; radar/feeds expand on demand.
   const [phone, setPhone] = useState(false); const [expanded, setExpanded] = useState(false); const [abSheet, setAbSheet] = useState(false);
   useEffect(() => { const mq = matchMedia("(max-width: 640px), (pointer: coarse)"); const u = () => setPhone(mq.matches); u(); mq.addEventListener("change", u); return () => mq.removeEventListener("change", u); }, []);
-  const bar = phone || !!slim; const compact = bar && !expanded;
+  const [dockOpen, setDockOpen] = useState(false); const bar = phone || !!slim; const compact = bar && !expanded;
   return (
     <nav data-safe-bottom aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
       <RobotWalker />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-glow" />
-      {open.some(o => o.minimized) && (
+      {phone && mods && <div role="tablist" aria-label="Modules (tab bar)" data-m-tabbar className="mb-1 flex gap-1 overflow-x-auto [scrollbar-width:none]">{mods.map(m => <button key={m.id} role="tab" aria-selected={activeMod === m.id} onClick={() => onOpenMod?.(m.id)} className={`relative flex min-h-[48px] min-w-[68px] shrink-0 flex-col items-center justify-center rounded-lg px-1 text-[12px] font-semibold ${activeMod === m.id ? "bg-cyan/15 text-cyan" : "text-snow"}`}><span className="text-lg leading-none" aria-hidden>{m.icon}</span><span className="max-w-[76px] truncate">{m.title}</span>{m.warn && <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-alert" aria-label="needs attention" />}</button>)}</div>}
+      {phone && open.some(o => o.minimized) && <button onClick={() => setDockOpen(x => !x)} aria-expanded={dockOpen} className="mb-1 w-full rounded-lg border border-cyan/25 py-2 text-sm text-cyan">▣ Minimized Applets ({open.filter(o => o.minimized).length}) {dockOpen ? "▾" : "▴"}</button>}
+      {open.some(o => o.minimized) && (!phone || dockOpen) && (
         <div className="mb-1 flex gap-1 overflow-x-auto" aria-label="Dock: minimized applets">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} title={`Open ${o.title} full screen${hotkey?.(o.id) ? ` (${hotkey(o.id)})` : ""}`} className="shrink-0 whitespace-nowrap rounded border border-cyan/30 px-2 py-0.5 text-xs text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>
       )}
-      {bar && <div className="mb-1 flex items-center gap-1">
+      {bar && <div className="mb-1 flex items-center gap-1" data-m-hudrow>
         <button onClick={() => setAbSheet(true)} className="btn btn-ghost flex-1 text-sm" aria-haspopup="dialog">⚡ Abilities</button>
         <button onClick={onHome} className="btn btn-ghost text-sm" aria-label="Return Home">⌂</button>
         {onCloseAll && <button onClick={onCloseAll} className="btn btn-ghost text-sm" aria-label="Close All Applets">✕</button>}
         <button onClick={onAlert} aria-pressed={alert} aria-label="Red Alert" className={`btn text-sm font-bold ${alert ? "bg-alert text-navy font-semibold" : "border border-alert/60 text-alert"}`}>!</button>
-        <button onClick={() => setExpanded(x => !x)} aria-expanded={expanded} className="btn btn-ghost flex-1 text-sm">{expanded ? "▾ Hide radar/feeds" : "▴ Radar & feeds"}</button>
+        <button onClick={() => setExpanded(x => !x)} aria-expanded={expanded} className="btn btn-ghost flex-1 text-sm">{expanded ? "▾ Hide Radar and Feeds" : phone ? "▴ Radar" : "▴ Radar & feeds"}</button>
       </div>}
       {abSheet && <div className="fixed inset-0 z-[60] flex items-end bg-navy/60" onClick={() => setAbSheet(false)}><div role="dialog" aria-label="Abilities" className="glass sheet w-full rounded-t-3xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={e => e.stopPropagation()}>
         <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-[#E8F4FF]">Abilities</h2><button className="btn btn-ghost" onClick={() => setAbSheet(false)} aria-label="Close Abilities">✕</button></div>

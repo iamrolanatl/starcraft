@@ -422,7 +422,7 @@ export default function Cockpit() {
         <button className="btn btn-primary mt-3 w-full text-sm" onClick={() => { setSettings(false); setCenter("Appearance"); }}>All Settings…</button>
         <button className="btn btn-ghost mt-2 w-full text-xs" onClick={() => setSettings(false)}>Close</button></div>}
       <SettingsCenter open={!!center} initialTab={center ?? "Profile"} onClose={() => setCenter(null)} />
-      <header data-safe-top data-slim={slim ? "1" : undefined} className="glass sticky top-0 z-30 !rounded-none border-x-0 border-t-0">
+      <header data-safe-top data-m-header data-slim={slim ? "1" : undefined} className="glass sticky top-0 z-30 !rounded-none border-x-0 border-t-0">
         <div className={`mx-auto flex max-w-[1600px] items-center gap-2 px-3 ${slim ? "flex-nowrap py-1.5" : "flex-wrap py-2"}`}>
           <button onClick={goHome} className="neon font-bold tracking-[.3em]" aria-label="Crystal Home">◆ CRYSTAL</button>
           <form onSubmit={e => { e.preventDefault(); execCommand(cmd.trim()); }} className={`order-3 flex w-full gap-2 sm:order-none ${slim ? "sm:w-[19rem] sm:shrink-0 sm:flex-none [&_input]:min-w-[7rem]" : "sm:w-auto sm:flex-1"}`}>
@@ -431,20 +431,20 @@ export default function Cockpit() {
             <button className="btn btn-primary !py-1.5 text-sm" disabled={cmdBusy}>{cmdBusy ? "…" : "Go"}</button>
           </form>
           {slim && <nav aria-label="Modules" data-testid="slim-modules" className="mod-scroll flex min-w-0 flex-1 flex-nowrap gap-1 overflow-x-auto">{MODS.map(id => { const q = squad.find(x => x.id === id); return <button key={id} onClick={() => openApp(id)} title={q?.detail ? `${META[id].title}: ${q.detail}` : META[id].title} aria-label={META[id].title} className={`relative flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 text-[11.5px] font-semibold text-snow ${q?.status === "warn" ? "border-alert/60" : "border-cyan/25"} bg-[rgb(10_12_22/.6)] hover:border-cyan/60`}><span className="text-sm text-cyan">{META[id].icon}</span><span className="hidden min-[1280px]:inline">{META[id].title}</span></button>; })}</nav>}
-          <button onClick={toggleSlim} aria-expanded={!slim} aria-label={slim ? "Expand Toolbar" : "Collapse Toolbar"} title={slim ? "Expand Toolbar" : "Collapse Toolbar"} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex">{slim ? "▾" : "▴"}</button>
-          <button onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open Command Palette"><kbd>⌘K</kbd></button>
+          <button data-m-hide onClick={toggleSlim} aria-expanded={!slim} aria-label={slim ? "Expand Toolbar" : "Collapse Toolbar"} title={slim ? "Expand Toolbar" : "Collapse Toolbar"} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex">{slim ? "▾" : "▴"}</button>
+          <button data-m-hide onClick={() => setPalette(true)} className="btn btn-ghost hidden !px-2 !py-1 text-xs sm:inline-flex" aria-label="Open Command Palette"><kbd>⌘K</kbd></button>
           <span data-testid="user-chip" data-hide-slim={slim ? "1" : undefined} title={demo ? "Demo mode" : [fullName(profile), user].filter(Boolean).join(" · ")} className={`ml-auto hidden max-w-[14rem] truncate text-xs text-ash ${slim ? "2xl:inline" : "md:inline"}`}>{demo ? "Demo mode" : shortName(profile, user)} · <span className="text-cyan">{RANKS[rankI]}</span></span>
           <button onClick={() => setSettings(s => !s)} aria-expanded={settings} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Quick Settings">⚙</button>
           <button onClick={() => setCenter("Profile")} className="tap grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-cyan/40 bg-navy-2 text-sm" aria-label="Profile and Settings">{profile.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : (greetName(profile)[0] ?? "C")}</button>
-          <button onClick={closeAll} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Close All Applets" title="Close All (Esc · Shift+Esc · Alt+0)">✕ All</button>
-          <button onClick={goHome} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Home">⌂</button>
-          <button onClick={logout} className="btn btn-ghost !px-2 !py-1 text-xs">Log Out</button>
+          <button data-m-hide onClick={closeAll} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Close All Applets" title="Close All (Esc · Shift+Esc · Alt+0)">✕ All</button>
+          <button data-m-hide onClick={goHome} className="btn btn-ghost !px-2 !py-1 text-xs" aria-label="Home">⌂</button>
+          <button onClick={logout} aria-label="Log Out" className="btn btn-ghost !px-2 !py-1 text-xs"><span className="sm:hidden" aria-hidden>⏻</span><span className="hidden sm:inline">Log Out</span></button>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-[1600px] px-3 pb-[190px] pt-3">
+      <main data-m-open={visible.some(w => !w.minimized) ? "1" : undefined} className="relative z-10 mx-auto max-w-[1600px] px-3 pb-[190px] pt-3">
         {demo && !slim && <div className="mb-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-xs text-amber-200">Demo mode: sample data stays on this device. <a href="/#launch" className="underline">Sign in</a> to save for real.</div>}
-        <div data-safe-top className={`mb-3 flex items-center gap-4 ${slim ? "hidden" : ""}`}>
+        <div data-safe-top data-m-greet className={`mb-3 flex items-center gap-4 ${slim ? "hidden" : ""}`}>
           <div className="relative shrink-0"><div className={listening ? "listen-ring" : ""}><CrystalBot size={76} mood={listening ? "thinking" : mood} say={caption || say} onClick={() => { openApp("crystal"); react("wave"); sfx("chirp"); speakBubble("Hi pilot! Need anything? 💙"); }} label="Open Crystal co-pilot chat" /></div>
             <button onClick={toggleMic} aria-pressed={listening} aria-label={listening ? "Stop listening" : "Talk to Crystal"} className={`absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border text-sm ${listening ? "border-alert bg-alert/30 text-white" : "border-cyan/60 bg-navy/90 text-cyan"}`}>🎙</button></div>
           <div className="min-w-0"><div className="hud-label">Pilot&apos;s assistant · <span style={{ color: DEFCON_COLOR[level as 1] }}>DEFCON {level}</span></div><p className="text-snow">{greetText(profile)} {open.length ? `${open.length} open mission${open.length > 1 ? "s" : ""}.` : "All clear."}</p>
@@ -452,7 +452,7 @@ export default function Cockpit() {
         </div>
         {!demo && !fam && <div className="mb-3"><Approvals /></div>}
         {fam && <div className="mb-3 rounded-lg border border-cyan/30 bg-cyan/10 px-3 py-2 text-sm text-snow">{fam === "child" ? "Family view: school information is read-only. Your own to-dos and check-ins are yours to change." : "Shared school view (read-only)."}</div>}
-        <section data-safe-top data-testid="modules-toolbar" className={`relative z-[35] mb-3 ${slim ? "hidden" : ""}`} aria-label="Modules">
+        <section data-safe-top data-m-mods data-testid="modules-toolbar" className={`relative z-[35] mb-3 ${slim ? "hidden" : ""}`} aria-label="Modules">
           <div className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-8 sm:overflow-visible sm:pb-0">
             {MODS.map(id => { const q = squad.find(s => s.id === id); return (
               <button key={id} onClick={() => openApp(id)} onMouseEnter={() => sfx("hover")} className={`tap glass relative min-w-[88px] shrink-0 rounded-xl p-2 text-left hover:border-cyan/60 ${q?.status === "warn" ? "!border-alert/60" : ""}`}>
@@ -479,7 +479,7 @@ export default function Cockpit() {
         onMin={() => minimize(maxed.id)} onClose={() => close(maxed.id)} onToggleMax={toggleFull} canFloat={desk}>{content(maxed.id)}</Applet>}
 
       {focusEnd && <ShieldsTimer endsAt={focusEnd} total={25 * 60000} onEnd={shieldsDone} onAbort={() => { setFocusEnd(null); log("Shields down (aborted).", "info"); sfx("close"); }} />}
-      <Boundary name="HUD" compact>{!idle ? <nav data-safe-bottom aria-label="HUD loading" className="fixed inset-x-0 bottom-0 z-30 h-16" /> : <HudBar slim={slim} pilot={greetName(profile)} mood={mood} onPilot={() => { openApp("crystal"); react("wave"); sfx("chirp"); }} squad={squad} contacts={contacts} tactical={tactical}
+      <Boundary name="HUD" compact>{!idle ? <nav data-safe-bottom aria-label="HUD loading" className="fixed inset-x-0 bottom-0 z-30 h-16" /> : <HudBar slim={slim} mods={MODS.map(id => ({ id, title: META[id].title, icon: META[id].icon, warn: squad.find(q => q.id === id)?.status === "warn" }))} onOpenMod={id => openApp(id)} activeMod={focus} pilot={greetName(profile)} mood={mood} onPilot={() => { openApp("crystal"); react("wave"); sfx("chirp"); }} squad={squad} contacts={contacts} tactical={tactical}
         radar={blips} pulse={pulse} defcon={{ level, reasons: manualAlert ? ["Manual red alert", ...dc.reasons] : dc.reasons }} bars={bars} feedsMuted={!!focusEnd}
         abilities={abilities} feed={feed} onCloseAll={closeAll} hotkey={(id: AppId) => { const i = ORDER.indexOf(id); return i >= 0 ? `Alt+${i + 1}` : ""; }} blips={open.length} alert={alert} onAlert={toggleAlert} onHome={goHome} onLogout={logout} open={dockPref.length ? wins.filter(w => dockPref.includes(w.id)).sort((x, y) => dockPref.indexOf(x.id) - dockPref.indexOf(y.id)) : wins} onRestore={id => openApp(id)} />}</Boundary>
       <Boundary name="Overlays" compact><CommandPalette open={palette} onClose={() => setPalette(false)} actions={actions} onFreeText={t => execCommand(t)} />

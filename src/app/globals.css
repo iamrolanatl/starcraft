@@ -437,3 +437,48 @@ header[data-safe-top]>div{min-height:0}
 /* Robot "Lively" is an explicit opt-in: keep its stroll smooth even with Reduced UI animations (OS reduce-motion / UI Off still force Calm). */
 html[data-motion="reduced"] .robot-lane .robot-mover { transition-duration: var(--walk-ms) !important; }
 .robot-bubble{animation:bubble .3s cubic-bezier(.34,1.56,.64,1) both}
+
+/* ===== Phone readability (<640px). Desktop untouched. ===== */
+@media (max-width: 639px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-size: 16px; line-height: 1.5; }
+  [data-m-hide] { display: none !important; }
+  [data-m-header] { padding-top: env(safe-area-inset-top); }
+  [data-m-header] > div { gap: .375rem; padding-top: .375rem; padding-bottom: .375rem; }
+  [data-m-header] .btn, [data-m-header] [aria-label="Profile and Settings"] { min-height: 44px; min-width: 44px; }
+  [data-m-header] input { min-height: 44px; font-size: 16px; } /* 16px stops iOS zoom-on-focus */
+  /* When an applet is open, the greeting row + module card strip step aside (modules live in the bottom tab bar) */
+  main[data-m-open] [data-m-greet], main[data-m-open] [data-m-mods] { display: none; }
+  main { padding-left: max(.75rem, env(safe-area-inset-left)); padding-right: max(.75rem, env(safe-area-inset-right)); }
+  /* Larger type: lift tiny utility sizes */
+  .text-xs { font-size: 14px !important; line-height: 1.4; }
+  .text-\[9px\], .text-\[10px\], .text-\[11px\], .text-\[11\.5px\], .\!text-\[8px\] { font-size: 12.5px !important; }
+  .text-sm { font-size: 15px !important; }
+  .hud-label { font-size: 12px !important; letter-spacing: .12em; }
+  /* Tap targets */
+  .btn, [role="tab"], section[aria-label$="applet"] > header button, [aria-label="Dock: minimized applets"] button { min-height: 44px; }
+  section[aria-label$="applet"] > header button { min-width: 44px; }
+  /* Tabs inside modules: one horizontally scrolling row of chips, sticky under the applet title */
+  .pill-tabs { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg,#000 calc(100% - 24px),transparent); mask-image: linear-gradient(90deg,#000 calc(100% - 24px),transparent); padding-right: 24px; }
+  .pill-tabs > * { flex: 0 0 auto; white-space: nowrap; }
+  [data-sticky-tabs] { position: sticky; top: -12px; z-index: 4; background: rgb(10 14 26 / .94); margin-inline: -12px; padding: 8px 12px; }
+  section[aria-label$="applet"] > header { position: sticky; top: 0; }
+  /* One column: collapse multi-column grids inside applets, tables become stacked cards */
+  section[aria-label$="applet"] .grid:not(.pill-tabs) { grid-template-columns: minmax(0,1fr) !important; }
+  section[aria-label$="applet"] .grid.grid-cols-3, section[aria-label$="applet"] .grid.grid-cols-2 { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  section[aria-label$="applet"] table { display: block; }
+  section[aria-label$="applet"] thead { display: none; }
+  section[aria-label$="applet"] tbody, section[aria-label$="applet"] tr { display: block; }
+  section[aria-label$="applet"] tr { border: 1px solid rgb(62 242 224 / .15); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; background: rgb(255 255 255 / .02); }
+  section[aria-label$="applet"] td { display: block; padding: 2px 0 !important; border: 0 !important; }
+  .applet-body { padding: 12px 12px calc(16px + env(safe-area-inset-bottom)) !important; font-size: 16px; }
+  /* Sheets use the full height left between header and bottom bar */
+  .sheet { max-height: 86dvh !important; }
+  /* Calmer decoration */
+  .bg-video { opacity: .35 !important; filter: saturate(.7) brightness(.8); }
+  .particle { display: none; }
+  .robot-mover > * { transform: scale(.75); transform-origin: bottom center; }
+  [data-m-tabbar] { scroll-snap-type: x proximity; }
+  [data-m-tabbar] > * { scroll-snap-align: start; }
+  html, body { overflow-x: hidden; }
+}
