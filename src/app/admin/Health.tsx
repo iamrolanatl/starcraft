@@ -27,7 +27,7 @@ function Meter({ name, used, limit, unit, pct }: { name: string; used: number; l
 }
 function Bars({ rows }: { rows: [number, number, number, number][] }) {
   const max = Math.max(1, ...rows.map(r => r[1] + r[2] + r[3]));
-  return <div className="flex h-24 items-end gap-0.5">{rows.length ? rows.map(r => <div key={r[0]} className="flex flex-1 flex-col justify-end" title={`${et(r[0])}: 4xx ${r[1]} · 5xx ${r[2]} · JS ${r[3]}`}>
+  return <div className="flex h-24 items-end gap-0.5">{rows.length ? rows.map(r => <div key={r[0]} className="flex h-full flex-1 flex-col justify-end" title={`${et(r[0])}: 4xx ${r[1]} · 5xx ${r[2]} · JS ${r[3]}`}>
     <div style={{ height: `${(r[2] / max) * 100}%`, background: COL.red }} /><div style={{ height: `${(r[1] / max) * 100}%`, background: COL.yellow }} /><div style={{ height: `${(r[3] / max) * 100}%`, background: "#a78bfa" }} /></div>)
     : <p className="text-xs text-ash">No errors in 24h.</p>}</div>;
 }
@@ -92,10 +92,10 @@ export default function Health({ api }: { api: Api }) {
 
     <Card title="Logs · live tail" hue="#7dffc8">
       <form className="mb-2 flex flex-wrap gap-1" onSubmit={e => { e.preventDefault(); loadLogs(); }}>
-        <input aria-label="Search logs" className="input w-56 py-1 text-xs" placeholder="search message / route" value={f.q} onChange={e => setF({ ...f, q: e.target.value })} />
-        <select aria-label="Severity" className="input w-32 py-1 text-xs" value={f.sev} onChange={e => setF({ ...f, sev: e.target.value })}><option value="">all severities</option>{["critical", "error", "security", "warn", "info", "debug"].map(s => <option key={s}>{s}</option>)}</select>
-        <select aria-label="Source" className="input w-32 py-1 text-xs" value={f.src} onChange={e => setF({ ...f, src: e.target.value })}><option value="">all sources</option>{["api", "client", "auth", "ratelimit", "cron"].map(s => <option key={s}>{s}</option>)}</select>
-        <input aria-label="Request id" className="input w-56 py-1 font-mono text-xs" placeholder="x-request-id" value={f.rid} onChange={e => setF({ ...f, rid: e.target.value })} />
+        <input aria-label="Search logs" style={{ width: "14rem" }} className="input py-1 text-xs" placeholder="search message / route" value={f.q} onChange={e => setF({ ...f, q: e.target.value })} />
+        <select aria-label="Severity" style={{ width: "8rem" }} className="input py-1 text-xs" value={f.sev} onChange={e => setF({ ...f, sev: e.target.value })}><option value="">all severities</option>{["critical", "error", "security", "warn", "info", "debug"].map(s => <option key={s}>{s}</option>)}</select>
+        <select aria-label="Source" style={{ width: "8rem" }} className="input py-1 text-xs" value={f.src} onChange={e => setF({ ...f, src: e.target.value })}><option value="">all sources</option>{["api", "client", "auth", "ratelimit", "cron"].map(s => <option key={s}>{s}</option>)}</select>
+        <input aria-label="Request id" style={{ width: "14rem" }} className="input py-1 font-mono text-xs" placeholder="x-request-id" value={f.rid} onChange={e => setF({ ...f, rid: e.target.value })} />
         <button className="btn btn-ghost px-2 py-1 text-xs">APPLY</button><button type="button" onClick={() => setLive(v => !v)} className="btn btn-ghost px-2 py-1 text-xs" aria-pressed={live}><span className={`h-2 w-2 rounded-full ${live ? "animate-pulse bg-[#7dffc8]" : "bg-ash"}`} />{live ? "LIVE" : "PAUSED"}</button></form>
       <div className="max-h-72 overflow-auto rounded bg-black/40 p-2 font-mono text-[11px]">{logs.map(l => <div key={l.id} className="whitespace-nowrap" style={{ color: { critical: COL.red, error: "#ff8fa3", security: "#f0abfc", warn: COL.yellow, info: "#c7ccd4", debug: "#64748b" }[l.severity as string] }}>
         <span className="text-ash">{et(l.at)}</span> [{l.severity.toUpperCase()}] {l.source} {l.code ?? ""} {l.route ?? ""} {l.message} {l.meta?.ms != null ? `${l.meta.ms}ms` : ""} {l.request_id && <button className="text-cyan underline" onClick={() => setF({ ...f, rid: l.request_id })}>{l.request_id.slice(0, 16)}</button>}</div>)}
