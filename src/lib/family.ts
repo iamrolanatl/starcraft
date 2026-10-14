@@ -63,7 +63,14 @@ export async function removeChild(id: string) { chk(await sb().from("children").
 
 // ---- family members / child-login invites ----
 export const listMembers = async () => chk<Member[]>(await sb().from("family_members").select("*").order("joined_at") as never) ?? [];
-export const listFamilyInvites = async () => chk<Invite[]>(await sb().from("family_invites").select("id,hint,email,created_at,expires_at,used_at,revoked_at,child_id").order("created_at", { ascending: false }).limit(30) as never) ?? [];
+const INV = "id,hint,email,created_at,expires_at,used_at,revoked_at";
+export async function listFamilyInvites(): Promise<Invite[]> {
+  const q = (cols: string) => sb().from("family_invites").select(cols).order("created_at", { ascending: false }).limit(30);
+  const r = await q(INV + ",child_id");
+  // 017 granted column-level SELECT without child_id (fixed in 020); fall back so the list still loads.
+  if (r.error?.code === "42501") return chk<Invite[]>(await q(INV) as never) ?? [];
+  return chk<Invite[]>(r as never) ?? [];
+}
 export const createChildInvite = (child: string, email?: string) => rpc<{ id: string; code: string; expires_at: string }>("family_create_invite", { p_child: child, p_email: email || null });
 export const decideMember = (user: string, approve: boolean) => rpc("family_decide", { p_user: user, p_approve: approve });
 export const revokeMember = (user: string) => rpc("family_revoke_member", { p_user: user });

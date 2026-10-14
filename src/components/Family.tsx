@@ -84,8 +84,15 @@ export default function Family() {
     try {
       const a = await F.loadAccess(); setAcc(a); if (!a) { setReady(false); return; }
       if (a.status.role === "child") { setReady(true); return; }
-      const [k, m, i, v, vi, e] = await Promise.all([F.listChildren(), F.listMembers(), F.listFamilyInvites(), F.listViewers(), F.listViewerInvites(), F.listEvents()]);
-      setKids(k); setMem(m); setInv(i); setVw(v.filter(x => x.owner !== x.user_id)); setVinv(vi); setEv(e); setOb(await F.outboxStatus(vi.map(x => x.outbox_id!).filter(Boolean))); setReady(true);
+      // Each list loads on its own: one failing section (e.g. a missing column grant) must never hide the children.
+      const r = await Promise.allSettled([F.listChildren(), F.listMembers(), F.listFamilyInvites(), F.listViewers(), F.listViewerInvites(), F.listEvents()]);
+      const bad = r.find(x => x.status === "rejected") as PromiseRejectedResult | undefined;
+      if (r[0].status === "rejected") throw r[0].reason;
+      const ok = <T,>(x: PromiseSettledResult<T>, d: T) => x.status === "fulfilled" ? x.value : d;
+      const vi = ok(r[4], []);
+      setKids(ok(r[0], [])); setMem(ok(r[1], [])); setInv(ok(r[2], [])); setVw(ok(r[3], []).filter(x => x.owner !== x.user_id)); setVinv(vi); setEv(ok(r[5], []));
+      setOb(await F.outboxStatus(vi.map(x => x.outbox_id!).filter(Boolean)).catch(() => ({}))); setReady(true);
+      if (bad) console.warn("Family: a section failed to load", bad.reason);
     } catch (e) { setReady(e instanceof F.NotReady ? false : true); if (!(e instanceof F.NotReady)) toast((e as Error).message, "warn"); }
   }, []);
   useEffect(() => { load(); }, [load]);
