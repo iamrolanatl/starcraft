@@ -69,7 +69,7 @@ export default function Health({ api }: { api: Api }) {
       <Card title="Supabase usage vs free tier" hue="#7dffc8">{dbItems.map(m => <Meter key={m.name} {...m} />)}
         <div className="mt-1 text-[10px] text-ash">Buckets: {(db.buckets || []).map((b: J) => `${b.bucket} ${b.objects} obj ${mb(b.bytes)}`).join(" · ") || "none"} · {db.auth_users} auth users</div>
         <details className="mt-1 text-xs"><summary className="cursor-pointer text-cyan">Largest tables</summary>{(db.top_tables || []).map((t: J) => <div key={t.name} className="flex justify-between font-mono text-[11px]"><span>{t.name}</span><span>{mb(t.bytes)} · {t.rows} rows</span></div>)}</details></Card>
-      <Card title="Cloudflare usage + quotas" hue="#ffd166">{quotas.map(q => <Meter key={q.name} {...q} />)}
+      <Card title="Cloudflare usage + quotas" hue="#ffd166">{quotas.map(q => <Meter key={q.name} name={q.name} used={q.used} limit={q.limit} unit={q.unit} pct={q.pct} />)}
         {(cf.pages || []).map((p: J) => <div key={p.dimensions?.scriptName} className="font-mono text-[11px]">{String(p.dimensions?.scriptName).replace(/pages-worker--\d+-/, "pages ")}: {p.sum?.requests} req · {p.sum?.errors} err · CPU p50 {(p.quantiles?.cpuTimeP50 / 1000).toFixed(1)}ms p99 {(p.quantiles?.cpuTimeP99 / 1000).toFixed(1)}ms (24h)</div>)}
         {(cf.ai || []).map((a: J) => <div key={a.dimensions?.modelId} className="font-mono text-[10px] text-ash">{String(a.dimensions?.modelId).replace("@cf/", "")} {Math.round(a.sum?.totalNeurons)} neurons · {a.count} calls</div>)}
         {(cf.graphql_error || cf.error) && <p className="text-xs text-[#ff8fa3]">{cf.graphql_error || cf.error}</p>}<div className="mt-1 text-[10px] text-ash">snapshot {ago(cf._at)}</div></Card>
