@@ -46,7 +46,9 @@ export function startHandsFree(onText: (t: string) => Promise<void>, setState: (
     r.onerror = e => { diag(`recognizer error: ${e.error}`); if (e.error !== "no-speech" && e.error !== "aborted") e0 = e.error; };
     r.onend = () => { clearInterval(poll); rec = null; const t = (fin || txt).trim();
       // Web Speech heard nothing although the mic picked up sound (or it errored with network/aborted): switch to recording + server transcription.
-      if (!t && (loud || /network|aborted|service/.test(e0))) { empty++; if (empty >= 2 || /network|service/.test(e0)) { useWeb = false; o.onEngine?.("recording"); diag("switched to recording mode (server transcription)"); e0 = ""; } }
+      // Recognizer-only failures (network, audio-capture, service, language) while getUserMedia works: switch engines instead of giving up.
+      if (e0 && !/not-allowed/.test(e0) && canRecord()) { useWeb = false; o.onEngine?.("recording"); diag(`switched to recording mode after "${e0}"`); e0 = ""; res(""); return; }
+      if (!t && (loud || /aborted/.test(e0))) { empty++; if (empty >= 2) { useWeb = false; o.onEngine?.("recording"); diag("switched to recording mode (server transcription)"); e0 = ""; } }
       else if (t) empty = 0;
       if (e0) { if (fatal(e0)) { end(); } err(e0); res(""); } else res(t); };
     try { r.start(); setState({ kind: "listening" }); diag("recognizer: started"); } catch (e) { clearInterval(poll); diag(`recognizer start failed: ${String(e)}`); useWeb = false; o.onEngine?.("recording"); res(""); }
