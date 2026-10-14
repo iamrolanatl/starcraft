@@ -17,7 +17,7 @@ const BANDS = [
 const MIN = 60; // visual axis floor only (not a rule)
 export const letterOf = (p: number) => (BANDS.find(b => Math.floor(p) >= b.lo) ?? BANDS[4]);
 const Cite = ({ s }: { s: string }) => <a href={SRC} target="_blank" rel="noreferrer" className="gr-cite" title="Open Cobb rule IHA-R (PDF)">{s}</a>;
-export type RuleClass = { key: string; course: string; percent: number | null };
+export type RuleClass = { key: string; course: string; percent: number | null; label?: string };
 
 function useGrow() { const [on, setOn] = useState(false); useEffect(() => { const t = requestAnimationFrame(() => setOn(true)); return () => cancelAnimationFrame(t); }, []); return on; }
 
@@ -41,7 +41,7 @@ export default function GradingRules({ classes }: { classes: RuleClass[] }) {
     {graded.length > 0 && <div className="gr-card"><div className="gr-h">Eli vs. the Scale <span className="gr-sub">(live grades from your sync, scale from <Cite s="§C.1, p.3" />)</span></div>
       <ul className="space-y-2">{graded.map(c => { const L = letterOf(c.percent); const to90 = 90 - c.percent; const next = BANDS.find(b => b.lo > c.percent && b.lo <= 90 && BANDS.indexOf(b) === BANDS.indexOf(L) - 1);
         return <li key={c.key}>
-          <div className="flex items-center gap-2"><LetterBadge pct={c.percent} size="sm" /><span className="min-w-0 flex-1 truncate gr-txt" title={c.course}>{c.course}</span><span className={`font-mono ${gradeText(c.percent)}`}>{c.percent.toFixed(c.percent % 1 ? 1 : 0)}</span></div>
+          <div className="flex items-center gap-2"><LetterBadge pct={c.percent} size="sm" /><span className="min-w-0 flex-1 truncate gr-txt" title={c.course}>{c.course}</span><span className={`font-mono ${gradeText(c.percent)}`}>{c.percent.toFixed(c.percent % 1 ? 1 : 0)}</span>{c.label && <span className="text-[11px] text-slate">{c.label}</span>}</div>
           <ProgressBar kind="grade" value={c.percent} label={`${c.course} grade`} message height={10} />
           <div className="gr-note">{to90 <= 0 ? `In the A band, ${(c.percent - 90).toFixed(1)} pts of cushion above 90.` : `${to90.toFixed(1)} pts to 90 (A)${next && next.l !== "A" ? ` · ${(next.lo - c.percent).toFixed(1)} to ${next.l}` : ""}.`}</div>
         </li>; })}</ul></div>}

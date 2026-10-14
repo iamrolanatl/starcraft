@@ -112,7 +112,10 @@ function EducationInner({ demo, log }: { demo: boolean; log: (s: string, t?: "in
       <div className="truncate text-[10px] text-ash">{m.sender}{m.body ? ` — ${m.body}` : ""}</div></li>)}{!data.messages.length && <li className="text-xs text-ash">No messages.</li>}</ul>}
     {tab === "calendar" && <ul className="space-y-1">{cal.map(c => <li key={c.date + c.title} className="flex gap-2 rounded-lg bg-navy-2/50 px-2 py-1"><span className="w-20 shrink-0 font-mono text-xs text-cyan">{fmt(c.date)}</span><span className="text-snow">{c.title.replace(/\s+-\s+Score:\s*-?$/, "")}</span></li>)}{!cal.length && <li className="text-xs text-ash">No upcoming school events.</li>}</ul>}
     {tab === "learn" && <Learn demo={data.demo} />}
-    {tab === "rules" && <GradingRules classes={gv.current.map(c => ({ key: c.key, course: c.course, percent: c.posted && c.term !== c.final?.term && c.percent != null ? Number(c.percent) : c.final?.percent != null ? Number(c.final.percent) : null }))} />}
+    {tab === "rules" && <GradingRules classes={gv.current.map(c => { /* same value + label as the Grades column (Q1 final by default; Q toggle respected) */
+      const fq = c.final ? c.final.term.replace(/^Quarter\s*/i, "Q") : "Q1"; const lq = c.term.replace(/^Quarter\s*/i, "Q").replace(/^Progress Period\s*/i, "Q");
+      const fp = c.final?.percent != null ? Number(c.final.percent) : null; const lp = c.posted && c.term !== c.final?.term && c.percent != null ? Number(c.percent) : null;
+      return { key: c.key, course: c.course, percent: qv === "final" ? fp : lp, label: qv === "final" ? `${fq} final` : lq }; })} />}
     {tab === "reportcards" && <ReportCards demo={data.demo} />}
     {tab === "msg" && <MsgHub messages={data.messages} />}
     {tab === "schedule" && <Schedule demo={data.demo} />}
