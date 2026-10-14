@@ -4,10 +4,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { sb } from "@/lib/supabase";
+import Health from "./Health";
 const AuthPanel = dynamic(() => import("@/components/AuthPanel"), { ssr: false });
 type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-const TABS = ["OVERVIEW", "USERS", "FAMILIES", "DATA", "SYNC", "AUDIT", "SUPPORT"] as const; type Tab = typeof TABS[number];
-const HUE: Record<Tab, string> = { OVERVIEW: "#3ef2e0", USERS: "#7dd3fc", FAMILIES: "#a78bfa", DATA: "#7dffc8", SYNC: "#ffd166", AUDIT: "#f0abfc", SUPPORT: "#ff8fa3" };
+const TABS = ["OVERVIEW", "HEALTH", "USERS", "FAMILIES", "DATA", "SYNC", "AUDIT", "SUPPORT"] as const; type Tab = typeof TABS[number];
+const HUE: Record<Tab, string> = { OVERVIEW: "#3ef2e0", HEALTH: "#7dffc8", USERS: "#7dd3fc", FAMILIES: "#a78bfa", DATA: "#7dffc8", SYNC: "#ffd166", AUDIT: "#f0abfc", SUPPORT: "#ff8fa3" };
 const et = (s?: string | null) => s ? new Date(s).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " ET" : "—";
 const ago = (s?: string | null) => { if (!s) return "never"; const m = Math.round((Date.now() - new Date(s).getTime()) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 2880 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
 const tsOf = (r: J) => r?.finished_at || r?.started_at || r?.created_at || r?.at || r?.ts || r?.ran_at || r?.sent_at || r?.updated_at;
@@ -57,7 +58,7 @@ export default function Admin() {
     const { data } = await sb().auth.getSession(); if (!data.session) { setState("signin"); return; }
     const r = await api("whoami"); if (r.status === 403) { location.replace("/oops/?code=403"); return; }
     if (r.status === 503) { setState("pending"); return; } if (r.status !== 200) { say(`ERR ${r.data.error}`); }
-    setMe(r.data.email || data.session.user.email || ""); setState("ok"); loadOv();
+    setMe(r.data.email || data.session.user.email || ""); setState("ok"); loadOv(); const qt = new URLSearchParams(location.search).get("tab")?.toUpperCase(); if (qt && (TABS as readonly string[]).includes(qt)) setTab(qt as Tab);
   })(); }, [loadOv, say]);
   useEffect(() => { if (state !== "ok") return; const t = setInterval(loadOv, 30000); return () => clearInterval(t); }, [state, loadOv]);
 
@@ -87,7 +88,7 @@ export default function Admin() {
   const run = useCallback(async (line: string) => {
     const [c, ...rest] = line.trim().split(/\s+/); const arg = rest.join(" "); say(`> ${line}`);
     switch ((c || "").toLowerCase()) {
-      case "help": say("commands: overview | users [q] | user <email|id> | families | tables | table <name> | sync | audit [q] | support | refresh | clear"); break;
+      case "help": say("commands: overview | health | users [q] | user <email|id> | families | tables | table <name> | sync | audit [q] | support | refresh | clear"); break;
       case "overview": case "refresh": setTab("OVERVIEW"); await loadOv(); break;
       case "users": setTab("USERS"); setQ(arg); await loadUsers(arg); break;
       case "user": { setTab("USERS"); const d = await call(`users?q=${encodeURIComponent(arg)}`).catch(() => []); const list = Array.isArray(d) ? d : []; setUsers(list);
@@ -96,6 +97,7 @@ export default function Admin() {
       case "tables": setTab("DATA"); break;
       case "table": setTab("DATA"); if (arg) openTable(arg, 0, "", ""); break;
       case "sync": case "jobs": setTab("SYNC"); break;
+      case "health": case "status": setTab("HEALTH"); break;
       case "audit": setTab("AUDIT"); loadAudit(arg); break;
       case "support": location.href = "/support/"; break;
       case "clear": setLog([]); break;
@@ -140,6 +142,7 @@ export default function Admin() {
         <div className="glass rounded-xl p-3 text-xs text-ash">Workers AI usage isn&apos;t exposed to the app; see Cloudflare dashboard › AI › Workers AI. Refreshes every 30s · last {et(o.at)}</div>
       </>}
 
+      {tab === "HEALTH" && <Health api={api} />}
       {tab === "USERS" && <div className="grid gap-3 lg:grid-cols-[1fr_28rem]">
         <section className="glass rounded-xl p-3"><form onSubmit={e => { e.preventDefault(); loadUsers(); }} className="mb-2 flex gap-2"><input className="input font-mono" placeholder="search email, name or id" value={q} onChange={e => setQ(e.target.value)} /><button className="btn btn-ghost">SEARCH</button></form>
           <Rows rows={users.map(u => ({ ...u, status: u.deleted_at ? "deleted" : u.disabled_at || u.banned_until ? "disabled" : "active", family: u.family_owner ? "owner" : u.family_role ?? "" }))} cols={["email", "name", "status", "family", "last_sign_in_at", "created_at"]} onPick={r => openUser(r.id)} /></section>

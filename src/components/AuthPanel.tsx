@@ -21,7 +21,7 @@ export default function AuthPanel({ title = "Sign up or log in", next = "/app/" 
     e.preventDefault(); setBusy(true);
     const { error } = await sb().auth.verifyOtp({ email, token: code.trim(), type: "email" });
     setBusy(false);
-    if (error) { setMsg(error.message); sfx("error"); } else { sfx("success"); window.location.href = next; }
+    if (error) { setMsg(error.message); sfx("error"); fetch("/api/log", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "auth_fail", message: `otp verify failed: ${error.message}`.slice(0, 200), url: location.pathname }) }).catch(() => {}); } else { sfx("success"); window.location.href = next; }
   }
   return (
     <div className="glass w-full max-w-sm rounded-2xl p-6">
