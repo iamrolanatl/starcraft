@@ -13,12 +13,16 @@ export default function Join() {
   const [me, setMe] = useState<string | null | undefined>(undefined); const [code, setCode] = useState(""); const [msg, setMsg] = useState(""); const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<Awaited<ReturnType<typeof joinWithCode>> | null>(null); const [approved, setApproved] = useState(false);
   useEffect(() => { const q = new URLSearchParams(location.search); const c = q.get("code") || q.get("token") || lsRaw("crystal-join-code", ""); if (c) { setCode(fmt(c)); lsSet("crystal-join-code", fmt(c)); }
+    // Strip the invite ?code= before the Supabase client starts: with PKCE + detectSessionInUrl it would treat it as an auth code.
+    if (q.has("code") || q.has("token")) history.replaceState(null, "", "/join/");
     sb().auth.getSession().then(({ data }) => setMe(data.session?.user.email ?? null)); }, []);
+  const [auto, setAuto] = useState(false);
+  useEffect(() => { if (me && !auto && !res && code.replace("-", "").length === 8) { setAuto(true); submit(); } }); // eslint-disable-line
   // poll until approved
   const poll = useCallback(async () => { const a = await loadAccess(); if (!a) return;
     if ((a.status.role === "child" && a.status.status === "active") || a.viewing.some(v => v.status === "active")) setApproved(true); }, []);
   useEffect(() => { if (!res?.ok) return; const t = setInterval(poll, 5000); return () => clearInterval(t); }, [res, poll]);
-  const submit = async (e: React.FormEvent) => { e.preventDefault(); setBusy(true); setMsg("");
+  const submit = async (e?: React.FormEvent) => { e?.preventDefault(); setBusy(true); setMsg("");
     try { const r = await joinWithCode(code); if (r.ok) { setRes(r); try { localStorage.removeItem("crystal-join-code"); } catch {} }
       else setMsg((ERR[r.error ?? ""] ?? "That code didn't work.") + (r.tries_left !== undefined && r.error === "bad_code" ? ` ${r.tries_left} tries left.` : "")); }
     catch (er) { setMsg(isMissing(er) || /017/.test(String(er)) ? "Family sharing isn't switched on yet. Ask the person who invited you to finish setup." : (er as Error).message); } finally { setBusy(false); } };

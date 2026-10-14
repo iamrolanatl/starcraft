@@ -103,8 +103,10 @@ export default function Cockpit() {
 
   /* auth + boot */
   useEffect(() => {
-    if (lsRaw("crystal-join-code", "")) { location.replace("/join/"); return; }   // signed in from an invite link: finish joining
     const isDemo = new URLSearchParams(location.search).has("demo"); const c = sb();
+    // Signed in from an invite link: finish joining. Must wait for the PKCE ?code= exchange (getSession awaits it);
+    // redirecting first dropped the auth code, so /join saw no session and asked to sign in again (redirect loop).
+    if (lsRaw("crystal-join-code", "") && !isDemo) { c.auth.getSession().then(({ data }) => { if (data.session) location.replace("/join/"); else setTimeout(() => c.auth.getSession().then(() => location.replace("/join/")), 1500); }); return; }
     const done = (email: string | null, d = false) => { setUser(email); setDemo(d); setReady(true); };
     c.auth.getSession().then(({ data }) => {
       if (data.session) done(data.session.user.email ?? "pilot");
