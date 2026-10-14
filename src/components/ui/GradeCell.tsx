@@ -7,7 +7,7 @@ export default function GradeCell({ pct, text, caption, empty }: { pct: number |
   return <span data-grade-cell className="shrink-0 font-mono text-lg font-bold leading-tight" style={GRID}>
     {text != null ? <>
       <span data-main data-letter={L ?? undefined} role="img" aria-label={L ? `${L}, ${text}` : text} data-tip={L ? `Letter grade ${LETTER_STYLE[L].label}, Cobb County scale` : undefined} className={`${cls} text-center`}>{L ?? ""}</span>
-      <span data-sep aria-hidden className="text-center font-normal text-[#6b7280]">{L ? "|" : ""}</span>
+      <span data-sep aria-hidden className="text-center font-normal text-[#8b93a3]">{L ? "|" : ""}</span>
       <span data-num aria-hidden className={`${cls} text-right`}>{text}</span>
       {caption && <span className="col-span-3 text-right font-sans text-[11px] font-normal text-slate">{caption}</span>}</>
       : <span data-main className="col-span-3 text-right font-sans text-sm font-normal text-ash">{empty}</span>}
