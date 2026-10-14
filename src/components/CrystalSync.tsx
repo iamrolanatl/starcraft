@@ -46,7 +46,7 @@ export function SyncConsole({ runId, title, onClose }: { runId: string; title: s
         {lines.map(l => <div key={l.id} style={{ color: LV[l.level] ?? "#cfe8ff" }}><span className="text-slate">{new Date(l.at).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour12: false })}</span> <span className="inline-block w-16 uppercase opacity-80">{l.step ?? ""}</span> {l.msg}</div>)}
         {run?.error && <div className="text-[#ff3b5c]">✖ {run.error}</div>}
       </div>
-      {run?.counts && Object.keys(run.counts).length > 0 && <div className="flex flex-wrap gap-2 border-t border-cyan/20 px-4 py-2 font-mono text-[11px] text-ash">{Object.entries(run.counts).map(([k, v]) => <span key={k} className="rounded bg-cyan/10 px-1.5 py-0.5"><b className="text-snow">{String(v)}</b> {k}</span>)}</div>}
+      {run?.counts && Object.keys(run.counts).length > 0 && <div className="flex flex-wrap gap-2 border-t border-cyan/20 px-4 py-2 font-mono text-[11px] text-ash">{Object.entries(run.counts).filter(([, v]) => typeof v !== "object").map(([k, v]) => <span key={k} className="rounded bg-cyan/10 px-1.5 py-0.5"><b className="text-snow">{String(v)}</b> {k}</span>)}</div>}
     </div></div>);
 }
 

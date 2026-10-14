@@ -5,7 +5,7 @@ import { sb } from "@/lib/supabase";
 import { SyncLights } from "@/components/CrystalSync";
 
 const VER = "0.1.0";
-const REL = `https://github.com/iamrolanatl/starcraft/releases/download/crystal-sync-v${VER}`;
+const REL = "/downloads";  // static files on Cloudflare Pages (the GitHub repo is private, so release links would not work for parents)
 const DL = [
   { os: "macOS", hue: "#c4b5fd", file: `CrystalSync-${VER}-macOS.dmg`, href: `${REL}/CrystalSync-${VER}-macOS.dmg`, note: "macOS 12+, Apple silicon & Intel. Unsigned preview: right-click the app → Open the first time.", runs: "Runs in the background with launchd (starts at login)." },
   { os: "Windows", hue: "#7dd3fc", file: `CrystalSync-${VER}-Windows-Setup.exe`, href: `${REL}/CrystalSync-${VER}-Windows-Setup.exe`, note: "Windows 10/11. Unsigned preview: SmartScreen → More info → Run anyway.", runs: "Runs with Task Scheduler at 5:40 AM/PM and at log-on." },
@@ -15,6 +15,8 @@ type Kid = { id: string; first_name: string; grade: string | null };
 
 export default function Downloads() {
   const [kids, setKids] = useState<Kid[] | null>(null); const [sel, setSel] = useState<string[]>([]); const [code, setCode] = useState<{ code: string; expires_at: string } | null>(null);
+  const [have, setHave] = useState<Record<string, boolean>>({});
+  useEffect(() => { DL.forEach(d => fetch(d.href, { method: "HEAD" }).then(r => setHave(h => ({ ...h, [d.os]: r.ok && !(r.headers.get("content-type") || "").includes("text/html") }))).catch(() => setHave(h => ({ ...h, [d.os]: false })))); }, []);
   const [err, setErr] = useState(""); const [signed, setSigned] = useState<boolean | null>(null); const [left, setLeft] = useState(0);
   const [devices, setDevices] = useState<{ id: string; name: string; platform: string; last_seen_at: string | null; revoked_at: string | null; child_ids: string[] }[]>([]);
   const load = useCallback(async () => {
@@ -32,7 +34,8 @@ export default function Downloads() {
     <p className="max-w-3xl text-ash">Crystal Sync is a small app for the parent&apos;s computer. It signs in to ParentVUE / CTLS Parent (and optionally the student&apos;s StudentVUE, CTLS Learn, Office 365) <b className="text-snow">from your own computer</b>, once per run, at 5:40 AM and 5:40 PM and whenever you press SYNC NOW, then uploads only your child&apos;s school data to Crystal. Passwords are stored only in that computer&apos;s keychain. They are never sent to Crystal.</p>
     <section className="grid gap-3 md:grid-cols-3">{DL.map(d => <div key={d.os} className="glass rounded-2xl border p-4" style={{ borderColor: `${d.hue}55`, boxShadow: `0 0 24px ${d.hue}1f` }}>
       <h2 className="font-mono text-lg font-bold tracking-[.15em]" style={{ color: d.hue }}>{d.os.toUpperCase()}</h2>
-      <a href={d.href} className="mt-2 block rounded-lg px-3 py-2 text-center font-bold tracking-wider text-[#04121a]" style={{ background: d.hue }}>DOWNLOAD</a>
+      {have[d.os] === false ? <span className="mt-2 block rounded-lg border px-3 py-2 text-center font-bold tracking-wider" style={{ borderColor: `${d.hue}66`, color: d.hue }}>BUILD COMING SOON</span>
+        : <a href={d.href} download className="mt-2 block rounded-lg px-3 py-2 text-center font-bold tracking-wider text-[#04121a]" style={{ background: d.hue }}>DOWNLOAD</a>}
       {"alt" in d && d.alt && <a href={d.alt.href} className="mt-1 block text-center text-xs text-ash hover:underline">or {d.alt.label}</a>}
       <p className="mt-2 break-all font-mono text-[10px] text-slate">{d.file}</p><p className="mt-2 text-xs">{d.note}</p><p className="mt-1 text-xs text-ash">{d.runs}</p></div>)}</section>
     <section className="glass rounded-2xl border border-cyan/25 p-4"><h2 className="mb-2 font-mono font-bold tracking-[.15em] text-cyan">SETUP · 4 STEPS</h2>
