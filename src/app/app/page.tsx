@@ -8,7 +8,13 @@ const Ld = () => <div className="space-y-2" aria-busy="true"><div className="ske
 const ChatPanel = dynamic(() => import("@/components/ChatPanel"), { ssr: false, loading: Ld });
 import Applet, { type Geo, type WinMode } from "@/components/Applet";
 import { HudBar, type Ability, type FeedItem, type Squad, type Contact, type Blip } from "@/components/hud/Hud";
-import { computeDefcon, DEFCON_COLOR, ShieldsTimer, Briefing, IncomingTransmission, Warp, MedalsPanel, HoloGlobe, RANKS, type Transmission, type Medal } from "@/components/hud/Ops";
+import { computeDefcon, DEFCON_COLOR, RANKS, type Transmission, type Medal } from "@/components/hud/Ops";
+const ShieldsTimer = dynamic(() => import("@/components/hud/Ops").then(m => m.ShieldsTimer), { ssr: false });
+const Briefing = dynamic(() => import("@/components/hud/Ops").then(m => m.Briefing), { ssr: false });
+const IncomingTransmission = dynamic(() => import("@/components/hud/Ops").then(m => m.IncomingTransmission), { ssr: false });
+const Warp = dynamic(() => import("@/components/hud/Ops").then(m => m.Warp), { ssr: false });
+const MedalsPanel = dynamic(() => import("@/components/hud/Ops").then(m => m.MedalsPanel), { ssr: false, loading: Ld });
+const HoloGlobe = dynamic(() => import("@/components/hud/Ops").then(m => m.HoloGlobe), { ssr: false, loading: Ld });
 const Priorities = dynamic(() => import("@/components/apps/Apps").then(m => m.Priorities), { ssr: false, loading: Ld });
 const TaskList = dynamic(() => import("@/components/apps/Apps").then(m => m.TaskList), { ssr: false, loading: Ld });
 const Weather = dynamic(() => import("@/components/apps/Apps").then(m => m.Weather), { ssr: false, loading: Ld });
@@ -21,7 +27,8 @@ const Shopping = dynamic(() => import("@/components/apps/Modules").then(m => m.S
 const SchoolHub = dynamic(() => import("@/components/apps/Modules").then(m => m.SchoolHub), { ssr: false, loading: Ld });
 const Education = dynamic(() => import("@/components/apps/Education"), { ssr: false, loading: Ld });
 const Ocr = dynamic(() => import("@/components/apps/Ocr"), { ssr: false, loading: Ld });
-import CommandPalette, { type PaletteAction } from "@/components/ui/CommandPalette";
+import type { PaletteAction } from "@/components/ui/CommandPalette";
+const CommandPalette = dynamic(() => import("@/components/ui/CommandPalette"), { ssr: false });
 const Tour = dynamic(() => import("@/components/ui/Tour"), { ssr: false });
 import { Toaster, toast, ErrorNote, Particles, undoableDelete } from "@/components/ui/kit";
 import { listTasks, addTask, deleteTask, restoreTask, type Task } from "@/lib/tasks";
@@ -101,6 +108,8 @@ export default function Cockpit() {
     if (pref("tour") !== "done") setTour(true); else if (pref("brief-date") !== ymd()) setBrief(true);
     return () => { un(); clearInterval(iv); };
   }, [ready, demo, reload, loadMods, loadEdu, log]);
+  const [idle, setIdle] = useState(false);
+  useEffect(() => { const w = window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }; const f = () => setIdle(true); if (w.requestIdleCallback) w.requestIdleCallback(f, { timeout: 2500 }); else setTimeout(f, 1200); }, []);
   useGlobalErrorHooks();
 
   /* derived data */
@@ -345,11 +354,11 @@ export default function Cockpit() {
   return (
     <div className={alert ? "red-alert" : ""}>
       <SpaceBackground dim={night ? 0.85 : 0.5} />
-      <Particles n={night || coarse ? (night ? 0 : 8) : 26} />
+      {idle && <Particles n={night || coarse ? (night ? 0 : 8) : 26} />}
       <div className="alert-overlay pointer-events-none fixed inset-0 z-20" />
       <div className="pointer-events-none fixed inset-0 z-[1]" style={{ boxShadow: `inset 0 0 160px ${DEFCON_COLOR[level as 1]}22` }} />
       <div ref={sparkRoot} className="pointer-events-none fixed inset-0 z-[90]" />
-      <Warp on={warp} /><Toaster /><OfflineBanner />
+      {warp && <Warp on={warp} />}<Toaster /><OfflineBanner />
       {caption && <div role="status" aria-live="polite" className="caption-bar fixed inset-x-0 bottom-[150px] z-[48] mx-auto w-fit max-w-[92vw] rounded-full border border-cyan/40 bg-navy/90 px-4 py-1.5 text-center text-sm text-[#E8F4FF]">{listening && <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-alert" aria-hidden />}{caption}</div>}
       {settings && <div role="dialog" aria-label="Settings" className="glass fixed right-3 top-14 z-[50] w-72 rounded-2xl p-4 text-sm">
         <h2 className="mb-2 font-semibold text-[#E8F4FF]">Settings</h2>
@@ -378,7 +387,7 @@ export default function Cockpit() {
 
       <main className="relative z-10 mx-auto max-w-[1600px] px-3 pb-[190px] pt-3">
         {demo && <div className="mb-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-xs text-amber-200">Demo mode: sample data stays on this device. <a href="/#launch" className="underline">Sign in</a> to save for real.</div>}
-        <div className="mb-3 flex items-center gap-4">
+        <div data-safe-top className="mb-3 flex items-center gap-4">
           <div className="relative shrink-0"><div className={listening ? "listen-ring" : ""}><CrystalBot size={76} mood={listening ? "thinking" : mood} say={caption || say} onClick={() => { openApp("crystal"); react("wave"); sfx("chirp"); speakBubble("Hi pilot! Need anything? 💙"); }} label="Open Crystal co-pilot chat" /></div>
             <button onClick={toggleMic} aria-pressed={listening} aria-label={listening ? "Stop listening" : "Talk to Crystal"} className={`absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border text-sm ${listening ? "border-alert bg-alert/30 text-white" : "border-cyan/60 bg-navy/90 text-cyan"}`}>🎙</button></div>
           <div className="min-w-0"><div className="hud-label">Pilot&apos;s assistant · <span style={{ color: DEFCON_COLOR[level as 1] }}>DEFCON {level}</span></div><p className="text-snow">{greeting()}, {demo ? "pilot" : (user?.split("@")[0] ?? "pilot")}. {open.length ? `${open.length} open mission${open.length > 1 ? "s" : ""}.` : "All clear."}</p>
