@@ -41,8 +41,8 @@ function Ring({ value, goal }: { value: number; goal: number }) {
   return (<svg viewBox="0 0 128 128" className="h-32 w-32 shrink-0" role="img" aria-label={`${value.toLocaleString()} of ${goal.toLocaleString()} steps today`}>
     <circle cx="64" cy="64" r={R} fill="rgba(4,12,24,.85)" stroke="rgba(62,242,224,.15)" strokeWidth="10" />
     <circle cx="64" cy="64" r={R} fill="none" stroke={col} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${C * p} ${C}`} transform="rotate(-90 64 64)" style={{ filter: `drop-shadow(0 0 4px ${col})`, transition: "stroke-dasharray .6s" }} />
-    <text x="64" y="62" textAnchor="middle" fontSize="20" fontWeight="700" fill="#eef6ff">{value.toLocaleString()}</text>
-    <text x="64" y="80" textAnchor="middle" fontSize="10" fill="#9fb3c8">{Math.round(p * 100)}% of {goal >= 1000 ? `${+(goal / 1000).toFixed(1)}k` : goal}</text>
+    <text x="64" y="60" textAnchor="middle" fontSize="20" fontWeight="700" fill="#eef6ff">{value.toLocaleString()}</text>
+    <text x="64" y="84" textAnchor="middle" fontSize="10" fill="#9fb3c8">{Math.round(p * 100)}% of {goal >= 1000 ? `${+(goal / 1000).toFixed(1)}k` : goal}</text>
   </svg>);
 }
 function Bars({ days, by, goal }: { days: string[]; by: Map<string, number>; goal: number }) {
@@ -82,7 +82,7 @@ export function StepsPanel({ rows, onLog }: { rows: Row[]; onLog: (v: number) =>
     </div>
     <div>
       <div className="mb-1 flex items-center gap-2 text-xs"><span className="text-ash">Daily steps</span>
-        {([7, 30] as const).map(n => <button key={n} onClick={() => setRange(n)} aria-pressed={range === n} className={`rounded px-2 py-0.5 ${range === n ? "bg-cyan/20 text-cyan" : "text-ash"}`}>{n}d</button>)}
+        {([7, 30] as const).map(n => <button key={n} onClick={() => setRange(n)} aria-pressed={range === n} className={`rounded px-2 py-0.5 ${range === n ? "bg-cyan/20 text-cyan" : "text-ash"}`}>{n} Days</button>)}
         <label className="ml-auto flex items-center gap-1 text-ash">Goal <input type="number" inputMode="numeric" min={500} step={500} defaultValue={goal} key={goal} onBlur={e => setGoal(Number(e.target.value))} className="input w-20 py-0.5 text-xs" aria-label="Daily step goal" /></label></div>
       <Bars days={range === 7 ? d7 : d30} by={by} goal={goal} />
     </div>
