@@ -139,3 +139,48 @@ html[data-theme="night"] .glass { background: rgba(4,6,10,.82); border-color: rg
 html[data-theme="night"] .neon, html[data-theme="night"] .neon-frame::after { text-shadow: none; opacity: .35; }
 html[data-theme="night"] .bg-video { opacity: .25; filter: grayscale(.8); }
 @media (prefers-reduced-motion: reduce) { .tx-static, .tx-glitch { animation: none !important; } .warp { display: none; } }
+
+/* v4: maximized applet spring from the clicked origin */
+@keyframes win-spring { 0% { opacity: 0; transform: scale(.12); filter: blur(8px) } 45% { opacity: 1; transform: scale(1.03); filter: blur(0) } 65% { transform: scale(.985) } 82% { transform: scale(1.006) } 100% { transform: none } }
+.win-spring { animation: win-spring .62s cubic-bezier(.2,.9,.3,1) both; }
+.win-maxed { transition: left .35s cubic-bezier(.2,.9,.3,1), top .35s cubic-bezier(.2,.9,.3,1), width .35s cubic-bezier(.2,.9,.3,1), height .35s cubic-bezier(.2,.9,.3,1); }
+@media (prefers-reduced-motion: reduce) { .win-spring { animation: none } .win-maxed { transition: none } }
+
+/* ===== v4 design tokens ===== */
+:root {
+  --fs-xs: .75rem; --fs-sm: .875rem; --fs-body: 1rem; --fs-lg: 1.125rem; --fs-xl: 1.375rem; --fs-2xl: 1.75rem; --lh-body: 1.5;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px;
+  --text-body: #E8F4FF; --text-muted: #a9b7cc; /* muted ≥ 7:1 on the glass backing */
+  --glass-a: .84; --glass-blur: 20px; --glass-sat: 85%;          /* balanced (default) */
+  --depth-1: 0 6px 18px -8px rgba(0,0,0,.6); --depth-2: 0 18px 50px -12px rgba(0,0,0,.7); --depth-3: 0 30px 80px -20px rgba(0,0,0,.85);
+}
+html[data-glass="clear"] { --glass-a: .72; --glass-blur: 16px; --glass-sat: 90%; }
+html[data-glass="solid"] { --glass-a: .96; --glass-blur: 24px; --glass-sat: 70%; }
+@layer components {
+  .glass {
+    background: linear-gradient(165deg, rgb(24 32 52 / var(--glass-a)), rgb(9 13 24 / var(--glass-a)) 60%, rgb(6 10 20 / calc(var(--glass-a) + .04)));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border: 1px solid rgba(62,242,224,.28);
+    box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 0 24px rgba(62,242,224,.05) inset, var(--depth-2), 0 0 0 1px rgba(62,242,224,.06);
+  }
+  section.glass, .glass .input, .glass table, .glass li { color: var(--text-body); }
+  section.glass > div { font-size: max(15px, var(--fs-body)); line-height: var(--lh-body); }
+  .glass :is(p, li, td, th, label, dd, span) { text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+  .glass .text-slate, .glass .text-ash { color: var(--text-muted) !important; }
+  .input { background: rgb(5 9 20 / .92); border-color: rgba(134,147,168,.65); color: var(--text-body); font-size: max(16px, 1rem); line-height: 1.5; }
+  .glass table { background: rgb(6 10 20 / .6); } .glass th, .glass td { padding: 4px 8px; }
+  .glass ul > li, .glass ol > li { background-color: rgb(6 10 20 / .35); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: #0a1122 !important; }
+}
+.ts-text { font-size: var(--fs-body); line-height: var(--lh-body); }
+.listen-ring { border-radius: 9999px; animation: listen 1.2s ease-in-out infinite; }
+@keyframes listen { 0%,100% { box-shadow: 0 0 0 0 rgba(62,242,224,.55) } 50% { box-shadow: 0 0 0 14px rgba(62,242,224,0) } }
+@media (prefers-reduced-motion: reduce) { .listen-ring { animation: none; box-shadow: 0 0 0 3px #3ef2e0 } }
+/* v4 delete affordances: trash subtle on desktop until row hover/focus, always visible on touch */
+@media (hover: hover) and (pointer: fine) { .del-btn { opacity: .45 } .group:hover .del-btn, .group:focus-within .del-btn, .del-btn:focus-visible { opacity: 1 } }
+[data-swipe] { touch-action: pan-y; transition: transform .2s ease, background-color .2s; }
+[data-swipe].swiping { transition: none; }
+[data-swipe].swipe-del { background: linear-gradient(270deg, rgba(255,59,92,.35), transparent 70%); }
+[data-swipe].swipe-done { background: linear-gradient(90deg, rgba(125,255,200,.3), transparent 70%); }

@@ -1,10 +1,15 @@
 "use client";
 // Tiny Web Audio synth for UI sounds. No audio files.
 let ctx: AudioContext | null = null;
-let muted = typeof window !== "undefined" && localStorage.getItem("crystal-muted") === "1";
+let muted = (() => { try { return typeof window !== "undefined" && localStorage.getItem("crystal-muted") === "1"; } catch { return false; } })();
 export const isMuted = () => muted;
-export function setMuted(m: boolean) { muted = m; localStorage.setItem("crystal-muted", m ? "1" : "0"); }
-function ac() { if (!ctx) ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)(); return ctx; }
+export function setMuted(m: boolean) { muted = m; try { localStorage.setItem("crystal-muted", m ? "1" : "0"); } catch {} if (m) { ambient(null); stopSpeech(); } }
+function ac() {
+  if (!ctx) { ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    // suspend the audio graph while the tab is hidden (battery + no runaway oscillators)
+    document.addEventListener("visibilitychange", () => { if (!ctx) return; if (document.hidden) ctx.suspend().catch(() => {}); else if (amb) ctx.resume().catch(() => {}); }); }
+  return ctx;
+}
 function tone(freq: number, dur: number, type: OscillatorType = "sine", gain = 0.06, slideTo?: number, delay = 0) {
   if (muted) return; const a = ac(); const t = a.currentTime + delay;
   const o = a.createOscillator(); const g = a.createGain(); o.type = type; o.frequency.setValueAtTime(freq, t);
@@ -48,6 +53,6 @@ export function ambient(level: number | null) {
 export function haptic(p: number | number[] = 12) { try { if (!matchMedia("(prefers-reduced-motion: reduce)").matches) navigator.vibrate?.(p); } catch {} }
 export function speak(text: string, onEnd?: () => void) {
   try { const s = window.speechSynthesis; if (!s || muted) { onEnd?.(); return; } s.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.04; u.pitch = 1.35;
-    const v = s.getVoices().find(v => /samantha|zira|female|google us english|aria|jenny/i.test(v.name)); if (v) u.voice = v; u.onend = () => onEnd?.(); s.speak(u); } catch { onEnd?.(); }
+    const v = s.getVoices().find(v => /samantha|zira|female|google us english|aria|jenny/i.test(v.name)); if (v) u.voice = v; u.onend = () => onEnd?.(); u.onerror = () => onEnd?.(); s.speak(u); } catch { onEnd?.(); }
 }
 export const stopSpeech = () => { try { window.speechSynthesis?.cancel(); } catch {} };

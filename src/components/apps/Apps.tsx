@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import type { Task } from "@/lib/tasks";
-import { addTask, deleteTask, updateTask } from "@/lib/tasks";
+import { addTask, deleteTask, updateTask, restoreTask } from "@/lib/tasks";
+import { toast, undoableDelete, TrashBtn, Empty } from "@/components/ui/kit";
 import { sfx } from "@/lib/synth";
 
 export interface TaskProps { tasks: Task[]; reload: () => Promise<void>; log: (s: string, tone?: "info" | "ok" | "warn") => void }
@@ -9,43 +10,67 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const fmt = (d: string | null) => d ? new Date(d + "T12:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "";
 const PRI = ["", "text-alert", "text-cyan", "text-slate"];
 
-export function Priorities({ tasks }: { tasks: Task[] }) {
-  const top = tasks.filter(t => !t.done).sort((a, b) => a.priority - b.priority || (a.due_date || "9").localeCompare(b.due_date || "9")).slice(0, 3);
-  if (!top.length) return <p className="text-sm text-ash">No open missions. Add one in the command bar ↑</p>;
+/** Optimistic task delete with undo; deletes hit Supabase (RLS) and roll back on error. */
+export function delTasks(gone: Task[], label: string, reload: () => Promise<void>, hide: (ids: string[] | null) => void) {
+  const ids = gone.map(t => t.id);
+  return undoableDelete(gone, { label, hide: () => hide(ids), rollback: () => hide(null), commit: t => deleteTask(t.id), restore: t => restoreTask(t), after: () => { reload().finally(() => hide(null)); } });
+}
+function useHidden() { const [h, setH] = useState<Set<string>>(new Set()); return [h, (ids: string[] | null) => setH(ids ? new Set(ids) : new Set())] as const; }
+
+export function Priorities({ tasks, reload }: { tasks: Task[]; reload?: () => Promise<void> }) {
+  const [hidden, hide] = useHidden();
+  const top = tasks.filter(t => !t.done && !hidden.has(t.id)).sort((a, b) => a.priority - b.priority || (a.due_date || "9").localeCompare(b.due_date || "9")).slice(0, 3);
+  if (!top.length) return <Empty title="No open missions" hint='Try "remind me Friday to pay the water bill" in the command bar ↑' mood="happy" />;
   return (<ol className="space-y-2">{top.map((t, i) => (
-    <li key={t.id} className="flex items-center gap-3 rounded-lg border border-cyan/15 bg-navy-2/50 px-3 py-2">
+    <li key={t.id} data-swipe className="group flex items-center gap-3 rounded-lg border border-cyan/15 bg-navy-2/50 px-3 py-2">
       <span className="neon font-mono text-lg">{i + 1}</span>
-      <span className="flex-1 text-snow">{t.title}</span>
+      <span className="flex-1 text-[#E8F4FF]">{t.title}</span>
       {t.due_date && <span className={`text-xs ${t.due_date < today() ? "text-alert" : "text-ash"}`}>{fmt(t.due_date)}</span>}
+      {reload && <><button data-done onClick={() => { sfx("success"); updateTask(t.id, { done: true }).then(reload).catch(e => toast((e as Error).message, "warn")); }} aria-label={`Complete ${t.title}`} className="tap grid h-7 w-7 place-items-center rounded-md text-mint hover:bg-mint/15">✓</button>
+        <TrashBtn onClick={() => delTasks([t], `Deleted "${t.title}"`, reload, hide)} label={t.title} /></>}
     </li>))}</ol>);
 }
 
 export function TaskList({ tasks, reload, log }: TaskProps) {
   const [title, setTitle] = useState(""); const [due, setDue] = useState(""); const [pri, setPri] = useState(2);
   const [edit, setEdit] = useState<string | null>(null); const [editText, setEditText] = useState("");
-  const wrap = async (fn: () => Promise<void>, ok: string) => { try { await fn(); await reload(); log(ok, "ok"); } catch (e) { log(`Error: ${(e as Error).message}`, "warn"); sfx("error"); } };
+  const [hidden, hide] = useHidden(); const [sel, setSel] = useState<Set<string> | null>(null); const [doneOv, setDoneOv] = useState<Record<string, boolean>>({});
+  const view = tasks.filter(t => !hidden.has(t.id)).map(t => t.id in doneOv ? { ...t, done: doneOv[t.id] } : t);
+  useEffect(() => { setDoneOv({}); }, [tasks]);
+  const wrap = async (fn: () => Promise<void>, ok: string) => { try { await fn(); await reload(); log(ok, "ok"); } catch (e) { log(`Error: ${(e as Error).message}`, "warn"); toast((e as Error).message, "warn"); sfx("error"); } };
+  const toggle = (t: Task) => { sfx(t.done ? "click" : "success"); setDoneOv(o => ({ ...o, [t.id]: !t.done })); updateTask(t.id, { done: !t.done }).then(() => { log(t.done ? `Reopened: ${t.title}` : `Mission complete: ${t.title}`, "ok"); return reload(); }).catch(e => { setDoneOv(o => { const n = { ...o }; delete n[t.id]; return n; }); toast(`Couldn't update: ${(e as Error).message}`, "warn"); }); };
+  const del = (gone: Task[], label: string) => { if (!gone.length) return; setSel(null); delTasks(gone, label, reload, hide); log(label, "info"); };
+  const completed = view.filter(t => t.done);
   return (<div className="space-y-3">
     <form className="flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!title.trim()) return; const t = title.trim(); wrap(() => addTask({ title: t, due_date: due || null, priority: pri }), `Task added: ${t}`); setTitle(""); setDue(""); sfx("success"); }}>
-      <input className="input min-w-[10rem] flex-1 text-sm" placeholder="New task" value={title} onChange={e => setTitle(e.target.value)} aria-label="Task title" />
+      <input className="input min-w-[10rem] flex-1 text-sm" placeholder="Quick add a task…" value={title} onChange={e => setTitle(e.target.value)} aria-label="Task title" />
       <input type="date" className="input w-auto text-sm" value={due} onChange={e => setDue(e.target.value)} aria-label="Due date" />
       <select className="input w-auto text-sm" value={pri} onChange={e => setPri(+e.target.value)} aria-label="Priority"><option value={1}>High</option><option value={2}>Normal</option><option value={3}>Low</option></select>
       <button className="btn btn-primary text-sm">Add</button>
     </form>
-    <ul className="space-y-1">{tasks.map(t => (
-      <li key={t.id} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
-        <input type="checkbox" checked={t.done} onChange={() => { sfx(t.done ? "click" : "success"); wrap(() => updateTask(t.id, { done: !t.done }), t.done ? `Reopened: ${t.title}` : `Mission complete: ${t.title}`); }} aria-label={`Mark ${t.title} done`} className="h-4 w-4 accent-[#3ef2e0]" />
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <button className="btn btn-ghost !py-1 text-xs" aria-pressed={!!sel} onClick={() => setSel(s => s ? null : new Set())}>{sel ? "Cancel select" : "☐ Select"}</button>
+      {sel && <><button className="btn btn-ghost !py-1 text-xs" onClick={() => setSel(new Set(view.map(t => t.id)))}>Select all</button>
+        <button className="btn !py-1 text-xs border border-alert/60 text-alert disabled:opacity-40" disabled={!sel.size} onClick={() => del(view.filter(t => sel.has(t.id)), `Deleted ${sel.size} task${sel.size > 1 ? "s" : ""}`)}>🗑 Delete selected ({sel.size})</button></>}
+      {completed.length > 0 && <button className="btn btn-ghost !py-1 text-xs ml-auto" onClick={() => del(completed, `Cleared ${completed.length} completed`)}>🧹 Clear completed ({completed.length})</button>}
+    </div>
+    <ul className="space-y-1" aria-label="To-do list">{view.map(t => (
+      <li key={t.id} data-swipe className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-cyan/5">
+        {sel ? <input type="checkbox" checked={sel.has(t.id)} onChange={() => setSel(s => { const n = new Set(s); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n; })} aria-label={`Select ${t.title}`} className="h-4 w-4 accent-[#ff3b5c]" />
+          : <input type="checkbox" data-done checked={t.done} onChange={() => toggle(t)} aria-label={`Mark ${t.title} done`} className="h-4 w-4 accent-[#3ef2e0]" />}
         <span className={`font-mono text-xs ${PRI[t.priority]}`}>{"!".repeat(4 - t.priority)}</span>
         {edit === t.id ? (
           <form className="flex-1" onSubmit={e => { e.preventDefault(); wrap(() => updateTask(t.id, { title: editText.trim() || t.title }), "Task updated"); setEdit(null); }}>
             <input autoFocus className="input py-1 text-sm" value={editText} onChange={e => setEditText(e.target.value)} onBlur={() => setEdit(null)} aria-label="Edit task" />
           </form>
-        ) : (<button className={`flex-1 text-left text-sm ${t.done ? "text-slate line-through" : "text-snow"}`} onDoubleClick={() => { setEdit(t.id); setEditText(t.title); }} title="Double-click to edit">{t.title}</button>)}
+        ) : (<button className={`flex-1 text-left ${t.done ? "text-[var(--text-muted)] line-through" : "text-[#E8F4FF]"}`} onDoubleClick={() => { setEdit(t.id); setEditText(t.title); }} title="Double-click to edit">{t.title}</button>)}
         {t.due_date && <span className={`text-xs ${!t.done && t.due_date < today() ? "text-alert" : "text-ash"}`}>{fmt(t.due_date)}</span>}
-        <button onClick={() => { setEdit(t.id); setEditText(t.title); }} aria-label={`Edit ${t.title}`} className="text-xs text-slate opacity-60 hover:text-cyan group-hover:opacity-100">✎</button>
-        <button onClick={() => { sfx("close"); wrap(() => deleteTask(t.id), `Deleted: ${t.title}`); }} aria-label={`Delete ${t.title}`} className="text-xs text-slate opacity-60 hover:text-alert group-hover:opacity-100">✕</button>
+        <button onClick={() => { setEdit(t.id); setEditText(t.title); }} aria-label={`Edit ${t.title}`} className="del-btn tap grid h-7 w-7 place-items-center rounded-md text-[var(--text-muted)] hover:text-cyan">✎</button>
+        <TrashBtn onClick={() => del([t], `Deleted "${t.title}"`)} label={t.title} />
       </li>))}
-      {!tasks.length && <li className="text-sm text-ash">No tasks yet.</li>}
+      {!view.length && <li><Empty title="No tasks yet" hint="Add one above, or say “remind me tomorrow to…”" /></li>}
     </ul>
+    <p className="text-[11px] text-[var(--text-muted)] sm:hidden">Tip: swipe left to delete, right to complete.</p>
   </div>);
 }
 
@@ -54,7 +79,7 @@ interface Wx { current: { temperature_2m: number; weather_code: number; wind_spe
 export function Weather() {
   const [wx, setWx] = useState<Wx | null>(null); const [place, setPlace] = useState("Marietta, GA"); const [err, setErr] = useState("");
   useEffect(() => {
-    const load = (lat: number, lon: number) => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`).then(r => r.json()).then(setWx).catch(() => setErr("Weather uplink failed."));
+    const load = (lat: number, lon: number) => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=5`).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); }).then(j => { if (j?.current) setWx(j); else setErr("Weather data unavailable."); }).catch(() => setErr("Weather uplink failed. Retry when online."));
     load(33.9526, -84.5499);
     navigator.geolocation?.getCurrentPosition(p => { setPlace("Your location"); load(p.coords.latitude, p.coords.longitude); }, () => {}, { timeout: 5000, maximumAge: 3600000 });
   }, []);

@@ -7,10 +7,11 @@ export type NewTask = Pick<Task, "title" | "due_date" | "priority">;
 import { isDemo, StoreError } from "./store";
 const LS = "crystal-demo-tasks";
 export const usingLocal = () => isDemo();
-const lsGet = (): Task[] => JSON.parse(localStorage.getItem(LS) || "null") ?? seed();
-const lsSet = (t: Task[]) => localStorage.setItem(LS, JSON.stringify(t));
+import { lsGet as safeGet, lsSet as safeSet } from "./safe";
+const lsGet = (): Task[] => { const v = safeGet<Task[] | null>(LS, null); return Array.isArray(v) ? v.filter(t => t && typeof t.title === "string") : seed(); };
+const lsSet = (t: Task[]) => safeSet(LS, t);
 const missing = (e: { code?: string; message?: string } | null) => !!e && (e.code === "PGRST205" || e.code === "42P01" || /does not exist|schema cache/i.test(e.message || ""));
-const fail = (e: { code?: string; message?: string }) => missing(e) ? new StoreError("Tasks table isn't set up. Run migration 001 in Supabase.", "migration") : new StoreError(e.message || "Database error", "db");
+const fail = (e: { code?: string; message?: string }) => /jwt|token|401|PGRST30/i.test(`${e.code} ${e.message}`) ? new StoreError("Your session expired. Please sign in again.", "signin") : missing(e) ? new StoreError("Tasks table isn't set up. Run migration 001 in Supabase.", "migration") : new StoreError(e.message || "Database error", "db");
 function seed(): Task[] { const d = (o: number) => { const x = new Date(); x.setDate(x.getDate() + o); return x.toISOString().slice(0, 10); }; const now = new Date().toISOString();
   const t: Task[] = [{ title: "Sign permission slip", due_date: d(1), priority: 1 }, { title: "Pay water bill", due_date: d(-1), priority: 1 }, { title: "Grocery run", due_date: d(2), priority: 2 }, { title: "Review science notes with Eli", due_date: d(0), priority: 2 }, { title: "Book dentist", due_date: null, priority: 3 }].map(x => ({ ...x, id: crypto.randomUUID(), done: false, created_at: now }));
   lsSet(t); return t; }
@@ -18,7 +19,7 @@ function seed(): Task[] { const d = (o: number) => { const x = new Date(); x.set
 export async function listTasks(): Promise<Task[]> {
   if (isDemo()) return lsGet().sort((a, b) => Number(a.done) - Number(b.done) || a.priority - b.priority);
   const { data, error } = await sb().from("tasks").select("*").order("done").order("priority").order("due_date", { nullsFirst: false });
-  if (error) throw fail(error); return data as Task[];
+  if (error) throw fail(error); return ((data ?? []) as Task[]).filter(t => t && typeof t.title === "string").map(t => ({ ...t, priority: [1, 2, 3].includes(t.priority) ? t.priority : 2 }));
 }
 export async function addTask(t: NewTask): Promise<void> {
   if (isDemo()) return lsSet([...lsGet(), { ...t, id: crypto.randomUUID(), done: false, created_at: new Date().toISOString() }]);
@@ -27,6 +28,10 @@ export async function addTask(t: NewTask): Promise<void> {
 export async function updateTask(id: string, patch: Partial<Task>): Promise<void> {
   if (isDemo()) return lsSet(lsGet().map(t => (t.id === id ? { ...t, ...patch } : t)));
   const { error } = await sb().from("tasks").update(patch).eq("id", id); if (error) throw fail(error);
+}
+export async function restoreTask(t: Task): Promise<void> {
+  if (isDemo()) return lsSet([...lsGet().filter(x => x.id !== t.id), t]);
+  const { error } = await sb().from("tasks").upsert(t); if (error) throw fail(error);
 }
 export async function deleteTask(id: string): Promise<void> {
   if (isDemo()) return lsSet(lsGet().filter(t => t.id !== id));

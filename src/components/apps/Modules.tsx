@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { list, insert, update, remove, onChange, isLocal, uploadHandout, handoutUrl, type Row, type Table } from "@/lib/store";
+import { list, insert, update, remove, restore, onChange, isLocal, uploadHandout, handoutUrl, type Row, type Table } from "@/lib/store";
 import { sfx } from "@/lib/synth";
-import { Skeleton, Empty, ErrorNote, Gauge, Sparkline, toast } from "@/components/ui/kit";
+import { Skeleton, Empty, ErrorNote, Gauge, Sparkline, toast, undoableDelete, TrashBtn } from "@/components/ui/kit";
 import { haptic } from "@/lib/synth";
+import { lsRaw, lsSet, fetchJSON } from "@/lib/safe";
 import { DMS, schoolDay, DMS_EVENTS, PORTALS, type Grade } from "@/lib/school";
 
 type Log = (s: string, tone?: "info" | "ok" | "warn") => void;
@@ -14,13 +15,16 @@ const money = (n: unknown) => n == null || n === "" ? "" : `$${Number(n).toLocal
 export function useRows(t: Table, log: Log) {
   const [rows, setRows] = useState<Row[]>([]); const [loaded, setLoaded] = useState(false); const [err, setErr] = useState<{ message: string; kind?: string } | null>(null);
   const reload = useCallback(() => list(t).then(r => { setRows(r); setLoaded(true); setErr(null); }).catch(e => { setLoaded(true); setErr(e as { message: string; kind?: string }); log(`${t}: ${(e as Error).message}`, "warn"); }), [t, log]);
-  useEffect(() => { reload(); return onChange(reload); }, [reload]);
+  useEffect(() => { reload(); const off = onChange(reload); addEventListener("crystal-refresh", reload); return () => { off(); removeEventListener("crystal-refresh", reload); }; }, [reload]);
   const act = async (fn: () => Promise<void>, ok?: string) => { try { await fn(); if (ok) { log(ok, "ok"); sfx("success"); haptic(12); toast(ok); } } catch (e) { setErr(e as { message: string; kind?: string }); toast((e as Error).message, "warn"); log(`Error: ${(e as Error).message}`, "warn"); sfx("error"); haptic([30, 30, 30]); } };
   return {
     rows, loaded, err, local: isLocal(t),
     add: (r: Record<string, unknown>, ok: string) => act(() => insert(t, r), ok),
-    set: (id: string, p: Record<string, unknown>) => act(() => update(t, id, p)),
-    del: (id: string, ok = "Deleted") => act(() => remove(t, id), ok),
+    set: (id: string, p: Record<string, unknown>) => { const prev = rows; setRows(r => r.map(x => x.id === id ? { ...x, ...p } : x)); return act(() => update(t, id, p).catch(e => { setRows(prev); throw e; })); },
+    del: (id: string) => { const prev = rows; const gone = rows.filter(r => r.id === id); const nm = String(gone[0]?.name ?? gone[0]?.title ?? gone[0]?.symbol ?? "item");
+      return undoableDelete(gone, { label: `Deleted ${nm}`, hide: () => setRows(r => r.filter(x => x.id !== id)), rollback: () => setRows(prev), commit: r => remove(t, r.id), restore: r => restore(t, r), after: () => { reload(); } }); },
+    delMany: (ids: string[], label: string) => { const prev = rows; const gone = rows.filter(r => ids.includes(r.id)); if (!gone.length) return;
+      return undoableDelete(gone, { label, hide: () => setRows(r => r.filter(x => !ids.includes(x.id))), rollback: () => setRows(prev), commit: r => remove(t, r.id), restore: r => restore(t, r), after: () => { reload(); } }); },
   };
 }
 
@@ -30,7 +34,7 @@ const Tabs = ({ tabs, cur, set }: { tabs: string[]; cur: string; set: (s: string
 const LocalNote = ({ on }: { on: boolean }) => on ? <p className="mt-2 text-[10px] text-amber-200/80">Demo data on this device only. Sign in to save for real.</p> : null;
 type RowsHook = { loaded: boolean; err: { message: string; kind?: string } | null };
 const State = ({ r, empty, n, hint }: { r: RowsHook; empty: string; n: number; hint?: string }) => !r.loaded ? <Skeleton rows={3} /> : r.err ? <ErrorNote err={r.err} /> : n === 0 ? <Empty title={empty} hint={hint} /> : null;
-const Del = ({ onClick, label }: { onClick: () => void; label: string }) => <button onClick={onClick} aria-label={`Delete ${label}`} className="text-xs text-slate hover:text-alert">✕</button>;
+const Del = ({ onClick, label }: { onClick: () => void; label: string }) => <TrashBtn onClick={onClick} label={label} />;
 
 /* ───────── Health ───────── */
 export function Health({ log }: { log: Log }) {
@@ -53,7 +57,7 @@ export function Health({ log }: { log: Log }) {
         <button className="btn btn-primary text-sm">Log</button>
       </form>
       {h.loaded && !h.err && !series.length && <Empty title={`No ${tab.toLowerCase()} logged yet`} hint={tab === "Steps" ? "Try “log 8000 steps”" : "Try “glucose 110”"} />}
-      <ul className="space-y-1 text-sm">{series.slice(-8).reverse().map(r => <li key={r.id} className="flex justify-between rounded px-2 py-1 hover:bg-cyan/5"><span className="text-ash">{fmtD(r.logged_on)}</span><span className="text-snow">{Number(r.value).toLocaleString()} {String(r.unit || "")}</span><Del onClick={() => h.del(r.id)} label="entry" /></li>)}</ul>
+      <ul className="space-y-1 text-sm">{series.slice(-8).reverse().map(r => <li key={r.id} data-swipe className="group flex justify-between rounded px-2 py-1 hover:bg-cyan/5"><span className="text-ash">{fmtD(r.logged_on)}</span><span className="text-snow">{Number(r.value).toLocaleString()} {String(r.unit || "")}</span><Del onClick={() => h.del(r.id)} label="entry" /></li>)}</ul>
       <p className="mt-2 text-[10px] text-slate">Manual entry. Apple Health / Google Fit / Dexcom auto-import needs account linking.</p>
       <LocalNote on={h.local} />
     </>) : (<>
@@ -64,7 +68,7 @@ export function Health({ log }: { log: Log }) {
         <button className="btn btn-primary col-span-3 text-sm">Add medication</button>
       </form>
       <ul className="space-y-1">{m.rows.map(r => { const taken = r.last_taken && String(r.last_taken).slice(0, 10) === new Date().toISOString().slice(0, 10); return (
-        <li key={r.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
+        <li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
           <span className="flex-1 text-snow">{String(r.name)} <span className="text-xs text-ash">{String(r.dose || "")} {r.schedule ? `· ${r.schedule}` : ""}</span></span>
           <button onClick={() => m.set(r.id, { last_taken: new Date().toISOString() })} className={`rounded px-2 py-0.5 text-xs ${taken ? "bg-mint/20 text-mint" : "border border-cyan/40 text-cyan"}`}>{taken ? "✓ taken" : "Take"}</button>
           <Del onClick={() => m.del(r.id)} label={String(r.name)} /></li>); })}
@@ -93,8 +97,8 @@ export function Comms({ log }: { log: Log }) {
       <input type="date" className="input w-auto text-sm" value={f.due_date} onChange={e => setF({ ...f, due_date: e.target.value })} aria-label="Due" />
       <button className="btn btn-primary text-sm">Add</button>
     </form>
-    <ul className="space-y-1">{rows.map(r => (<li key={r.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
-      <input type="checkbox" checked={!!r.done} onChange={() => c.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Done ${r.title}`} />
+    <ul className="space-y-1">{rows.map(r => (<li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
+      <input type="checkbox" data-done checked={!!r.done} onChange={() => c.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Done ${r.title}`} />
       <span className={`flex-1 ${r.done ? "text-slate line-through" : "text-snow"}`}>{r.url && /^https?:\/\//.test(String(r.url)) ? <a href={String(r.url)} target="_blank" rel="noopener noreferrer" className="hover:text-cyan">{String(r.title)} ↗</a> : String(r.title)}</span>
       {r.due_date ? <span className={`text-xs ${!r.done && String(r.due_date) < today() ? "text-alert" : "text-ash"}`}>{fmtD(r.due_date)}</span> : null}
       <Del onClick={() => c.del(r.id)} label={String(r.title)} /></li>))}
@@ -111,10 +115,10 @@ export function Finance({ log }: { log: Log }) {
   const b = useRows("bills", log); const s = useRows("stocks", log); const cr = useRows("credit_scores", log);
   const [bf, setBf] = useState({ name: "", amount: "", due_date: "" }); const [sf, setSf] = useState({ symbol: "", shares: "" }); const [score, setScore] = useState("");
   const [q, setQ] = useState<Record<string, Quote>>({});
-  const [budget, setBudget] = useState(() => typeof window !== "undefined" ? Number(localStorage.getItem("crystal-budget") || 1500) : 1500);
+  const [budget, setBudget] = useState(() => Math.max(1, Number(lsRaw("crystal-budget", "1500")) || 1500));
   const ym = today().slice(0, 7); const monthSpend = b.rows.filter(r => String(r.due_date || "").startsWith(ym)).reduce((t, r) => t + Number(r.amount || 0), 0);
   const syms = useMemo(() => [...new Set(s.rows.map(r => String(r.symbol).toUpperCase()))].join(","), [s.rows]);
-  useEffect(() => { if (tab !== "Stocks" || !syms) return; fetch(`/api/quote?symbols=${encodeURIComponent(syms)}`).then(r => r.json()).then((j: { quotes: Quote[] }) => setQ(Object.fromEntries(j.quotes.map(x => [x.symbol, x])))).catch(() => log("Quote uplink failed", "warn")); }, [tab, syms, log]);
+  useEffect(() => { if (tab !== "Stocks" || !syms) return; const ac = new AbortController(); fetchJSON<{ quotes?: Quote[] }>(`/api/quote?symbols=${encodeURIComponent(syms)}`, { signal: ac.signal, timeoutMs: 10000 }).then(j => setQ(Object.fromEntries((j?.quotes ?? []).filter(x => x?.symbol).map(x => [x.symbol, x])))).catch(e => { if (!ac.signal.aborted) log(`Quote uplink failed: ${(e as Error).message}`, "warn"); }); return () => ac.abort(); }, [tab, syms, log]);
   const unpaid = b.rows.filter(r => !r.paid).sort((x, y) => String(x.due_date || "9").localeCompare(String(y.due_date || "9")));
   const total = unpaid.reduce((t, r) => t + Number(r.amount || 0), 0);
   const scores = cr.rows.slice().sort((x, y) => String(x.checked_on).localeCompare(String(y.checked_on)));
@@ -125,14 +129,14 @@ export function Finance({ log }: { log: Log }) {
       <div className="mb-2 flex items-center gap-2">
         <Gauge value={Math.max(0, budget - monthSpend)} max={budget} label="Budget left" unit="$" bands={[[budget * .25, "#ff3b5c"], [budget * .5, "#ffd166"], [1e12, "#7dffc8"]]} />
         <div className="flex-1 text-xs text-ash"><p>Unpaid: <span className="text-snow">{money(total)}</span> · {unpaid.filter(r => r.due_date && String(r.due_date) < today()).length} overdue</p>
-          <label className="mt-1 flex items-center gap-1">Monthly budget $<input type="number" className="input w-24 !py-0.5 text-xs" value={budget} onChange={e => { const v = Math.max(1, Number(e.target.value) || 1); setBudget(v); localStorage.setItem("crystal-budget", String(v)); window.dispatchEvent(new Event("crystal-prefs")); }} aria-label="Monthly budget" /></label></div></div>
+          <label className="mt-1 flex items-center gap-1">Monthly budget $<input type="number" className="input w-24 !py-0.5 text-xs" value={budget} onChange={e => { const v = Math.max(1, Number(e.target.value) || 1); setBudget(v); lsSet("crystal-budget", String(v)); window.dispatchEvent(new Event("crystal-prefs")); }} aria-label="Monthly budget" /></label></div></div>
       <form className="mb-2 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!bf.name.trim()) return; b.add({ name: bf.name.trim(), amount: bf.amount ? Number(bf.amount) : null, due_date: bf.due_date || null }, `Bill added: ${bf.name}`); setBf({ name: "", amount: "", due_date: "" }); }}>
         <input className="input min-w-[8rem] flex-1 text-sm" placeholder="Bill" value={bf.name} onChange={e => setBf({ ...bf, name: e.target.value })} aria-label="Bill name" />
         <input className="input w-24 text-sm" type="number" step="0.01" placeholder="$" value={bf.amount} onChange={e => setBf({ ...bf, amount: e.target.value })} aria-label="Amount" />
         <input type="date" className="input w-auto text-sm" value={bf.due_date} onChange={e => setBf({ ...bf, due_date: e.target.value })} aria-label="Due date" />
         <button className="btn btn-primary text-sm">Add</button>
       </form>
-      <ul className="space-y-1">{b.rows.slice().sort((x, y) => Number(x.paid) - Number(y.paid) || String(x.due_date || "9").localeCompare(String(y.due_date || "9"))).map(r => (<li key={r.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
+      <ul className="space-y-1">{b.rows.slice().sort((x, y) => Number(x.paid) - Number(y.paid) || String(x.due_date || "9").localeCompare(String(y.due_date || "9"))).map(r => (<li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
         <span className={`flex-1 ${r.paid ? "text-slate line-through" : "text-snow"}`}>{String(r.name)}</span>
         <span className="text-ash">{money(r.amount)}</span>
         {r.due_date ? <span className={`text-xs ${!r.paid && String(r.due_date) < today() ? "text-alert" : "text-ash"}`}>{fmtD(r.due_date)}</span> : null}
@@ -147,7 +151,7 @@ export function Finance({ log }: { log: Log }) {
         <input className="input text-sm" type="number" min={300} max={850} placeholder="Score (300–850)" value={score} onChange={e => setScore(e.target.value)} aria-label="Credit score" />
         <button className="btn btn-primary text-sm">Log</button>
       </form>
-      <ul className="space-y-1 text-sm">{scores.slice().reverse().map(r => <li key={r.id} className="flex justify-between px-2"><span className="text-ash">{fmtD(r.checked_on)}</span><span className="text-snow">{String(r.score)}</span><Del onClick={() => cr.del(r.id)} label="score" /></li>)}</ul>
+      <ul className="space-y-1 text-sm">{scores.slice().reverse().map(r => <li key={r.id} data-swipe className="group flex justify-between px-2"><span className="text-ash">{fmtD(r.checked_on)}</span><span className="text-snow">{String(r.score)}</span><Del onClick={() => cr.del(r.id)} label="score" /></li>)}</ul>
       <p className="mt-2 text-[10px] text-slate">Automatic bureau monitoring needs a credit-data provider account (e.g. Plaid/Array). Free reports: <a className="underline" href="https://www.annualcreditreport.com" target="_blank" rel="noopener noreferrer">annualcreditreport.com</a></p>
       <LocalNote on={cr.local} />
     </>)}
@@ -158,7 +162,7 @@ export function Finance({ log }: { log: Log }) {
         <input className="input w-24 text-sm" type="number" step="any" placeholder="Shares" value={sf.shares} onChange={e => setSf({ ...sf, shares: e.target.value })} aria-label="Shares" />
         <button className="btn btn-primary text-sm">Track</button>
       </form>
-      <ul className="space-y-1">{s.rows.map(r => { const k = String(r.symbol).toUpperCase(); const x = q[k]; return (<li key={r.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
+      <ul className="space-y-1">{s.rows.map(r => { const k = String(r.symbol).toUpperCase(); const x = q[k]; return (<li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
         <span className="w-16 font-mono text-cyan">{k}</span><span className="flex-1 text-xs text-ash">{Number(r.shares || 0)} sh</span>
         <span className="text-snow">{x?.price != null ? money(x.price) : "…"}</span>
         {x?.changePct != null && <span className={`w-14 text-right text-xs ${x.changePct >= 0 ? "text-mint" : "text-alert"}`}>{x.changePct >= 0 ? "▲" : "▼"}{Math.abs(x.changePct).toFixed(2)}%</span>}
@@ -184,12 +188,13 @@ export function Shopping({ log }: { log: Log }) {
       <input className="input w-20 text-sm" type="number" step="0.01" placeholder="$" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} aria-label="Price" />
       <button className="btn btn-primary text-sm">Add</button>
     </form>
-    <ul className="space-y-1">{rows.map(r => (<li key={r.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
-      <input type="checkbox" checked={!!r.done} onChange={() => s.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Got ${r.name}`} />
+    <ul className="space-y-1">{rows.map(r => (<li key={r.id} data-swipe className="group flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-cyan/5">
+      <input type="checkbox" data-done checked={!!r.done} onChange={() => s.set(r.id, { done: !r.done })} className="h-4 w-4 accent-[#3ef2e0]" aria-label={`Got ${r.name}`} />
       <span className={`flex-1 ${r.done ? "text-slate line-through" : "text-snow"}`}>{r.url && /^https?:\/\//.test(String(r.url)) ? <a href={String(r.url)} target="_blank" rel="noopener noreferrer" className="hover:text-cyan">{String(r.name)} ↗</a> : String(r.name)}{Number(r.qty) > 1 ? <span className="text-xs text-ash"> ×{String(r.qty)}</span> : null}</span>
       <span className="text-xs text-ash">{money(r.price)}</span>
       {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to shopping list">→🛒</button>}
       <Del onClick={() => s.del(r.id)} label={String(r.name)} /></li>))}
+      {rows.some(r => r.done) && <li className="pt-1"><button className="btn btn-ghost !py-1 text-xs" onClick={() => s.delMany(rows.filter(r => r.done).map(r => r.id), `Cleared ${rows.filter(r => r.done).length} completed`)}>🧹 Clear completed</button></li>}
 </ul><State r={s} n={rows.length} empty={li === "wish" ? "Wish list is empty" : "Shopping list is empty"} hint={li === "wish" ? "Try “add headphones to wish list”" : "Try “add milk to shopping list”"} />
     {est > 0 && <p className="mt-2 text-xs text-ash">Estimated: <span className="text-snow">{money(est)}</span></p>}
     <LocalNote on={s.local} />
@@ -199,7 +204,7 @@ export function Shopping({ log }: { log: Log }) {
 /* ───────── School hub (portals, bells, calendar, check-ins) ───────── */
 export function SchoolHub({ log }: { log: Log }) {
   const [tab, setTab] = useState("Bells");
-  const [grade, setGrade] = useState<Grade>(() => (typeof window !== "undefined" && (localStorage.getItem("crystal-grade") as Grade)) || "6");
+  const [grade, setGrade] = useState<Grade>(() => (["6", "7", "8"].includes(lsRaw("crystal-grade")) ? lsRaw("crystal-grade") as Grade : "6"));
   const [now, setNow] = useState(new Date()); useEffect(() => { const i = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(i); }, []);
   const day = schoolDay(now); const sched = day.kind === "none" ? null : DMS.schedules[day.kind][grade];
   const mins = now.getHours() * 60 + now.getMinutes();
@@ -210,14 +215,14 @@ export function SchoolHub({ log }: { log: Log }) {
     <Tabs tabs={["Bells", "Calendar", "Check-ins", "Portals"]} cur={tab} set={setTab} />
     {tab === "Bells" && (<>
       <div className="mb-2 flex items-center gap-2 text-xs"><span className="text-ash">{DMS.name} ·</span>
-        <select className="input w-auto !py-0.5 text-xs" value={grade} onChange={e => { setGrade(e.target.value as Grade); localStorage.setItem("crystal-grade", e.target.value); }} aria-label="Grade">{(["6", "7", "8"] as Grade[]).map(g => <option key={g} value={g}>Grade {g}</option>)}</select>
+        <select className="input w-auto !py-0.5 text-xs" value={grade} onChange={e => { setGrade(e.target.value as Grade); lsSet("crystal-grade", e.target.value); }} aria-label="Grade">{(["6", "7", "8"] as Grade[]).map(g => <option key={g} value={g}>Grade {g}</option>)}</select>
         <span className="ml-auto text-cyan">{day.label}</span></div>
       {sched ? <table className="w-full text-sm"><tbody>{sched.map(([p, t]) => { const [a, b] = t.split("-"); const live = mins >= toM(a) && mins < toM(b); return (
         <tr key={p + t} className={live ? "bg-cyan/15 text-cyan" : "text-snow"}><td className="px-2 py-0.5">{live ? "▶ " : ""}{p}</td><td className="px-2 py-0.5 text-right font-mono text-xs text-ash">{t}</td></tr>); })}</tbody></table>
         : <p className="text-sm text-ash">No school today.</p>}
       <p className="mt-2 text-[10px] text-slate">Mon–Wed master · Thu–Fri flex block · early-release days auto-detected. Source: <a className="underline" href="https://cobbk12.org/dickerson/class-schedules" target="_blank" rel="noopener noreferrer">cobbk12.org/dickerson</a></p>
     </>)}
-    {tab === "Calendar" && (<ul className="space-y-1 text-sm">{upcoming.map(e => <li key={e.start + e.title} className="flex gap-2 rounded px-2 py-1 hover:bg-cyan/5"><span className="w-28 shrink-0 text-xs text-ash">{fmtD(e.start)}{e.end !== e.start ? ` – ${fmtD(e.end)}` : ""}</span><span className={e.kind === "holiday" ? "text-mint" : e.kind === "early" ? "text-amber-200" : "text-snow"}>{e.title}</span></li>)}
+    {tab === "Calendar" && (<ul className="space-y-1 text-sm">{upcoming.map(e => <li key={e.start + e.title} data-swipe className="group flex gap-2 rounded px-2 py-1 hover:bg-cyan/5"><span className="w-28 shrink-0 text-xs text-ash">{fmtD(e.start)}{e.end !== e.start ? ` – ${fmtD(e.end)}` : ""}</span><span className={e.kind === "holiday" ? "text-mint" : e.kind === "early" ? "text-amber-200" : "text-snow"}>{e.title}</span></li>)}
       <li className="pt-1 text-[10px] text-slate">Cobb County School District 2026–27 calendar.</li></ul>)}
     {tab === "Check-ins" && (<>
       <form className="mb-2 space-y-2" onSubmit={async e => {
@@ -231,7 +236,7 @@ export function SchoolHub({ log }: { log: Log }) {
         <div className="flex items-center gap-2"><input type="file" accept="image/*,application/pdf,.doc,.docx" onChange={e => setFile(e.target.files?.[0] || null)} className="flex-1 text-xs text-ash file:mr-2 file:rounded file:border-0 file:bg-cyan/20 file:px-2 file:py-1 file:text-cyan" aria-label="Handout file" />
           <button className="btn btn-primary text-sm" disabled={busy}>{busy ? "…" : "Save"}</button></div>
       </form>
-      <ul className="space-y-1">{c.rows.map(r => (<li key={r.id} className="rounded px-2 py-1 text-sm hover:bg-cyan/5"><div className="flex items-center gap-2">
+      <ul className="space-y-1">{c.rows.map(r => (<li key={r.id} data-swipe className="group rounded px-2 py-1 text-sm hover:bg-cyan/5"><div className="flex items-center gap-2">
         <span className="text-xs text-ash">{fmtD(r.checkin_on)}</span><span className="flex-1 text-snow">{String(r.title)}</span>
         {r.file_path ? <button className="text-xs text-cyan underline" onClick={() => handoutUrl(String(r.file_path)).then(u => window.open(u, "_blank", "noopener")).catch(e => log(String(e.message), "warn"))}>📎 handout</button> : null}
         <Del onClick={() => c.del(r.id)} label={String(r.title)} /></div>{r.note ? <p className="pl-14 text-xs text-ash">{String(r.note)}</p> : null}</li>))}

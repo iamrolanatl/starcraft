@@ -129,7 +129,7 @@ export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogou
 }) {
   const [muted, setM] = useState(false); useEffect(() => setM(isMuted()), []);
   return (
-    <nav aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
+    <nav data-safe-bottom aria-label="Cockpit HUD" className="glass fixed inset-x-0 bottom-0 z-30 !rounded-none border-x-0 border-b-0 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-glow" />
       {open.some(o => o.minimized) && (
         <div className="mb-1 flex gap-1 overflow-x-auto">{open.filter(o => o.minimized).map(o => <button key={o.id} onClick={() => onRestore(o.id)} className="rounded border border-cyan/30 px-2 py-0.5 text-[10px] text-cyan hover:bg-cyan/10">▣ {o.title}</button>)}</div>

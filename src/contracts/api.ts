@@ -27,8 +27,20 @@ export const Routes = {
 } as const;
 
 export async function call<Req, Res>(route: string, body: Req): Promise<Res> {
-  const r = await fetch(route, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  const j = await r.json();
-  if (!r.ok) throw new Error((j as ApiError).error || `HTTP ${r.status}`);
-  return j as Res;
+  // timeout + one backoff retry on network/5xx + friendly 429 (kept DOM-free: this file is shared with Pages Functions)
+  let last: Error = new Error("Network error");
+  for (let i = 0; i < 2; i++) {
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 30000);
+    try {
+      const r = await fetch(route, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ac.signal });
+      const j = await r.json().catch(() => ({})) as Res & Partial<ApiError>;
+      if (r.status === 429) throw Object.assign(new Error(`Easy there, pilot! Rate limit hit. Try again in ${r.headers.get("retry-after") || 30}s.`), { fatal: true });
+      if (r.ok) return j as Res;
+      last = Object.assign(new Error(j.error || `Server error (${r.status})`), { fatal: r.status < 500 });
+    } catch (e) { last = (e as Error).name === "AbortError" ? new Error("Request timed out. Check your connection.") : e as Error; }
+    finally { clearTimeout(t); }
+    if ((last as Error & { fatal?: boolean }).fatal) throw last;
+    await new Promise(res => setTimeout(res, 500 + Math.random() * 300));
+  }
+  throw last;
 }

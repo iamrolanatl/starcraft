@@ -36,7 +36,7 @@ export function ShieldsTimer({ endsAt, total, onEnd, onAbort }: { endsAt: number
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(i); }, []);
   const left = Math.max(0, endsAt - now); useEffect(() => { if (!left && !fired.current) { fired.current = true; onEnd(); } }, [left, onEnd]);
   const pct = left / total * 100; const mm = Math.floor(left / 60000), ss = Math.floor(left / 1000) % 60;
-  return (<div className="glass neon-frame fixed left-1/2 top-14 z-[46] w-[min(420px,calc(100vw-1rem))] -translate-x-1/2 rounded-2xl px-4 py-2" role="timer" aria-label={`Battle stations: ${mm} minutes ${ss} seconds left`}>
+  return (<div data-safe-avoid className="glass neon-frame fixed left-1/2 top-14 z-[46] w-[min(420px,calc(100vw-1rem))] -translate-x-1/2 rounded-2xl px-4 py-2" role="timer" aria-label={`Battle stations: ${mm} minutes ${ss} seconds left`}>
     <div className="flex items-center gap-3"><span className="hud-label !text-cyan">⛨ Battle stations</span><span className="flex-1 text-center font-mono text-2xl text-snow" style={{ textShadow: "0 0 12px #3ef2e0" }}>{String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}</span>
       <button onClick={onAbort} className="btn btn-ghost !px-2 !py-1 text-xs">Stand down</button></div>
     <div className="mt-1 h-2 overflow-hidden rounded-full bg-navy-2"><div className="h-full rounded-full bg-gradient-to-r from-cyan via-mint to-cyan transition-[width] duration-300" style={{ width: `${pct}%`, boxShadow: "0 0 12px #3ef2e0" }} /></div>

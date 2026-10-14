@@ -11,7 +11,7 @@ export async function complete(env: Env, system: string, messages: ChatMessage[]
   const msgs = [{ role: "system", content: system }, ...messages.slice(-12).map(m => ({ role: m.role, content: m.content.slice(0, 2000) }))];
   for (const model of MODELS) {
     try {
-      const out = await env.AI.run(model, { messages: msgs, max_tokens: maxTokens });
+      const out = await Promise.race([env.AI.run(model, { messages: msgs, max_tokens: maxTokens }), new Promise<never>((_, rej) => setTimeout(() => rej(new Error("AI timeout")), 20000))]);
       const reply = textOf(out).trim();
       if (reply && !needsEscalation(reply)) return { reply, model, provider: "workers-ai" };
     } catch (e) { console.log("workers-ai error", model, String(e)); }

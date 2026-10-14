@@ -1,10 +1,10 @@
 // Edge hardening for every request: per-IP rate limits on /api/*, security headers, and server error capture.
 // Limits are per isolate (best-effort); swap for a Durable Object / Rate Limiting binding at scale.
-const LIMITS: Record<string, [number, number]> = { "/api/chat": [20, 60], "/api/command": [40, 60], "/api/quote": [60, 60], "/api/log": [30, 60] };
+const LIMITS: Record<string, [number, number]> = { "/api/chat": [20, 60], "/api/command": [40, 60], "/api/quote": [60, 60], "/api/log": [30, 60], "/api/transcribe": [15, 60] };
 const hits = new Map<string, { n: number; reset: number }>();
 const SEC = {
   "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin",
-  "permissions-policy": "camera=(self), geolocation=(self), microphone=()", "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "permissions-policy": "camera=(self), geolocation=(self), microphone=(self)", "strict-transport-security": "max-age=31536000; includeSubDomains",
 };
 export const onRequest: PagesFunction = async (ctx) => {
   const url = new URL(ctx.request.url); const lim = LIMITS[url.pathname];

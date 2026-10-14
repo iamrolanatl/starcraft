@@ -5,15 +5,16 @@ import { sfx } from "@/lib/synth";
 
 /* ── Toasts (event bus, no context needed) ── */
 export type ToastTone = "ok" | "warn" | "info";
-type T = { id: number; text: string; tone: ToastTone };
+export interface ToastAction { label: string; run: () => void }
+type T = { id: number; text: string; tone: ToastTone; action?: ToastAction; ms?: number };
 const bus = new EventTarget();
-export function toast(text: string, tone: ToastTone = "ok") { bus.dispatchEvent(new CustomEvent("t", { detail: { id: Date.now() + Math.random(), text, tone } })); }
+export function toast(text: string, tone: ToastTone = "ok", o: { action?: ToastAction; ms?: number } = {}) { bus.dispatchEvent(new CustomEvent("t", { detail: { id: Date.now() + Math.random(), text, tone, ...o } })); }
 export function Toaster() {
   const [items, setItems] = useState<T[]>([]);
-  useEffect(() => { const h = (e: Event) => { const t = (e as CustomEvent<T>).detail; setItems(i => [...i.slice(-3), t]); setTimeout(() => setItems(i => i.filter(x => x.id !== t.id)), 4500); }; bus.addEventListener("t", h); return () => bus.removeEventListener("t", h); }, []);
+  useEffect(() => { const h = (e: Event) => { const t = (e as CustomEvent<T>).detail; setItems(i => [...i.slice(-3), t]); setTimeout(() => setItems(i => i.filter(x => x.id !== t.id)), t.ms ?? 4500); }; bus.addEventListener("t", h); return () => bus.removeEventListener("t", h); }, []);
   return (<div className="pointer-events-none fixed right-3 top-16 z-[60] flex w-[min(360px,calc(100vw-1.5rem))] flex-col gap-2" role="status" aria-live="polite">
     {items.map(t => <div key={t.id} className={`toast-in glass neon-frame pointer-events-auto flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${t.tone === "warn" ? "text-alert" : t.tone === "ok" ? "text-mint" : "text-ice"}`}>
-      <span aria-hidden>{t.tone === "warn" ? "⚠" : t.tone === "ok" ? "✦" : "ℹ"}</span><span className="flex-1 text-snow">{t.text}</span>
+      <span aria-hidden>{t.tone === "warn" ? "⚠" : t.tone === "ok" ? "✦" : "ℹ"}</span><span className="flex-1 text-snow">{t.text}</span>{t.action && <button className="rounded border border-cyan/60 px-2 py-0.5 text-xs font-semibold text-cyan hover:bg-cyan/15" onClick={() => { t.action!.run(); setItems(i => i.filter(x => x.id !== t.id)); }}>{t.action.label}</button>}
       <button className="text-slate hover:text-snow" aria-label="Dismiss" onClick={() => setItems(i => i.filter(x => x.id !== t.id))}>✕</button></div>)}
   </div>);
 }
@@ -62,3 +63,16 @@ export function Particles({ n = 28 }: { n?: number }) {
 
 /* hover-sound helper for any element */
 export const hoverSfx = { onMouseEnter: () => sfx("hover") };
+
+/** Optimistic delete with a ~6s Undo toast. `hide` updates UI now; `commit` hits the DB (RLS); on failure `rollback`; Undo calls `restore`. */
+export async function undoableDelete<R>(rows: R[], o: { label: string; hide: () => void; rollback: () => void; commit: (r: R) => Promise<void>; restore: (r: R) => Promise<void>; after?: () => void }) {
+  o.hide(); sfx("close");
+  try { for (const r of rows) await o.commit(r); }
+  catch (e) { o.rollback(); toast(`Couldn't delete: ${(e as Error).message}`, "warn"); return; }
+  o.after?.();
+  toast(o.label, "info", { ms: 6000, action: { label: "Undo", run: async () => { try { for (const r of rows) await o.restore(r); sfx("success"); toast("Restored"); } catch (e) { toast(`Undo failed: ${(e as Error).message}`, "warn"); } finally { o.after?.(); } } } });
+}
+/** Trash button: subtle on hover-capable desktops (full on row hover/focus), always visible on touch. */
+export function TrashBtn({ onClick, label }: { onClick: () => void; label: string }) {
+  return <button type="button" data-del onClick={onClick} aria-label={`Delete ${label}`} title="Delete" className="del-btn tap grid h-7 w-7 shrink-0 place-items-center rounded-md text-[var(--text-muted)] hover:bg-alert/20 hover:text-alert">🗑</button>;
+}
