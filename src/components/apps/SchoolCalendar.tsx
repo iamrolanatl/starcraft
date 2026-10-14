@@ -1,4 +1,5 @@
 "use client";
+import { SyncLights } from "@/components/CrystalSync";
 // School Hub month view: official CCSD 2026-27 district calendar + Eli's ParentVUE calendar items + assignment due dates.
 import { useEffect, useMemo, useState } from "react";
 import { CAT_LABEL, eventsOn, type DCat, type DEvent, type DistrictCal } from "@/lib/district";
@@ -35,6 +36,7 @@ export default function SchoolCalendar() {
   const listDays = useMemo(() => { const set = new Set<string>(); cal.events.forEach(e => { if (e.end >= today) set.add(e.start < today ? today : e.start); }); pv.forEach(p => p.date >= today && set.add(p.date.slice(0, 10))); due.forEach(a => a.due_date! >= today && set.add(a.due_date!.slice(0, 10))); extOn.forEach((_, k) => k >= today && set.add(k)); return [...set].sort().slice(0, 40); }, [cal, pv, due, today, extOn]);
   const detail = itemsOn(sel);
   return (<div className="cal-solid rounded-xl p-2 text-[#E8F4FF]">
+    <div className="mb-2"><SyncLights compact /></div>
     <div className="mb-2 flex flex-wrap items-center gap-1">
       <button className="btn btn-ghost min-h-[44px] min-w-[44px] !px-2" onClick={() => mv(-1)} aria-label="Previous Month">‹</button>
       <h3 className="min-w-[9rem] flex-1 text-center text-base font-semibold" aria-live="polite">{cur.toLocaleDateString([], { month: "long", year: "numeric" })}</h3>

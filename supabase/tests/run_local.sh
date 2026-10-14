@@ -10,3 +10,7 @@ $P -c "create table if not exists private.google_tokens(user_id uuid)" >/dev/nul
 $P -f $H/017_seed.sql
 $P -f $M/017_family.sql >/dev/null 2>$D/017.log && $P -f $M/017_family.sql >/dev/null 2>>$D/017.log && echo "017 applied (and re-applied) OK"
 $P -o /dev/null -f $H/017_family_rls.sql 2>&1 | sed 's/^psql:[^ ]* NOTICE:  //'
+if [ -f $M/020_sync_devices.sql ]; then
+  $P -f $M/020_sync_devices.sql >/dev/null && $P -f $M/020_sync_devices.sql >/dev/null && echo "020 applied (and re-applied) OK"
+  $P -o /dev/null -f $H/020_sync_test.sql 2>&1 | sed 's/^psql:[^ ]* NOTICE:  //'
+fi
