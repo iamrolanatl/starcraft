@@ -21,6 +21,8 @@ class Fake:
             return copy.deepcopy(got)
         tb = s.t[path]
         if method == "GET": return copy.deepcopy([r for r in tb if s.match(r, params)])
+        if method == "DELETE":
+            gone = [r for r in tb if s.match(r, params)]; s.t[path] = [r for r in tb if r not in gone]; return None
         if method == "PATCH":
             out = [r for r in tb if s.match(r, params)]
             for r in out: r.update(body)
@@ -40,7 +42,7 @@ class Fake:
 def setup():
     f = Fake(); C.rest = f.rest; C.storage_put = f.put; C.owner_id = lambda: UID
     def ai(m): f.ai_calls.append(m); return D.clean("Hi Ms. Sparks,\nThank you for the heads-up. Eli will study the guide this week.\nRolan Chowdhury (Eli's father)"), "@cf/test"
-    D.ai = ai; return f
+    D.ai = ai; D.needs_reply = lambda m: None; return f
 
 def run(argv):
     b = io.StringIO()
@@ -120,6 +122,72 @@ def test_classifier():
     assert t("x@signupgenius.com", sub="Dickerson PTO volunteers") == "school" and t("x@signupgenius.com", sub="Church potluck") is None
     assert t("me@gmail.com", to="t.k@cobbk12.org") == "teacher" and t("x@shop.com") is None
     assert I.school_tag({"from": "coach@gmail.com"}, teachers={"coach@gmail.com"}) == "teacher"
+
+
+
+# ---------- reply gate ----------
+def _m(**k):
+    b = {"from": "Ms. Jane Sparks <jane.sparks@cobbk12.org>", "to": "iamrolan@gmail.com", "cc": "", "subject": "Eli's essay",
+         "body_text": "Could we meet Thursday to talk about Eli's essay?", "labels": ["INBOX"]}
+    b.update(k); return b
+
+def test_gate_accepts_personal_teacher_email():
+    assert C.reply_gate(_m()) == (True, "personal staff email")
+
+def test_gate_rejections():
+    cases = {
+        "from self": _m(**{"from": "Rolan <iamrolan@gmail.com>", "to": "jane.sparks@cobbk12.org"}),
+        "role/noreply sender": _m(**{"from": "CCSD.Schoolinfo+a92e5a8c-9666@cobbk12.org"}),
+    }
+    for want, m in cases.items(): assert C.reply_gate(m)[1] == want, (want, C.reply_gate(m))
+    assert C.reply_gate(_m(**{"from": "FieldTrips@cobbk12.org"}))[0] is False
+    assert C.reply_gate(_m(**{"from": "noreply@cobbk12.org"}))[0] is False
+    assert C.reply_gate(_m(**{"from": "jane.sparks@gmail.com"}))[1] == "not an @cobbk12.org sender"
+    assert C.reply_gate(_m(**{"from": "dickerson@smore.com"}))[1] == "bulk sender domain"
+    assert C.reply_gate(_m(**{"from": "jsparks@cobbk12.org"}))[1] == "not an individual sender"
+    assert C.reply_gate(_m(headers={"List-Unsubscribe": "<mailto:x>"}))[1] == "bulk headers"
+    assert C.reply_gate(_m(headers=[{"name": "Precedence", "value": "bulk"}]))[1] == "bulk headers"
+    assert C.reply_gate(_m(to="parents@cobbk12.org"))[1] == "bcc/not addressed to owner"
+    many = ", ".join(f"p{i}@gmail.com" for i in range(6)) + ", iamrolan@gmail.com"
+    assert C.reply_gate(_m(to=many))[1] == "broadcast (many recipients)"
+    assert C.reply_gate(_m(body_text="Chorus concert Friday. Click here to unsubscribe."))[1] == "newsletter content"
+    assert C.reply_gate(_m(labels=["SENT"]))[1] == "from self"
+    assert C.reply_gate(_m(), rolan_replied_after=True)[1] == "already replied"
+
+def _seed(f, gid, frm, subj, date="2026-10-10T10:00:00Z", thread="t1", edited=False):
+    f.t["mail_messages"].append({"id": gid, "gmail_id": gid, "user_id": UID, "thread_id": thread, "from": frm, "to": "iamrolan@gmail.com", "cc": None,
+        "subject": subj, "date": date, "body_text": "Can you let me know?", "school_tag": "teacher", "labels": ["INBOX"]})
+    f.t["mail_outbox"].append({"id": "o" + gid, "user_id": UID, "in_reply_to": gid, "status": "draft", "drafted_by": "crystal",
+        "draft_original": "orig", "body": "edited by Rolan" if edited else "orig"})
+
+def test_prune_keeps_edited_and_outbox():
+    f = setup()
+    _seed(f, "a", "CCSD.Schoolinfo+x@cobbk12.org", "Digest")
+    _seed(f, "b", "jane.sparks@cobbk12.org", "Question", thread="t2")
+    _seed(f, "c", "FieldTrips@cobbk12.org", "Permission slip", edited=True, thread="t3")
+    _seed(f, "d", "Rolan <iamrolan@gmail.com>", "Re: Question", thread="t4")
+    f.t["mail_outbox"].append({"id": "q1", "user_id": UID, "in_reply_to": "a", "status": "queued", "drafted_by": "crystal", "draft_original": "x", "body": "x"})
+    dry = D.prune(apply=False); assert dry["drafts_after"] == 4 and len(f.t["mail_outbox"]) == 5
+    r = D.prune(apply=True)
+    assert r["drafts_before"] == 4 and r["kept_edited"] == 1 and r["kept"] == 1 and r["drafts_after"] == 2
+    left = {x["id"] for x in f.t["mail_outbox"]}
+    assert left == {"ob", "oc", "q1"}
+
+def test_draft_for_skips_when_llm_says_no_and_when_already_replied():
+    f = setup()
+    _seed(f, "e", "jane.sparks@cobbk12.org", "FYI", thread="t5"); f.t["mail_outbox"].clear()
+    D.needs_reply = lambda m: False
+    assert D.draft_for("e")["skipped"] == "llm: no reply needed"
+    D.needs_reply = lambda m: None
+    f.t["mail_messages"].append({"id": "e2", "gmail_id": "e2", "thread_id": "t5", "from": "iamrolan@gmail.com", "date": "2026-10-11T00:00:00Z"})
+    assert D.draft_for("e")["skipped"] == "already replied" and not f.t["mail_outbox"]
+
+def test_ingest_no_draft_for_bulk_teacher_tagged():
+    f = setup()
+    msg = {"id": "z1", "sender": "Jane Sparks <jane.sparks@cobbk12.org>", "to_recipients": ["iamrolan@gmail.com"], "subject": "Class newsletter",
+           "plaintext_body": "Weekly update", "headers": {"List-Unsubscribe": "<https://x>"}, "label_ids": ["INBOX"]}
+    p = "/tmp/_mailgate.json"; json.dump({"messages": [msg]}, open(p, "w"))
+    code, s = run([p]); assert code == 0 and not s["drafts"] and s["no_draft"][0]["reason"] == "bulk headers"
 
 if __name__ == "__main__":
     for k, v in list(globals().items()):

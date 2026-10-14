@@ -11,7 +11,8 @@ Rules: idempotent upsert by gmail_id; a blank incoming field never overwrites a 
 (merge.is_blank / merge.merge_fields); is_read is only ever moved unread->read by Gmail, never reset by a re-pull;
 attachments go to mail/<user_id>/<gmail_id>/<key>-<filename>; HTML is sanitized with nh3 (no scripts, styles,
 event handlers, remote images); non-school messages are skipped. New teacher messages get a Crystal draft reply
-(mail_draft.py) unless --no-drafts.
+(mail_draft.py) unless --no-drafts, but only when mail_common.reply_gate passes (individual @cobbk12.org sender, addressed
+to Rolan, not bulk/broadcast/from-self) and the cheap LLM check in mail_draft.needs_reply agrees.
 """
 import argparse, base64, hashlib, json, re, sys, os, datetime as dt
 from email.utils import parsedate_to_datetime
@@ -98,6 +99,7 @@ def normalize(m):
         atts.append({"attachment_key": key, "filename": fn, "mime_type": a.get("mime_type") or a.get("mimeType") or "application/octet-stream",
                      "size": len(data) if data is not None else a.get("size"), "_data": data})
     n["has_attachments"] = bool(atts); n["_atts"] = atts
+    n["headers"] = g(m, "headers", "payload_headers")  # classification only (List-Unsubscribe/Precedence), not stored
     return n
 
 def load(path):
@@ -142,7 +144,10 @@ def main(argv=None):
                 C.rest("POST", "mail_attachments", [{"user_id": uid, "message_id": rec["id"], "gmail_id": n["gmail_id"], "attachment_key": at["attachment_key"], "filename": at["filename"],
                         "mime_type": at["mime_type"], "size": at["size"], "storage_path": sp}], {"on_conflict": "gmail_id,attachment_key"}, "resolution=ignore-duplicates,return=minimal")
                 s["attachments_uploaded"] += 1
-            if old is None and tag == "teacher": s["new_teacher_ids"].append(n["gmail_id"])
+            if old is None and tag == "teacher":
+                ok, why = C.reply_gate(n)
+                if ok: s["new_teacher_ids"].append(n["gmail_id"])
+                else: s.setdefault("no_draft", []).append({"gmail_id": n["gmail_id"], "reason": why})
         except C.Missing as e: print(json.dumps({"ok": False, "error": f"table missing: {e}; run migration 012_mail.sql"})); return 3
         except Exception as e: s["errors"].append(f"{raw.get('id', '?')}: {e}"[:300])
     if s["new_teacher_ids"] and not a.no_drafts and not a.dry_run:

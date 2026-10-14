@@ -41,3 +41,43 @@ def owner_id():
 
 ADDR = re.compile(r"[A-Za-z0-9._%+'-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 def addrs(s): return [a.lower() for a in ADDR.findall(s or "")]
+
+# ---------- reply gate: which messages deserve a Crystal draft ----------
+# Only an individual Cobb staff member writing personally to Rolan, where a reply is plausibly expected.
+ROLE = re.compile(r"^(no-?reply|do-?not-?reply|donotreply|mailer-daemon|postmaster|news|newsletter|communications?|info|notifications?|"
+                  r"alerts?|support|help|webmaster|ctls|itslearning|superintendent|board|ccsd|schoolinfo|fieldtrips?|attendance|"
+                  r"admissions?|registrar|counseling|office|frontoffice|media|pto|pta|events?|digest|announcements?|district|"
+                  r"principal|admin|hr|payroll|transportation|nutrition|athletics|chorus|band|clinic|it|tech)\b", re.I)
+BULK_DOM = re.compile(r"(smore|smorepages|parentsquare|schoolmessenger|remind\.com|signupgenius|mailchimp|constantcontact|"
+                      r"blackboard|finalsite|peachjar|sendgrid|mcsv\.net|campaign|bulletin|list-manage)", re.I)
+BULK_TEXT = re.compile(r"unsubscribe|view (this|in) (email )?(in )?(your )?browser|parentsquare|smore\.com|schoolmessenger|"
+                       r"you are receiving this|manage (your )?(notification|subscription)|this (message|email) was sent to all", re.I)
+INDIVIDUAL = re.compile(r"^[a-z]+(?:[.'-][a-z]+)+\d*$", re.I)   # first.last / first.m.last style
+MAX_RECIPIENTS = 4
+
+def header(m, name):
+    h = m.get("headers") or m.get("payload_headers") or {}
+    if isinstance(h, list): h = {(x.get("name") or "").lower(): x.get("value") for x in h if isinstance(x, dict)}
+    else: h = {str(k).lower(): v for k, v in h.items()}
+    return h.get(name.lower())
+
+def reply_gate(m, owner=None, rolan_replied_after=False):
+    """Pure rule check. Returns (ok, reason). m: normalized message (from/to/cc/subject/body_text/labels, optional headers)."""
+    owner = (owner or OWNER).lower()
+    frm = (addrs(m.get("from")) or [""])[0]
+    to, cc = addrs(m.get("to")), addrs(m.get("cc"))
+    local, _, dom = frm.partition("@")
+    if not frm: return False, "no sender"
+    if frm == owner or "SENT" in (m.get("labels") or []): return False, "from self"
+    if ROLE.match(local) or "+" in local: return False, "role/noreply sender"
+    if header(m, "list-unsubscribe") or header(m, "list-id") or (header(m, "precedence") or "").lower() in ("bulk", "list", "junk"):
+        return False, "bulk headers"
+    if BULK_DOM.search(dom): return False, "bulk sender domain"
+    if dom != "cobbk12.org": return False, "not an @cobbk12.org sender"
+    if not INDIVIDUAL.match(local): return False, "not an individual sender"
+    if owner not in to + cc: return False, "bcc/not addressed to owner"
+    if len(set(to + cc) - {frm}) > MAX_RECIPIENTS: return False, "broadcast (many recipients)"
+    text = f"{m.get('subject') or ''}\n{(m.get('body_text') or m.get('snippet') or '')[:6000]}"
+    if BULK_TEXT.search(text): return False, "newsletter content"
+    if rolan_replied_after: return False, "already replied"
+    return True, "personal staff email"
