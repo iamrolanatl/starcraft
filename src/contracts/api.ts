@@ -15,7 +15,7 @@ export type CommandIntent =
 export type ItemTable = "health_logs" | "meds" | "bills" | "credit_scores" | "stocks" | "shop_items" | "comms_notes" | "edu_checkins";
 export interface CommandResponse { intent: CommandIntent; provider: ChatResponse["provider"] }
 
-export type AppId = "home" | "tasks" | "weather" | "calendar" | "health" | "comms" | "education" | "finance" | "shopping" | "crystal" | "school" | "ocr";
+export type AppId = "home" | "tasks" | "weather" | "calendar" | "health" | "comms" | "education" | "finance" | "shopping" | "crystal" | "school" | "ocr" | "globe" | "medals";
 
 export interface ApiError { error: string }
 

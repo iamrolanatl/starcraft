@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { list, insert, update, remove, onChange, isLocal, uploadHandout, handoutUrl, type Row, type Table } from "@/lib/store";
 import { sfx } from "@/lib/synth";
+import { Skeleton, Empty, ErrorNote, Gauge, Sparkline, toast } from "@/components/ui/kit";
+import { haptic } from "@/lib/synth";
 import { DMS, schoolDay, DMS_EVENTS, PORTALS, type Grade } from "@/lib/school";
 
 type Log = (s: string, tone?: "info" | "ok" | "warn") => void;
@@ -10,12 +12,12 @@ const fmtD = (d?: unknown) => d ? new Date(String(d) + "T12:00").toLocaleDateStr
 const money = (n: unknown) => n == null || n === "" ? "" : `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function useRows(t: Table, log: Log) {
-  const [rows, setRows] = useState<Row[]>([]); const [loaded, setLoaded] = useState(false);
-  const reload = useCallback(() => list(t).then(r => { setRows(r); setLoaded(true); }).catch(e => log(`${t}: ${(e as Error).message}`, "warn")), [t, log]);
+  const [rows, setRows] = useState<Row[]>([]); const [loaded, setLoaded] = useState(false); const [err, setErr] = useState<{ message: string; kind?: string } | null>(null);
+  const reload = useCallback(() => list(t).then(r => { setRows(r); setLoaded(true); setErr(null); }).catch(e => { setLoaded(true); setErr(e as { message: string; kind?: string }); log(`${t}: ${(e as Error).message}`, "warn"); }), [t, log]);
   useEffect(() => { reload(); return onChange(reload); }, [reload]);
-  const act = async (fn: () => Promise<void>, ok?: string) => { try { await fn(); if (ok) { log(ok, "ok"); sfx("success"); } } catch (e) { log(`Error: ${(e as Error).message}`, "warn"); sfx("error"); } };
+  const act = async (fn: () => Promise<void>, ok?: string) => { try { await fn(); if (ok) { log(ok, "ok"); sfx("success"); haptic(12); toast(ok); } } catch (e) { setErr(e as { message: string; kind?: string }); toast((e as Error).message, "warn"); log(`Error: ${(e as Error).message}`, "warn"); sfx("error"); haptic([30, 30, 30]); } };
   return {
-    rows, loaded, local: isLocal(t),
+    rows, loaded, err, local: isLocal(t),
     add: (r: Record<string, unknown>, ok: string) => act(() => insert(t, r), ok),
     set: (id: string, p: Record<string, unknown>) => act(() => update(t, id, p)),
     del: (id: string, ok = "Deleted") => act(() => remove(t, id), ok),
@@ -25,13 +27,10 @@ export function useRows(t: Table, log: Log) {
 const Tabs = ({ tabs, cur, set }: { tabs: string[]; cur: string; set: (s: string) => void }) => (
   <div role="tablist" className="mb-3 flex flex-wrap gap-1">{tabs.map(t => <button key={t} role="tab" aria-selected={cur === t} onClick={() => { sfx("click"); set(t); }} className={`rounded-md px-2.5 py-1 text-xs ${cur === t ? "bg-cyan/20 text-cyan neon-border" : "text-ash hover:text-cyan"}`}>{t}</button>)}</div>
 );
-const LocalNote = ({ on }: { on: boolean }) => on ? <p className="mt-2 text-[10px] text-amber-200/80">Saved on this device (sign in + run migration 004 to sync).</p> : null;
+const LocalNote = ({ on }: { on: boolean }) => on ? <p className="mt-2 text-[10px] text-amber-200/80">Demo data on this device only. Sign in to save for real.</p> : null;
+type RowsHook = { loaded: boolean; err: { message: string; kind?: string } | null };
+const State = ({ r, empty, n, hint }: { r: RowsHook; empty: string; n: number; hint?: string }) => !r.loaded ? <Skeleton rows={3} /> : r.err ? <ErrorNote err={r.err} /> : n === 0 ? <Empty title={empty} hint={hint} /> : null;
 const Del = ({ onClick, label }: { onClick: () => void; label: string }) => <button onClick={onClick} aria-label={`Delete ${label}`} className="text-xs text-slate hover:text-alert">✕</button>;
-function Spark({ vals }: { vals: number[] }) {
-  if (vals.length < 2) return null; const mx = Math.max(...vals), mn = Math.min(...vals), r = mx - mn || 1;
-  const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * 100},${28 - ((v - mn) / r) * 26}`).join(" ");
-  return <svg viewBox="0 0 100 30" className="h-8 w-full" aria-hidden><polyline points={pts} fill="none" stroke="#3ef2e0" strokeWidth="1.5" /></svg>;
-}
 
 /* ───────── Health ───────── */
 export function Health({ log }: { log: Log }) {
@@ -45,13 +44,15 @@ export function Health({ log }: { log: Log }) {
   return (<div>
     <Tabs tabs={["Steps", "Glucose", "Meds"]} cur={tab} set={setTab} />
     {tab !== "Meds" ? (<>
-      {tab === "Steps" && <div className="mb-2"><div className="flex justify-between text-xs text-ash"><span>Today</span><span className="text-snow">{todaySteps.toLocaleString()} / {goal.toLocaleString()}</span></div><div className="mt-1 h-2 rounded bg-navy-2"><div className="h-2 rounded bg-gradient-to-r from-cyan to-mint" style={{ width: `${Math.min(100, todaySteps / goal * 100)}%` }} /></div></div>}
-      {tab === "Glucose" && series.length > 0 && <p className="mb-1 text-xs text-ash">Last: <span className={Number(series.at(-1)!.value) > 180 || Number(series.at(-1)!.value) < 70 ? "text-alert" : "text-mint"}>{String(series.at(-1)!.value)} mg/dL</span> · target 70–180</p>}
-      <Spark vals={series.slice(-14).map(r => Number(r.value))} />
+      {!h.loaded || h.err ? <State r={h} empty="" n={1} /> : <div className="flex items-center gap-2">
+        {tab === "Steps" ? <Gauge value={todaySteps} max={goal} label="Steps today" unit={`goal ${goal / 1000}k`} bands={[[goal * .5, "#ff9a5c"], [goal - 1, "#ffd166"], [1e9, "#7dffc8"]]} />
+          : series.length ? <Gauge value={Number(series.at(-1)!.value)} min={40} max={250} label="Glucose" unit="mg/dL" bands={[[69, "#ff3b5c"], [180, "#7dffc8"], [1e9, "#ff3b5c"]]} /> : null}
+        <div className="min-w-0 flex-1"><Sparkline vals={series.slice(-14).map(r => Number(r.value))} color={tab === "Steps" ? "#3ef2e0" : "#c77dff"} /><p className="text-[10px] text-slate">{tab === "Steps" ? "Last 14 entries" : "Target 70–180 mg/dL"}</p></div></div>}
       <form className="my-2 flex gap-2" onSubmit={e => { e.preventDefault(); const v = Number(val); if (!v || v < 0) return; h.add({ kind, value: v, unit: kind === "steps" ? "steps" : "mg/dL", logged_on: today() }, `Logged ${v} ${kind === "steps" ? "steps" : "mg/dL glucose"}`); setVal(""); }}>
         <input className="input text-sm" type="number" inputMode="numeric" min={0} placeholder={tab === "Steps" ? "Steps walked" : "Glucose mg/dL"} value={val} onChange={e => setVal(e.target.value)} aria-label={`${tab} value`} />
         <button className="btn btn-primary text-sm">Log</button>
       </form>
+      {h.loaded && !h.err && !series.length && <Empty title={`No ${tab.toLowerCase()} logged yet`} hint={tab === "Steps" ? "Try “log 8000 steps”" : "Try “glucose 110”"} />}
       <ul className="space-y-1 text-sm">{series.slice(-8).reverse().map(r => <li key={r.id} className="flex justify-between rounded px-2 py-1 hover:bg-cyan/5"><span className="text-ash">{fmtD(r.logged_on)}</span><span className="text-snow">{Number(r.value).toLocaleString()} {String(r.unit || "")}</span><Del onClick={() => h.del(r.id)} label="entry" /></li>)}</ul>
       <p className="mt-2 text-[10px] text-slate">Manual entry. Apple Health / Google Fit / Dexcom auto-import needs account linking.</p>
       <LocalNote on={h.local} />
@@ -67,7 +68,7 @@ export function Health({ log }: { log: Log }) {
           <span className="flex-1 text-snow">{String(r.name)} <span className="text-xs text-ash">{String(r.dose || "")} {r.schedule ? `· ${r.schedule}` : ""}</span></span>
           <button onClick={() => m.set(r.id, { last_taken: new Date().toISOString() })} className={`rounded px-2 py-0.5 text-xs ${taken ? "bg-mint/20 text-mint" : "border border-cyan/40 text-cyan"}`}>{taken ? "✓ taken" : "Take"}</button>
           <Del onClick={() => m.del(r.id)} label={String(r.name)} /></li>); })}
-        {!m.rows.length && <li className="text-sm text-ash">No medications yet.</li>}</ul>
+</ul><State r={m} n={m.rows.length} empty="No medications yet" hint="Try “add med vitamin D 2000 IU morning”" />
       <LocalNote on={m.local} />
     </>)}
   </div>);
@@ -97,7 +98,7 @@ export function Comms({ log }: { log: Log }) {
       <span className={`flex-1 ${r.done ? "text-slate line-through" : "text-snow"}`}>{r.url && /^https?:\/\//.test(String(r.url)) ? <a href={String(r.url)} target="_blank" rel="noopener noreferrer" className="hover:text-cyan">{String(r.title)} ↗</a> : String(r.title)}</span>
       {r.due_date ? <span className={`text-xs ${!r.done && String(r.due_date) < today() ? "text-alert" : "text-ash"}`}>{fmtD(r.due_date)}</span> : null}
       <Del onClick={() => c.del(r.id)} label={String(r.title)} /></li>))}
-      {!rows.length && <li className="text-sm text-ash">Nothing tracked.</li>}</ul>
+</ul><State r={c} n={rows.length} empty="Nothing tracked here" hint="Try “email: reply to coach friday”" />
     <p className="mt-2 text-[10px] text-slate">Inbox and Drive sync need Gmail/Drive API consent (Google Cloud). Notes are tracked here meanwhile.</p>
     <LocalNote on={c.local} />
   </div>);
@@ -110,6 +111,8 @@ export function Finance({ log }: { log: Log }) {
   const b = useRows("bills", log); const s = useRows("stocks", log); const cr = useRows("credit_scores", log);
   const [bf, setBf] = useState({ name: "", amount: "", due_date: "" }); const [sf, setSf] = useState({ symbol: "", shares: "" }); const [score, setScore] = useState("");
   const [q, setQ] = useState<Record<string, Quote>>({});
+  const [budget, setBudget] = useState(() => typeof window !== "undefined" ? Number(localStorage.getItem("crystal-budget") || 1500) : 1500);
+  const ym = today().slice(0, 7); const monthSpend = b.rows.filter(r => String(r.due_date || "").startsWith(ym)).reduce((t, r) => t + Number(r.amount || 0), 0);
   const syms = useMemo(() => [...new Set(s.rows.map(r => String(r.symbol).toUpperCase()))].join(","), [s.rows]);
   useEffect(() => { if (tab !== "Stocks" || !syms) return; fetch(`/api/quote?symbols=${encodeURIComponent(syms)}`).then(r => r.json()).then((j: { quotes: Quote[] }) => setQ(Object.fromEntries(j.quotes.map(x => [x.symbol, x])))).catch(() => log("Quote uplink failed", "warn")); }, [tab, syms, log]);
   const unpaid = b.rows.filter(r => !r.paid).sort((x, y) => String(x.due_date || "9").localeCompare(String(y.due_date || "9")));
@@ -119,7 +122,10 @@ export function Finance({ log }: { log: Log }) {
   return (<div>
     <Tabs tabs={["Bills", "Credit", "Stocks"]} cur={tab} set={setTab} />
     {tab === "Bills" && (<>
-      <p className="mb-2 text-xs text-ash">Unpaid: <span className="text-snow">{money(total)}</span> · {unpaid.filter(r => r.due_date && String(r.due_date) < today()).length} overdue</p>
+      <div className="mb-2 flex items-center gap-2">
+        <Gauge value={Math.max(0, budget - monthSpend)} max={budget} label="Budget left" unit="$" bands={[[budget * .25, "#ff3b5c"], [budget * .5, "#ffd166"], [1e12, "#7dffc8"]]} />
+        <div className="flex-1 text-xs text-ash"><p>Unpaid: <span className="text-snow">{money(total)}</span> · {unpaid.filter(r => r.due_date && String(r.due_date) < today()).length} overdue</p>
+          <label className="mt-1 flex items-center gap-1">Monthly budget $<input type="number" className="input w-24 !py-0.5 text-xs" value={budget} onChange={e => { const v = Math.max(1, Number(e.target.value) || 1); setBudget(v); localStorage.setItem("crystal-budget", String(v)); window.dispatchEvent(new Event("crystal-prefs")); }} aria-label="Monthly budget" /></label></div></div>
       <form className="mb-2 flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); if (!bf.name.trim()) return; b.add({ name: bf.name.trim(), amount: bf.amount ? Number(bf.amount) : null, due_date: bf.due_date || null }, `Bill added: ${bf.name}`); setBf({ name: "", amount: "", due_date: "" }); }}>
         <input className="input min-w-[8rem] flex-1 text-sm" placeholder="Bill" value={bf.name} onChange={e => setBf({ ...bf, name: e.target.value })} aria-label="Bill name" />
         <input className="input w-24 text-sm" type="number" step="0.01" placeholder="$" value={bf.amount} onChange={e => setBf({ ...bf, amount: e.target.value })} aria-label="Amount" />
@@ -132,12 +138,11 @@ export function Finance({ log }: { log: Log }) {
         {r.due_date ? <span className={`text-xs ${!r.paid && String(r.due_date) < today() ? "text-alert" : "text-ash"}`}>{fmtD(r.due_date)}</span> : null}
         <button onClick={() => b.set(r.id, { paid: !r.paid })} className={`rounded px-2 py-0.5 text-xs ${r.paid ? "bg-mint/20 text-mint" : "border border-cyan/40 text-cyan"}`}>{r.paid ? "Paid" : "Pay"}</button>
         <Del onClick={() => b.del(r.id)} label={String(r.name)} /></li>))}
-        {!b.rows.length && <li className="text-sm text-ash">No bills yet.</li>}</ul>
+</ul><State r={b} n={b.rows.length} empty="No bills yet" hint="Try “bill: water $45 due friday”" />
       <LocalNote on={b.local} />
     </>)}
     {tab === "Credit" && (<>
-      {scores.length ? <div className="mb-2 flex items-end gap-3"><span className="text-4xl font-semibold text-snow">{String(scores.at(-1)!.score)}</span><span className="pb-1 text-xs text-ash">{Number(scores.at(-1)!.score) >= 740 ? "Excellent" : Number(scores.at(-1)!.score) >= 670 ? "Good" : Number(scores.at(-1)!.score) >= 580 ? "Fair" : "Poor"} · {fmtD(scores.at(-1)!.checked_on)}</span></div> : <p className="mb-2 text-sm text-ash">No score logged.</p>}
-      <Spark vals={scores.map(r => Number(r.score))} />
+      {scores.length ? <div className="flex items-center gap-2"><Gauge value={Number(scores.at(-1)!.score)} min={300} max={850} label={Number(scores.at(-1)!.score) >= 740 ? "Excellent" : Number(scores.at(-1)!.score) >= 670 ? "Good" : Number(scores.at(-1)!.score) >= 580 ? "Fair" : "Poor"} bands={[[579, "#ff3b5c"], [669, "#ffd166"], [739, "#3ef2e0"], [900, "#7dffc8"]]} /><div className="min-w-0 flex-1"><Sparkline vals={scores.map(r => Number(r.score))} color="#7dffc8" /><p className="text-[10px] text-slate">Updated {fmtD(scores.at(-1)!.checked_on)}</p></div></div> : <State r={cr} n={0} empty="No score logged" hint="Try “credit score is 742”" />}
       <form className="my-2 flex gap-2" onSubmit={e => { e.preventDefault(); const v = Number(score); if (v < 300 || v > 850) return log("Score must be 300–850", "warn"); cr.add({ score: v, bureau: "manual", checked_on: today() }, `Credit score logged: ${v}`); setScore(""); }}>
         <input className="input text-sm" type="number" min={300} max={850} placeholder="Score (300–850)" value={score} onChange={e => setScore(e.target.value)} aria-label="Credit score" />
         <button className="btn btn-primary text-sm">Log</button>
@@ -158,7 +163,7 @@ export function Finance({ log }: { log: Log }) {
         <span className="text-snow">{x?.price != null ? money(x.price) : "…"}</span>
         {x?.changePct != null && <span className={`w-14 text-right text-xs ${x.changePct >= 0 ? "text-mint" : "text-alert"}`}>{x.changePct >= 0 ? "▲" : "▼"}{Math.abs(x.changePct).toFixed(2)}%</span>}
         <Del onClick={() => s.del(r.id)} label={k} /></li>); })}
-        {!s.rows.length && <li className="text-sm text-ash">Add a ticker to track.</li>}</ul>
+</ul><State r={s} n={s.rows.length} empty="No tickers tracked" hint="Try “track 10 shares of AAPL”" />
       <p className="mt-2 text-[10px] text-slate">Quotes via Crystal&apos;s edge proxy, delayed, informational only.</p>
       <LocalNote on={s.local} />
     </>)}
@@ -185,7 +190,7 @@ export function Shopping({ log }: { log: Log }) {
       <span className="text-xs text-ash">{money(r.price)}</span>
       {li === "wish" && <button onClick={() => s.set(r.id, { list: "shopping" })} className="text-xs text-cyan" title="Move to shopping list">→🛒</button>}
       <Del onClick={() => s.del(r.id)} label={String(r.name)} /></li>))}
-      {!rows.length && <li className="text-sm text-ash">List is empty.</li>}</ul>
+</ul><State r={s} n={rows.length} empty={li === "wish" ? "Wish list is empty" : "Shopping list is empty"} hint={li === "wish" ? "Try “add headphones to wish list”" : "Try “add milk to shopping list”"} />
     {est > 0 && <p className="mt-2 text-xs text-ash">Estimated: <span className="text-snow">{money(est)}</span></p>}
     <LocalNote on={s.local} />
   </div>);
@@ -230,7 +235,7 @@ export function SchoolHub({ log }: { log: Log }) {
         <span className="text-xs text-ash">{fmtD(r.checkin_on)}</span><span className="flex-1 text-snow">{String(r.title)}</span>
         {r.file_path ? <button className="text-xs text-cyan underline" onClick={() => handoutUrl(String(r.file_path)).then(u => window.open(u, "_blank", "noopener")).catch(e => log(String(e.message), "warn"))}>📎 handout</button> : null}
         <Del onClick={() => c.del(r.id)} label={String(r.title)} /></div>{r.note ? <p className="pl-14 text-xs text-ash">{String(r.note)}</p> : null}</li>))}
-        {!c.rows.length && <li className="text-sm text-ash">No check-ins yet.</li>}</ul>
+</ul><State r={c} n={c.rows.length} empty="No check-ins yet" hint="Snap a handout and save it here" />
       <LocalNote on={c.local} />
     </>)}
     {tab === "Portals" && (<ul className="grid grid-cols-2 gap-2">{PORTALS.map(p => <li key={p.name}><a href={p.url} target="_blank" rel="noopener noreferrer" className="glass block rounded-lg p-2 hover:border-cyan/50"><div className="text-sm font-semibold text-snow">{p.name} ↗</div><div className="text-[10px] text-ash">{p.note}</div></a></li>)}</ul>)}

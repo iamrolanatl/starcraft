@@ -3,22 +3,29 @@ import { useEffect, useState } from "react";
 import type { AppId } from "@/contracts/api";
 import { sfx, isMuted, setMuted } from "@/lib/synth";
 import CrystalBot, { type Mood } from "@/components/CrystalBot";
+import { DefconMeter, StatusBars } from "./Ops";
+import { haptic } from "@/lib/synth";
 
 export interface Ability { id: string; icon: string; label: string; cooldown: number; run: () => void }
 export interface Squad { id: AppId; label: string; status: "ok" | "warn" | "off"; detail: string }
 export interface Contact { label: string; sector: number; hot?: boolean }
 export interface FeedItem { t: number; text: string; tone?: "info" | "ok" | "warn" }
 
-export function Radar({ blips, alert }: { blips: number; alert: boolean }) {
-  const pts = Array.from({ length: Math.min(blips, 12) }, (_, i) => { const a = (i * 137.5) * Math.PI / 180, r = 18 + ((i * 29) % 22); return [50 + r * Math.cos(a), 50 + r * Math.sin(a)]; });
+export interface Blip { label: string; days: number | null; hot: boolean }
+// 360 radar: each blip is a real task; distance from center = days until due (overdue at core), red = overdue/hot.
+export function Radar({ blips, alert, items = [], pulse = 0 }: { blips: number; alert: boolean; items?: Blip[]; pulse?: number }) {
   const c = alert ? "#ff3b5c" : "#3ef2e0";
+  const pts = items.slice(0, 24).map((b, i) => { const a = (i * 137.5) * Math.PI / 180, r = b.days == null ? 44 : Math.max(6, Math.min(44, 8 + b.days * 5)); return { ...b, x: 50 + r * Math.cos(a), y: 50 + r * Math.sin(a), ang: ((i * 137.5) % 360) }; });
   return (
-    <div className="relative aspect-square h-full" role="img" aria-label={`Radar: ${blips} open tasks`}>
+    <div className="relative aspect-square h-full" role="img" aria-label={`Radar: ${blips} open tasks, ${items.filter(i => i.hot).length} overdue`}>
       <svg viewBox="0 0 100 100" className="h-full w-full">
-        <circle cx="50" cy="50" r="48" fill="rgba(6,11,26,.7)" stroke={c} strokeOpacity=".5" />
-        {[16, 32].map(r => <circle key={r} cx="50" cy="50" r={r} fill="none" stroke={c} strokeOpacity=".2" />)}
+        <circle cx="50" cy="50" r="48" fill="rgba(6,11,26,.75)" stroke={c} strokeOpacity=".5" />
+        {[12, 24, 36].map(r => <circle key={r} cx="50" cy="50" r={r} fill="none" stroke={c} strokeOpacity=".18" strokeDasharray={r === 24 ? "1 2" : undefined} />)}
         <line x1="2" y1="50" x2="98" y2="50" stroke={c} strokeOpacity=".15" /><line x1="50" y1="2" x2="50" y2="98" stroke={c} strokeOpacity=".15" />
-        {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2.2" fill={i === 0 ? "#7dffc8" : c} className="animate-glow" style={{ animationDelay: `${i * .3}s` }} />)}
+        {pulse > 0 && <circle key={pulse} cx="50" cy="50" r="2" fill="none" stroke={c} strokeWidth="1.5"><animate attributeName="r" from="2" to="48" dur="1.4s" fill="freeze" /><animate attributeName="opacity" from="1" to="0" dur="1.4s" fill="freeze" /></circle>}
+        {pts.map((p, i) => <g key={i}><title>{p.label}{p.days != null ? ` · ${p.days < 0 ? `${-p.days}d overdue` : p.days === 0 ? "due today" : `in ${p.days}d`}` : ""}</title>
+          {p.hot && <circle cx={p.x} cy={p.y} r="1" fill="none" stroke="#ff3b5c" className="blip-ring" style={{ animationDelay: `${i * .2}s` }} />}
+          <circle cx={p.x} cy={p.y} r={p.hot ? 2.6 : 2} fill={p.hot ? "#ff3b5c" : i === 0 ? "#7dffc8" : c} style={{ animation: `glow 4s ${(p.ang / 360) * 4}s infinite` }} /></g>)}
       </svg>
       <div className="animate-sweep absolute inset-[2%] rounded-full" style={{ background: `conic-gradient(from 0deg, ${c}88, transparent 25%)` }} />
     </div>
@@ -28,16 +35,19 @@ export function Radar({ blips, alert }: { blips: number; alert: boolean }) {
 export function AbilityGrid({ abilities }: { abilities: Ability[] }) {
   const [cd, setCd] = useState<Record<string, number>>({}); const [now, setNow] = useState(Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 200); return () => clearInterval(i); }, []);
+  const fire = (a: Ability) => { if ((cd[a.id] || 0) > Date.now()) { sfx("error"); haptic(40); return; } sfx("click"); haptic(10); a.run(); if (a.cooldown) setCd(c => ({ ...c, [a.id]: Date.now() + a.cooldown * 1000 })); };
+  useEffect(() => { const h = (e: KeyboardEvent) => { const t = e.target as HTMLElement; if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable) return; const n = Number(e.key); if (n >= 1 && n <= 9 && abilities[n - 1]) { e.preventDefault(); fire(abilities[n - 1]); } }; addEventListener("keydown", h); return () => removeEventListener("keydown", h); });
   return (
     <div className="grid h-full grid-cols-3 gap-1" role="toolbar" aria-label="Command matrix">
       {abilities.slice(0, 9).map((a, idx) => {
         const until = cd[a.id] || 0; const left = Math.max(0, until - now); const pct = a.cooldown ? left / (a.cooldown * 1000) : 0;
         return (
           <button key={a.id} title={`${a.label} (${idx + 1})`} aria-label={a.label} disabled={left > 0}
-            onClick={() => { a.run(); if (a.cooldown) setCd(c => ({ ...c, [a.id]: Date.now() + a.cooldown * 1000 })); }}
+            onClick={() => fire(a)} onMouseEnter={() => sfx("hover")}
             className="relative flex flex-col items-center justify-center overflow-hidden rounded-md border border-cyan/25 bg-navy-2/70 text-cyan transition hover:border-cyan hover:bg-cyan/10 hover:shadow-[0_0_12px_rgba(62,242,224,.4)] disabled:cursor-wait">
             <span className="text-base leading-none sm:text-lg">{a.icon}</span>
             <span className="hidden text-[9px] uppercase tracking-wider text-ash sm:block">{a.label}</span>
+            <span className="absolute left-0.5 top-0 font-mono text-[8px] text-slate">{idx + 1}</span>
             {left > 0 && (<>
               <span className="absolute inset-0" style={{ background: `conic-gradient(rgba(6,11,26,.8) ${pct * 360}deg, transparent 0)` }} />
               <span className="absolute font-mono text-xs text-snow">{Math.ceil(left / 1000)}</span>
@@ -111,9 +121,10 @@ export function SquadStatus({ squad, onOpen }: { squad: Squad[]; onOpen: (id: Ap
   );
 }
 
-export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogout, open, onRestore, pilot, mood, onPilot, squad, contacts, tactical }: {
+export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogout, open, onRestore, pilot, mood, onPilot, squad, contacts, tactical, radar, pulse, defcon, bars, feedsMuted }: {
   abilities: Ability[]; feed: FeedItem[]; blips: number; alert: boolean; onAlert: () => void; onHome: () => void; onLogout: () => void;
   pilot: string; mood: Mood; onPilot: () => void; squad: Squad[]; contacts: Contact[]; tactical: FeedItem[];
+  radar: Blip[]; pulse: number; defcon: { level: number; reasons: string[] }; bars: { shields: number; hull: number; energy: number; labels: [string, string, string] }; feedsMuted: boolean;
   open: { id: AppId; title: string; minimized: boolean }[]; onRestore: (id: AppId) => void;
 }) {
   const [muted, setM] = useState(false); useEffect(() => setM(isMuted()), []);
@@ -125,13 +136,15 @@ export function HudBar({ abilities, feed, blips, alert, onAlert, onHome, onLogou
       )}
       <div className="mx-auto flex h-[112px] max-w-[1600px] items-stretch gap-2 sm:h-[132px]">
         <div className="flex min-w-0 flex-1 snap-x items-stretch gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="HUD panels (swipe on mobile)">
+          <div className="snap-start"><DefconMeter level={defcon.level} reasons={defcon.reasons} manual={alert} /></div>
           <div className="snap-start"><PilotView name={pilot} mood={mood} onClick={onPilot} alert={alert} /></div>
-          <div className="flex snap-start flex-col items-center gap-1"><div className="h-[84px] sm:h-[104px]"><Radar blips={blips} alert={alert} /></div><span className="hud-label !text-[8px]">360 · {blips} tgt</span></div>
+          <div className="flex snap-start flex-col items-center gap-1"><div className="h-[84px] sm:h-[104px]"><Radar blips={blips} alert={alert} items={radar} pulse={pulse} /></div><span className="hud-label !text-[8px]">360 · {blips} tgt</span></div>
           <div className="w-[132px] shrink-0 snap-start sm:w-[200px]"><AbilityGrid abilities={abilities} /></div>
           <div className="flex snap-start flex-col items-center gap-1"><div className="h-[84px] sm:h-[104px]"><TacticalRadar contacts={contacts} alert={alert} /></div><span className="hud-label !text-[8px]">Tactical · {contacts.length}</span></div>
+          <div className="snap-start"><StatusBars {...bars} /></div>
           <div className="snap-start"><SquadStatus squad={squad} onOpen={onRestore} /></div>
-          <div className="w-[220px] shrink-0 snap-start lg:w-auto lg:min-w-[180px] lg:flex-1"><TacticalFeed items={tactical} /></div>
-          <div className="w-[220px] shrink-0 snap-start lg:w-auto lg:min-w-[180px] lg:flex-1"><CommFeed items={feed} /></div>
+          <div className="w-[220px] shrink-0 snap-start lg:w-auto lg:min-w-[180px] lg:flex-1"><TacticalFeed items={feedsMuted ? [{ t: 1, text: "Feeds muted: battle stations", tone: "info" }] : tactical} /></div>
+          <div className="w-[220px] shrink-0 snap-start lg:w-auto lg:min-w-[180px] lg:flex-1"><CommFeed items={feedsMuted ? [] : feed} /></div>
         </div>
         <div className="ml-auto flex shrink-0 flex-col justify-between gap-1">
           <button onClick={onHome} className="btn btn-ghost !px-3 !py-1.5 text-xs" aria-label="Return home">⌂ Home</button>

@@ -8,7 +8,7 @@
   --color-mint: #7dffc8;
   --color-ice: #cfe9ff;
   --color-snow: #f4f8ff;
-  --color-slate: #64748b;
+  --color-slate: #8693a8;
   --color-ash: #c7ccd4;
   --color-alert: #ff3b5c;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -55,3 +55,85 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .bg-video { display: none; }
 }
+
+/* ───────── Premium HUD layer (v2) ───────── */
+@property --ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes spin-ang { to { --ang: 360deg; } }
+.glass { position: relative; background: linear-gradient(160deg, rgba(36,46,68,.62), rgba(12,16,26,.52) 55%, rgba(8,12,22,.6)); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -1px 0 rgba(0,0,0,.35) inset, 0 18px 50px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(62,242,224,.06); }
+.glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 30%); }
+.neon-frame { position: relative; }
+.neon-frame::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: conic-gradient(from var(--ang), transparent 0 60%, #3ef2e0 72%, #7dffc8 78%, #c77dff 84%, transparent 92%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin-ang 5s linear infinite; opacity: .9; }
+.red-alert .neon-frame::after { background: conic-gradient(from var(--ang), transparent 0 55%, #ff3b5c 70%, #ff9a5c 80%, transparent 92%); animation-duration: 1.6s; }
+.corner-ticks { background:
+  linear-gradient(#3ef2e0,#3ef2e0) top left/10px 1px no-repeat, linear-gradient(#3ef2e0,#3ef2e0) top left/1px 10px no-repeat,
+  linear-gradient(#3ef2e0,#3ef2e0) top right/10px 1px no-repeat, linear-gradient(#3ef2e0,#3ef2e0) top right/1px 10px no-repeat,
+  linear-gradient(#3ef2e0,#3ef2e0) bottom left/10px 1px no-repeat, linear-gradient(#3ef2e0,#3ef2e0) bottom left/1px 10px no-repeat,
+  linear-gradient(#3ef2e0,#3ef2e0) bottom right/10px 1px no-repeat, linear-gradient(#3ef2e0,#3ef2e0) bottom right/1px 10px no-repeat; }
+
+/* press / hover micro-interactions */
+.btn, .tap { transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .2s, background-color .2s, border-color .2s, color .2s; }
+.btn:active, .tap:active { transform: scale(.95); }
+.tap:hover { transform: translateY(-2px); }
+.btn-ghost:hover { box-shadow: 0 0 14px rgba(62,242,224,.35), inset 0 0 12px rgba(62,242,224,.08); }
+:focus-visible { outline: 2px solid #7dffc8 !important; outline-offset: 3px; border-radius: 6px; box-shadow: 0 0 0 5px rgba(125,255,200,.18); }
+
+/* spring window transitions */
+@keyframes win-in { 0% { opacity: 0; transform: translateY(18px) scale(.86); filter: blur(6px) } 55% { opacity: 1; transform: translateY(-4px) scale(1.025); filter: blur(0) } 75% { transform: translateY(1px) scale(.995) } 100% { transform: none } }
+@keyframes win-min { to { opacity: 0; transform: translateY(60vh) scale(.25); filter: blur(4px) } }
+@keyframes win-close { to { opacity: 0; transform: scale(.82) rotateX(14deg); filter: blur(8px) brightness(2) } }
+.win-in { animation: win-in .55s cubic-bezier(.2,.9,.3,1) both; }
+.win-min { animation: win-min .32s cubic-bezier(.6,0,.9,.4) forwards; }
+.win-close { animation: win-close .26s ease-in forwards; }
+.win-drag { cursor: grabbing; box-shadow: 0 30px 80px -10px rgba(0,0,0,.8), 0 0 30px rgba(62,242,224,.35) !important; }
+
+/* bottom sheet */
+@keyframes sheet-up { 0% { transform: translateY(100%) } 70% { transform: translateY(-2%) } 100% { transform: none } }
+.sheet { animation: sheet-up .45s cubic-bezier(.2,.9,.3,1) both; }
+@keyframes fade-in { from { opacity: 0 } }
+.fade-in { animation: fade-in .25s ease both; }
+
+/* skeleton */
+@keyframes shimmer { to { background-position: -200% 0 } }
+.skel { border-radius: .4rem; background: linear-gradient(90deg, rgba(100,116,139,.15) 25%, rgba(62,242,224,.18) 50%, rgba(100,116,139,.15) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+
+/* toasts + speech */
+@keyframes toast-in { 0% { opacity: 0; transform: translateX(40px) scale(.9) } 60% { opacity: 1; transform: translateX(-4px) scale(1.02) } 100% { transform: none } }
+.toast-in { animation: toast-in .45s cubic-bezier(.2,.9,.3,1) both; }
+@keyframes bubble { 0% { opacity: 0; transform: translateY(6px) scale(.85) } 100% { opacity: 1; transform: none } }
+.bubble { animation: bubble .3s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes look { 0%,40%,100% { transform: translateX(0) } 50%,60% { transform: translateX(-3px) } 70%,80% { transform: translateX(3px) } }
+.animate-look { animation: look 7s ease-in-out infinite; transform-box: fill-box; }
+@keyframes antenna { 0%,100% { transform: rotate(0) } 30% { transform: rotate(-12deg) } 60% { transform: rotate(10deg) } }
+.animate-antenna { animation: antenna 3s ease-in-out infinite; transform-origin: 60px 16px; }
+@keyframes blip { 0% { r: 1; opacity: 1 } 100% { r: 7; opacity: 0 } }
+.blip-ring { animation: blip 1.8s ease-out infinite; }
+@keyframes particle { 0% { transform: translate3d(0,0,0); opacity: 0 } 10% { opacity: .9 } 100% { transform: translate3d(var(--px), -110vh, 0); opacity: 0 } }
+.particle { position: absolute; bottom: -10px; width: 2px; height: 2px; border-radius: 9999px; background: #7dffc8; box-shadow: 0 0 6px #3ef2e0; animation: particle linear infinite; }
+
+@media (prefers-reduced-motion: reduce) { .neon-frame::after, .particle, .animate-look, .animate-antenna { animation: none !important; } }
+@media (prefers-contrast: more) { .glass { background: rgba(6,11,26,.95); border-color: #3ef2e0; } .text-slate { color: #a8b3c4 !important; } }
+
+/* ───────── v3 ops ───────── */
+@keyframes static-n { 0% { background-position: 0 0 } 100% { background-position: 100px 70px } }
+.tx-static { background: rgba(10,0,6,.82); background-image: repeating-radial-gradient(circle at 17% 32%, rgba(255,255,255,.07) 0 1px, transparent 1px 3px), repeating-linear-gradient(0deg, rgba(255,59,92,.06) 0 2px, transparent 2px 4px); animation: static-n .25s steps(4) infinite; }
+@keyframes glitch { 0%,92%,100% { transform: none; filter: none } 93% { transform: translate(-3px,1px) skewX(4deg); filter: hue-rotate(40deg) } 95% { transform: translate(3px,-1px); filter: saturate(3) } 97% { transform: translate(-1px,0) skewX(-3deg) } }
+.tx-glitch { animation: glitch 2.2s infinite; }
+@keyframes warp-streak { 0% { transform-origin: 0 0; opacity: 0; width: 0 } 30% { opacity: 1 } 100% { width: 75vmax; opacity: 0 } }
+.warp { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(62,242,224,.25), transparent 60%); animation: fade-in .1s; }
+.warp span { position: absolute; left: 50%; top: 50%; height: 2px; transform-origin: 0 50%; background: linear-gradient(90deg, transparent, #cfe9ff, #3ef2e0); }
+.warp span::before { content: ""; display: block; height: 100%; animation: warp-streak .55s cubic-bezier(.5,0,.9,.5) both; animation-delay: inherit; background: inherit; }
+.warp span { background: none; width: 75vmax; }
+.warp span::before { background: linear-gradient(90deg, transparent, #cfe9ff, #3ef2e0); }
+.focus-dim { opacity: .28; filter: saturate(.3) blur(1px); pointer-events: none; transition: opacity .5s, filter .5s; }
+/* DEFCON theming */
+html[data-defcon="3"] { --color-cyan: #ffd166; }
+html[data-defcon="2"] { --color-cyan: #ff9a5c; }
+html[data-defcon="1"] { --color-cyan: #ff3b5c; }
+/* Night ops / stealth */
+html[data-theme="night"] { --color-cyan: #5a7f99; --color-mint: #6b8f7f; --color-ice: #9fb0c0; --color-snow: #c8d2dc; }
+html[data-theme="night"] .glass { background: rgba(4,6,10,.82); border-color: rgba(90,127,153,.25); box-shadow: none; }
+html[data-theme="night"] .neon, html[data-theme="night"] .neon-frame::after { text-shadow: none; opacity: .35; }
+html[data-theme="night"] .bg-video { opacity: .25; filter: grayscale(.8); }
+@media (prefers-reduced-motion: reduce) { .tx-static, .tx-glitch { animation: none !important; } .warp { display: none; } }
